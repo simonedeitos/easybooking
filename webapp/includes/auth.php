@@ -21,12 +21,9 @@ function requireAuth(): void {
         // X-Requested-With headers that our front-end attaches) return a
         // JSON 401 so the client can show a helpful error message instead
         // of trying to parse an HTML redirect page as JSON.
-        $acceptHeader = strtolower((string)($_SERVER['HTTP_ACCEPT'] ?? ''));
         $isAjaxRequest = !empty($_SERVER['HTTP_X_CSRF_TOKEN'])
             || (!empty($_SERVER['HTTP_X_REQUESTED_WITH'])
-                && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest')
-            || str_contains($acceptHeader, 'application/json')
-            || isset($_REQUEST['action']);
+                && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest');
 
         if ($isAjaxRequest) {
             while (ob_get_level() > 0) { ob_end_clean(); }
@@ -48,12 +45,9 @@ function requireAuth(): void {
 function requireAdmin(): void {
     requireAuth();
     if (($_SESSION['user_role'] ?? '') !== 'admin') {
-        $acceptHeader = strtolower((string)($_SERVER['HTTP_ACCEPT'] ?? ''));
         $isAjaxRequest = !empty($_SERVER['HTTP_X_CSRF_TOKEN'])
             || (!empty($_SERVER['HTTP_X_REQUESTED_WITH'])
-                && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest')
-            || str_contains($acceptHeader, 'application/json')
-            || isset($_REQUEST['action']);
+                && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest');
         if ($isAjaxRequest) {
             while (ob_get_level() > 0) { ob_end_clean(); }
             http_response_code(403);

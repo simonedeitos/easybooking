@@ -158,8 +158,7 @@ if ($requestAction !== '') {
             $stmt->execute([$status, $id]);
             jsonResponse(['success' => true, 'message' => 'Stato pagamento aggiornato con successo.']);
         }
-    } catch (Throwable $e) {
-        error_log('acquisti.php action error [' . $requestAction . ']: ' . $e->getMessage());
+    } catch (PDOException $e) {
         jsonResponse(['success' => false, 'message' => 'Errore durante l\'operazione richiesta.'], 500);
     }
 }
@@ -524,7 +523,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function fetchPurchase(id) {
         const response = await fetch(`acquisti.php?action=get&id=${encodeURIComponent(id)}`);
-        const data = await safeJsonResponse(response);
+        const data = await response.json();
         if (!data.success) {
             throw new Error(data.message || 'Errore nel caricamento dell\'acquisto.');
         }
@@ -573,7 +572,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 formData.append('id', button.dataset.id);
                 formData.append('csrf_token', getCsrfToken());
                 const response = await fetch('acquisti.php', { method: 'POST', body: formData });
-                const data = await safeJsonResponse(response);
+                const data = await response.json();
                 if (!data.success) {
                     throw new Error(data.message || 'Errore durante l\'eliminazione.');
                 }
@@ -594,7 +593,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 formData.append('stato_pagamento', select.value);
                 formData.append('csrf_token', getCsrfToken());
                 const response = await fetch('acquisti.php', { method: 'POST', body: formData });
-                const data = await safeJsonResponse(response);
+                const data = await response.json();
                 if (!data.success) {
                     throw new Error(data.message || 'Errore aggiornando il pagamento.');
                 }
