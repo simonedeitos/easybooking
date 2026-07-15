@@ -110,8 +110,7 @@ if ($requestAction !== '') {
 
             jsonResponse(['success' => true, 'package' => $package]);
         }
-    } catch (Throwable $e) {
-        error_log('pacchetti.php action error [' . $requestAction . ']: ' . $e->getMessage());
+    } catch (PDOException $e) {
         jsonResponse(['success' => false, 'message' => 'Errore durante l\'operazione richiesta.'], 500);
     }
 }
@@ -279,7 +278,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function fetchPackage(id) {
         const response = await fetch(`pacchetti.php?action=get&id=${encodeURIComponent(id)}`);
-        const data = await safeJsonResponse(response);
+        const data = await response.json();
         if (!data.success) {
             throw new Error(data.message || 'Errore nel caricamento del pacchetto.');
         }
@@ -324,7 +323,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 formData.append('id', button.dataset.id);
                 formData.append('csrf_token', getCsrfToken());
                 const response = await fetch('pacchetti.php', { method: 'POST', body: formData });
-                const data = await safeJsonResponse(response);
+                const data = await response.json();
                 if (!data.success) {
                     throw new Error(data.message || 'Errore durante l\'eliminazione.');
                 }

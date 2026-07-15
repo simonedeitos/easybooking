@@ -264,8 +264,7 @@ if ($requestAction !== '') {
             }
             jsonResponse(['success' => true, 'message' => 'Evento eliminato con successo.']);
         }
-    } catch (Throwable $e) {
-        error_log('calendario.php action error [' . $requestAction . ']: ' . $e->getMessage());
+    } catch (PDOException $e) {
         if ($requestAction === 'get_events') {
             calendarSendEvents([]);
         }
@@ -309,21 +308,21 @@ require_once __DIR__ . '/includes/header.php';
     <div class="card-body d-flex flex-column gap-3">
         <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
             <div class="btn-group" role="group" aria-label="Navigazione calendario">
-                <button type="button" class="btn btn-outline-secondary" id="cal-prev"><i class="fas fa-chevron-left"></i></button>
-                <button type="button" class="btn btn-outline-secondary" id="cal-today">Oggi</button>
-                <button type="button" class="btn btn-outline-secondary" id="cal-next"><i class="fas fa-chevron-right"></i></button>
+                <button type="button" class="btn btn-outline-light" id="cal-prev"><i class="fas fa-chevron-left"></i></button>
+                <button type="button" class="btn btn-outline-light" id="cal-today">Oggi</button>
+                <button type="button" class="btn btn-outline-light" id="cal-next"><i class="fas fa-chevron-right"></i></button>
             </div>
             <span class="fs-5 fw-semibold" id="cal-title">Calendario</span>
             <div class="btn-group" role="group" aria-label="Vista calendario">
                 <button type="button" class="btn btn-primary cal-view-btn active" id="cal-view-week">Settimana</button>
-                <button type="button" class="btn btn-outline-secondary cal-view-btn" id="cal-view-month">Mese</button>
-                <button type="button" class="btn btn-outline-secondary cal-view-btn" id="cal-view-day">Giorno</button>
+                <button type="button" class="btn btn-outline-light cal-view-btn" id="cal-view-month">Mese</button>
+                <button type="button" class="btn btn-outline-light cal-view-btn" id="cal-view-day">Giorno</button>
             </div>
         </div>
         <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
             <div class="btn-group" role="group" aria-label="Colorazione eventi">
                 <button type="button" class="btn btn-primary" id="color-by-status">Per Stato</button>
-                <button type="button" class="btn btn-outline-secondary" id="color-by-teacher">Per Insegnante</button>
+                <button type="button" class="btn btn-outline-light" id="color-by-teacher">Per Insegnante</button>
             </div>
             <div class="d-flex align-items-center gap-2">
                 <label for="calendarTeacherFilter" class="form-label mb-0">Filtra insegnante</label>
@@ -405,7 +404,7 @@ require_once __DIR__ . '/includes/header.php';
                         <i class="fas fa-trash me-2"></i>Elimina
                     </button>
                     <div class="d-flex gap-2">
-                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annulla</button>
+                        <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">Annulla</button>
                         <button type="submit" class="btn btn-primary">
                             <i class="fas fa-save me-2"></i>Salva Modifiche
                         </button>
@@ -477,7 +476,7 @@ require_once __DIR__ . '/includes/header.php';
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annulla</button>
+                    <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">Annulla</button>
                     <button type="submit" class="btn btn-primary">
                         <i class="fas fa-save me-2"></i>Salva Lezione
                     </button>
@@ -530,9 +529,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function updateColorButtons() {
         document.getElementById('color-by-status')?.classList.toggle('btn-primary', currentColorMode === 'status');
-        document.getElementById('color-by-status')?.classList.toggle('btn-outline-secondary', currentColorMode !== 'status');
+        document.getElementById('color-by-status')?.classList.toggle('btn-outline-light', currentColorMode !== 'status');
         document.getElementById('color-by-teacher')?.classList.toggle('btn-primary', currentColorMode === 'teacher');
-        document.getElementById('color-by-teacher')?.classList.toggle('btn-outline-secondary', currentColorMode !== 'teacher');
+        document.getElementById('color-by-teacher')?.classList.toggle('btn-outline-light', currentColorMode !== 'teacher');
     }
 
     function renderCalendar() {
@@ -563,7 +562,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const response = await fetch('calendario.php', { method: 'POST', body: fd });
-        const result = await safeJsonResponse(response);
+        const result = await response.json();
         if (!result.success) {
             throw new Error(result.message || successMessage);
         }
@@ -617,7 +616,7 @@ document.addEventListener('DOMContentLoaded', () => {
             formData.append('id', id);
             formData.append('csrf_token', getCsrfToken());
             const response = await fetch('calendario.php', { method: 'POST', body: formData });
-            const result = await safeJsonResponse(response);
+            const result = await response.json();
             if (!result.success) {
                 throw new Error(result.message || 'Errore durante l\'eliminazione.');
             }
