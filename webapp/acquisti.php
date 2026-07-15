@@ -227,39 +227,6 @@ require_once __DIR__ . '/includes/header.php';
 </div>
 <?php endif; ?>
 
-<?php if ($alerts !== []): ?>
-<div class="card mb-4 border-warning">
-    <div class="card-header text-warning">
-        <i class="fas fa-triangle-exclamation me-2"></i>Pacchetti quasi esauriti
-    </div>
-    <div class="card-body p-0">
-        <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
-                <thead>
-                    <tr>
-                        <th>Cliente</th>
-                        <th>Pacchetto</th>
-                        <th>Lezioni svolte</th>
-                        <th>Rimanenti</th>
-                        <th>Stato</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($alerts as $alert): ?>
-                    <tr>
-                        <td><?= htmlspecialchars(trim((string)$alert['cliente_nome'] . ' ' . (string)$alert['cliente_cognome'])) ?></td>
-                        <td><?= htmlspecialchars((string)($alert['pacchetto_nome'] ?: 'Pacchetto manuale')) ?></td>
-                        <td><?= htmlspecialchars((string)$alert['lezioni_svolte']) ?> / <?= htmlspecialchars((string)$alert['totale_lezioni']) ?></td>
-                        <td><span class="badge bg-warning text-dark"><?= htmlspecialchars((string)$alert['lezioni_rimanenti']) ?></span></td>
-                        <td><?= htmlspecialchars((string)$alert['stato_pagamento']) ?></td>
-                    </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
-        </div>
-    </div>
-</div>
-<?php endif; ?>
 
 <div class="card mb-4">
     <div class="card-body">
