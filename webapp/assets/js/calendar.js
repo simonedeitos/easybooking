@@ -175,8 +175,8 @@ function bindCalendarToolbar() {
 function buildTooltip(props) {
     const cliente = props.cliente || 'N/D';
     const insegnante = props.insegnante || 'N/D';
-    return `<b>${escapeHtml(cliente || '')}</b><br>
-            ${escapeHtml(insegnante || 'N/D')}${props.strumento ? ' – ' + escapeHtml(props.strumento) : ''}<br>
+    return `<b>${escapeHtml(cliente)}</b><br>
+            ${escapeHtml(insegnante)}${props.strumento ? ' – ' + escapeHtml(props.strumento) : ''}<br>
             Stato: ${escapeHtml(props.stato || '')}`;
 }
 

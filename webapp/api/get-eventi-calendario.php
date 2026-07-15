@@ -53,8 +53,8 @@ try {
     $sql =
         'SELECT p.id, p.data, p.ora_inizio, p.ora_fine, p.stato, p.strumento, p.note,
                 p.cliente_id, p.insegnante_id, p.pacchetto_nome, p.acquisto_id,
-                COALESCE(c.nome, \'N/A\') AS cliente_nome, COALESCE(c.cognome, \'\') AS cliente_cognome,
-                COALESCE(i.nome, \'N/A\') AS insegnante_nome, COALESCE(i.cognome, \'\') AS insegnante_cognome
+                COALESCE(c.nome, \'\') AS cliente_nome, COALESCE(c.cognome, \'\') AS cliente_cognome,
+                COALESCE(i.nome, \'\') AS insegnante_nome, COALESCE(i.cognome, \'\') AS insegnante_cognome
          FROM prenotazioni p
          LEFT JOIN clienti c ON c.id = p.cliente_id
          LEFT JOIN insegnanti i ON i.id = p.insegnante_id
@@ -86,8 +86,8 @@ try {
 
     $events = [];
     foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
-        $cliente    = trim(decryptField((string)$row['cliente_nome']) . ' ' . decryptField((string)$row['cliente_cognome']));
-        $insegnante = trim(decryptField((string)$row['insegnante_nome']) . ' ' . decryptField((string)$row['insegnante_cognome']));
+        $cliente    = trim(decryptField((string)$row['cliente_nome']) . ' ' . decryptField((string)$row['cliente_cognome'])) ?: 'N/D';
+        $insegnante = trim(decryptField((string)$row['insegnante_nome']) . ' ' . decryptField((string)$row['insegnante_cognome'])) ?: 'N/D';
         $strumento  = trim((string)($row['strumento'] ?? ''));
         $stato      = (string)$row['stato'];
         $title      = $cliente;

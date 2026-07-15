@@ -15,6 +15,7 @@ $totalClients = 0;
 $lessonsToday = 0;
 $lessonsThisWeek = 0;
 $expiringPackagesCount = 0;
+$maxExpiringPackages = 10;
 $nextLessons = [];
 $expiringPackages = [];
 $weekdayChartData = array_fill(0, 7, 0);
@@ -33,7 +34,7 @@ function dashboardDecryptName(?string $nome, ?string $cognome): string
 
 function dashboardWhatsAppNumber(?string $telefono): string
 {
-    return preg_replace('/[^0-9+]/', '', dashboardDecryptPart($telefono)) ?? '';
+    return preg_replace('/[^0-9+]/', '', dashboardDecryptPart($telefono));
 }
 
 try {
@@ -92,7 +93,7 @@ try {
     $stmt->execute();
     $expiringPackagesCount = (int)$stmt->fetchColumn();
 
-    $stmt = $pdo->prepare($expiringSql . ' ORDER BY (COALESCE(a.numero_lezioni, pk.numero_lezioni, 0) - COALESCE(ls.lezioni_svolte, 0)) ASC, a.data_acquisto DESC LIMIT 10');
+    $stmt = $pdo->prepare($expiringSql . ' ORDER BY (COALESCE(a.numero_lezioni, pk.numero_lezioni, 0) - COALESCE(ls.lezioni_svolte, 0)) ASC, a.data_acquisto DESC LIMIT ' . (int)$maxExpiringPackages);
     $stmt->execute();
     $expiringPackages = $stmt->fetchAll();
 
