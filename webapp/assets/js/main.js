@@ -53,6 +53,8 @@ const ThemeManager = (() => {
 })();
 
 // ── CSRF Helpers ─────────────────────────────────────────────
+const MAX_ERROR_MESSAGE_LENGTH = 240;
+
 function getCsrfToken() {
     const meta = document.querySelector('meta[name="csrf-token"]');
     return meta ? meta.getAttribute('content') : '';
@@ -76,16 +78,14 @@ window.fetch = async function(url, opts = {}) {
             return await originalJson();
         } catch (error) {
             const rawBody = await responseClone.text();
-            const cleanText = rawBody
-                .replace(/<style[\s\S]*?<\/style>/gi, ' ')
-                .replace(/<script[\s\S]*?<\/script>/gi, ' ')
-                .replace(/<[^>]+>/g, ' ')
+            const parsedDocument = new DOMParser().parseFromString(rawBody, 'text/html');
+            const cleanText = (parsedDocument.body?.textContent || rawBody)
                 .replace(/\s+/g, ' ')
                 .trim();
 
             throw new Error(
                 cleanText !== ''
-                    ? cleanText.slice(0, 240)
+                    ? cleanText.slice(0, MAX_ERROR_MESSAGE_LENGTH)
                     : `Risposta non valida dal server${response.status ? ' (HTTP ' + response.status + ')' : ''}.`
             );
         }

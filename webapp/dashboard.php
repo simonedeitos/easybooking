@@ -16,6 +16,7 @@ $lessonsToday = 0;
 $lessonsThisWeek = 0;
 $expiringPackagesCount = 0;
 $maxExpiringPackages = 10;
+$expiringPackageThreshold = 3;
 $nextLessons = [];
 $expiringPackages = [];
 $weekdayChartData = array_fill(0, 7, 0);
@@ -90,7 +91,7 @@ try {
             c.cognome,
             c.telefono,
             pk.nome AS pacchetto_nome,
-            COALESCE(NULLIF(a.numero_lezioni, 0), pk.numero_lezioni, 0) AS totale_lezioni,
+            COALESCE(NULLIF(a.numero_lezioni, 0), pk.numero_lezioni, 0) AS lezioni_acquistate,
             COALESCE(ls.lezioni_svolte, 0) AS lezioni_svolte,
             GREATEST(COALESCE(NULLIF(a.numero_lezioni, 0), pk.numero_lezioni, 0) - COALESCE(ls.lezioni_svolte, 0), 0) AS lezioni_rimanenti
          FROM acquisti a
@@ -103,10 +104,10 @@ try {
              GROUP BY acquisto_id
          ) ls ON ls.acquisto_id = a.id
          WHERE a.stato_pagamento <> 'Rimborso'
-         HAVING totale_lezioni > 0 AND lezioni_rimanenti BETWEEN 1 AND 3
+         HAVING lezioni_acquistate > 0 AND lezioni_rimanenti BETWEEN 1 AND ?
          ORDER BY lezioni_rimanenti ASC, a.data_acquisto DESC, a.id DESC"
     );
-    $stmt->execute();
+    $stmt->execute([$expiringPackageThreshold]);
     $expiringPackages = $stmt->fetchAll();
     $expiringPackagesCount = count($expiringPackages);
     $expiringPackages = array_slice($expiringPackages, 0, $maxExpiringPackages);
@@ -298,7 +299,7 @@ require_once __DIR__ . '/includes/header.php';
                         </div>
                         <div class="small text-secondary mt-2">
                             Svolte: <?= htmlspecialchars((string)$package['lezioni_svolte']) ?> /
-                            <?= htmlspecialchars((string)$package['numero_lezioni']) ?>
+                            <?= htmlspecialchars((string)$package['lezioni_acquistate']) ?>
                         </div>
                     </div>
                     <?php endforeach; ?>
@@ -357,8 +358,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const monthLabels = <?= json_encode($monthLabels, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
     const revenueData = <?= json_encode($revenueChartData, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
 
+    const DEFAULT_CHART_TEXT_COLOR = '#a6adc8';
     const cssChartTextColor = getComputedStyle(document.documentElement).getPropertyValue('--text-secondary').trim();
-    const chartTextColor = cssChartTextColor !== '' ? cssChartTextColor : '#a6adc8';
+    const chartTextColor = cssChartTextColor !== '' ? cssChartTextColor : DEFAULT_CHART_TEXT_COLOR;
     const chartGridColor = 'rgba(166, 173, 200, 0.15)';
 
     function renderChartAvailabilityError(canvas, message) {
