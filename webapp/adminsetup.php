@@ -427,7 +427,7 @@ function loadXmlContentFromEncryptedFile(string $filePath, string $originalName,
 {
     $content = decryptXMLFile($filePath);
     if ($content !== false) {
-        $content = preg_replace('/^\xEF\xBB\xBF/', '', $content) ?? $content;
+        $content = fixXMLEncoding($content);
         if (str_starts_with(ltrim($content), '<')) {
             $log[] = '🔐 ' . $originalName . ': decrittazione completata.';
             return $content;
@@ -439,7 +439,7 @@ function loadXmlContentFromEncryptedFile(string $filePath, string $originalName,
         throw new RuntimeException('Impossibile leggere il file ' . $originalName . '.');
     }
 
-    $fallback = preg_replace('/^\xEF\xBB\xBF/', '', $fallback) ?? $fallback;
+    $fallback = fixXMLEncoding($fallback);
     if (!str_starts_with(ltrim($fallback), '<')) {
         throw new RuntimeException('Il file ' . $originalName . ' non contiene XML valido dopo la decrittazione.');
     }

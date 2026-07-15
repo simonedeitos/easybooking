@@ -11,6 +11,58 @@ define('XML_PBKDF2_ITERATIONS',   1000);
 define('XML_PBKDF2_LENGTH',       48);   // 32 key + 16 IV
 
 /**
+ * Normalise XML content encoding before passing to simplexml_load_string().
+ *
+ * The C# XmlSerializer can write a UTF-16 encoding declaration even when the
+ * underlying byte stream is UTF-8 (StringWriter reports UTF-16 internally).
+ * After AES decryption, PHP ends up with UTF-8 bytes whose <?xml?> header
+ * still declares encoding="utf-16", causing libxml to reject the document
+ * with "Document labelled UTF-16 but has UTF-8 content".
+ *
+ * Steps:
+ *  1. Strip any UTF-8 BOM (\xEF\xBB\xBF).
+ *  2. Detect a UTF-16 LE/BE BOM, convert the content to UTF-8.
+ *  3. Rewrite the XML encoding declaration to "UTF-8".
+ */
+function fixXMLEncoding(string $content): string
+{
+    // 1. Strip UTF-8 BOM
+    if (str_starts_with($content, "\xEF\xBB\xBF")) {
+        $content = substr($content, 3);
+    }
+
+    // 2. Convert UTF-16 LE (FF FE) or UTF-16 BE (FE FF) content to UTF-8
+    if (str_starts_with($content, "\xFF\xFE")) {
+        $converted = mb_convert_encoding(substr($content, 2), 'UTF-8', 'UTF-16LE');
+        if ($converted !== false) {
+            $content = $converted;
+        }
+    } elseif (str_starts_with($content, "\xFE\xFF")) {
+        $converted = mb_convert_encoding(substr($content, 2), 'UTF-8', 'UTF-16BE');
+        if ($converted !== false) {
+            $content = $converted;
+        }
+    }
+
+    // 3. Rewrite the XML encoding declaration to UTF-8 (handles utf-16,
+    //    UTF-16, Windows-1252, ISO-8859-1, etc.)
+    $content = preg_replace_callback(
+        '/<\?xml\b[^?]*\?>/i',
+        static function (array $m): string {
+            return preg_replace(
+                '/\bencoding=["\'][^"\']*["\']/i',
+                'encoding="UTF-8"',
+                $m[0]
+            ) ?? $m[0];
+        },
+        $content,
+        1
+    ) ?? $content;
+
+    return $content;
+}
+
+/**
  * Decrypt a file that was encrypted by the C# EasyBooking desktop app.
  * Algorithm: PBKDF2-SHA1 → AES-256-CBC (Rfc2898DeriveBytes defaults).
  */
