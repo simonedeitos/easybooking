@@ -1,0 +1,67 @@
+/* Light Theme – overrides CSS variables for a clean white appearance */
+:root {
+    --bg-main:        #f0f2f5;
+    --bg-sidebar:     #ffffff;
+    --bg-card:        #ffffff;
+    --bg-input:       #f8f9fa;
+    --bg-table-row:   #ffffff;
+    --bg-table-hover: #f0f2ff;
+    --bg-navbar:      #ffffff;
+    --text-primary:   #1a1a2e;
+    --text-secondary: #495057;
+    --text-muted:     #9098a3;
+    --border-color:   #e2e8f0;
+    --shadow:         0 4px 24px rgba(0,0,0,0.08);
+    --shadow-sm:      0 2px 8px rgba(0,0,0,0.06);
+}
+
+body { background-color: var(--bg-main); color: var(--text-primary); }
+
+/* Light-theme table tweaks */
+.table thead th { background: #f8f9fa; color: #6c757d; }
+.table tbody td { border-bottom-color: #e9ecef; }
+
+/* Light inputs */
+.form-control, .form-select {
+    background: var(--bg-input);
+    border-color: var(--border-color);
+    color: var(--text-primary);
+}
+.form-control:focus, .form-select:focus {
+    background: #fff;
+}
+
+/* Light sidebar links */
+.nav-link { color: #495057; }
+.nav-link:hover { background: rgba(124,106,247,0.08); color: var(--accent); }
+.nav-link.active { color: var(--accent); background: rgba(124,106,247,0.12); }
+
+/* Light modal */
+.modal-content { background: #fff; color: var(--text-primary); border-color: var(--border-color); }
+.btn-close { filter: none; }
+.modal-header, .modal-footer { border-color: var(--border-color); }
+
+/* Light badges */
+.badge.bg-success { background: #d1fae5 !important; color: #065f46 !important; }
+.badge.bg-danger  { background: #fee2e2 !important; color: #991b1b !important; }
+.badge.bg-warning { background: #fef3c7 !important; color: #92400e !important; }
+.badge.bg-info    { background: #e0f2fe !important; color: #075985 !important; }
+
+/* Light card */
+.card, .stat-card { background: #fff; border-color: var(--border-color); }
+.card-header { background: #f8f9fa; border-bottom-color: var(--border-color); }
+
+/* Light DataTables */
+.dataTables_wrapper .dataTables_filter input,
+.dataTables_wrapper .dataTables_length select {
+    background: #fff;
+    border-color: #ced4da;
+    color: var(--text-primary);
+}
+
+/* Toast */
+.toast { background: #fff; border-color: var(--border-color); color: var(--text-primary); }
+.toast-header { background: #f8f9fa; color: #6c757d; }
+
+/* Login */
+.login-card { background: #fff; border-color: var(--border-color); }

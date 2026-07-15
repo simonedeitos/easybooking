@@ -1,0 +1,362 @@
+<?php
+if (session_status() === PHP_SESSION_NONE) { session_start(); }
+require_once __DIR__ . '/config/database.php';
+require_once __DIR__ . '/config/functions.php';
+require_once __DIR__ . '/config/encryption.php';
+require_once __DIR__ . '/includes/auth.php';
+requireAuth();
+
+$pdo = Database::getInstance();
+
+$totalClients = 0;
+$lessonsToday = 0;
+$lessonsThisWeek = 0;
+$expiringPackagesCount = 0;
+$nextLessons = [];
+$expiringPackages = [];
+$weekdayChartData = array_fill(0, 7, 0);
+$revenueChartData = array_fill(0, 12, 0.0);
+$dashboardError = '';
+
+try {
+    $stmt = $pdo->prepare('SELECT COUNT(*) FROM clienti');
+    $stmt->execute();
+    $totalClients = (int)$stmt->fetchColumn();
+
+    $stmt = $pdo->prepare('SELECT COUNT(*) FROM prenotazioni WHERE data = CURDATE()');
+    $stmt->execute();
+    $lessonsToday = (int)$stmt->fetchColumn();
+
+    $stmt = $pdo->prepare('SELECT COUNT(*) FROM prenotazioni WHERE YEARWEEK(data, 1) = YEARWEEK(CURDATE(), 1)');
+    $stmt->execute();
+    $lessonsThisWeek = (int)$stmt->fetchColumn();
+
+    $stmt = $pdo->prepare(
+        "SELECT p.*, c.nome, c.cognome, i.nome AS ins_nome, i.cognome AS ins_cognome
+         FROM prenotazioni p
+         INNER JOIN clienti c ON p.cliente_id = c.id
+         INNER JOIN insegnanti i ON p.insegnante_id = i.id
+         WHERE p.data >= CURDATE() AND p.stato = 'Programmata'
+         ORDER BY p.data ASC, p.ora_inizio ASC
+         LIMIT 10"
+    );
+    $stmt->execute();
+    $nextLessons = $stmt->fetchAll();
+
+    $expiringSql = "
+        SELECT
+            a.*,
+            c.nome,
+            c.cognome,
+            pk.nome AS pacchetto_nome,
+            pk.numero_lezioni,
+            COALESCE(ls.lezioni_svolte, 0) AS lezioni_svolte,
+            (pk.numero_lezioni - COALESCE(ls.lezioni_svolte, 0)) AS lezioni_rimanenti
+        FROM acquisti a
+        INNER JOIN clienti c ON a.cliente_id = c.id
+        INNER JOIN pacchetti pk ON a.pacchetto_id = pk.id
+        LEFT JOIN (
+            SELECT acquisto_id, COUNT(*) AS lezioni_svolte
+            FROM prenotazioni
+            WHERE stato = 'Svolta' AND acquisto_id IS NOT NULL
+            GROUP BY acquisto_id
+        ) ls ON ls.acquisto_id = a.id
+        WHERE a.stato_pagamento != 'Rimborso'
+          AND (pk.numero_lezioni - COALESCE(ls.lezioni_svolte, 0)) BETWEEN 0 AND 3
+    ";
+
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM ({$expiringSql}) AS expiring_packages");
+    $stmt->execute();
+    $expiringPackagesCount = (int)$stmt->fetchColumn();
+
+    $stmt = $pdo->prepare($expiringSql . ' ORDER BY lezioni_svolte DESC, a.data_acquisto DESC LIMIT 5');
+    $stmt->execute();
+    $expiringPackages = $stmt->fetchAll();
+
+    $stmt = $pdo->prepare(
+        'SELECT DAYOFWEEK(data) AS dow, COUNT(*) AS cnt
+         FROM prenotazioni
+         WHERE YEARWEEK(data, 1) = YEARWEEK(CURDATE(), 1)
+         GROUP BY dow'
+    );
+    $stmt->execute();
+    $weekdayRows = $stmt->fetchAll();
+    $weekdayMap = [2 => 0, 3 => 1, 4 => 2, 5 => 3, 6 => 4, 7 => 5, 1 => 6];
+    foreach ($weekdayRows as $row) {
+        $dow = (int)$row['dow'];
+        if (isset($weekdayMap[$dow])) {
+            $weekdayChartData[$weekdayMap[$dow]] = (int)$row['cnt'];
+        }
+    }
+
+    $stmt = $pdo->prepare(
+        'SELECT MONTH(data_acquisto) AS m, SUM(importo_pagato) AS totale
+         FROM acquisti
+         WHERE YEAR(data_acquisto) = YEAR(CURDATE()) AND stato_pagamento = ?
+         GROUP BY m
+         ORDER BY m ASC'
+    );
+    $stmt->execute(['Pagato']);
+    foreach ($stmt->fetchAll() as $row) {
+        $monthIndex = max(1, (int)$row['m']) - 1;
+        $revenueChartData[$monthIndex] = (float)$row['totale'];
+    }
+} catch (PDOException $e) {
+    $dashboardError = 'Impossibile caricare tutti i dati della dashboard.';
+}
+
+$weekdayLabels = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'];
+$monthLabels = ['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'];
+
+require_once __DIR__ . '/includes/header.php';
+?>
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+    <div>
+        <h2 class="mb-1">Panoramica</h2>
+        <p class="text-secondary mb-0">Stato generale di lezioni, clienti e ricavi.</p>
+    </div>
+    <span class="badge bg-primary-subtle text-primary-emphasis px-3 py-2">Aggiornato in tempo reale</span>
+</div>
+
+<?php if ($dashboardError !== ''): ?>
+<div class="alert alert-warning">
+    <i class="fas fa-exclamation-triangle me-2"></i><?= htmlspecialchars($dashboardError) ?>
+</div>
+<?php endif; ?>
+
+<div class="row g-4 mb-4">
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="stat-card h-100">
+            <div class="stat-icon purple"><i class="fas fa-users"></i></div>
+            <div>
+                <div class="text-secondary small text-uppercase">Clienti Totali</div>
+                <div class="fs-2 fw-bold"><?= htmlspecialchars((string)$totalClients) ?></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="stat-card h-100">
+            <div class="stat-icon blue"><i class="fas fa-calendar-day"></i></div>
+            <div>
+                <div class="text-secondary small text-uppercase">Lezioni Oggi</div>
+                <div class="fs-2 fw-bold"><?= htmlspecialchars((string)$lessonsToday) ?></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="stat-card h-100">
+            <div class="stat-icon green"><i class="fas fa-calendar-week"></i></div>
+            <div>
+                <div class="text-secondary small text-uppercase">Lezioni Settimana</div>
+                <div class="fs-2 fw-bold"><?= htmlspecialchars((string)$lessonsThisWeek) ?></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="stat-card h-100">
+            <div class="stat-icon orange"><i class="fas fa-box-open"></i></div>
+            <div>
+                <div class="text-secondary small text-uppercase">Pacchetti in Scadenza</div>
+                <div class="fs-2 fw-bold"><?= htmlspecialchars((string)$expiringPackagesCount) ?></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-12 col-xl-7">
+        <div class="card h-100">
+            <div class="card-header">
+                <i class="fas fa-clock"></i>
+                Prossime 10 lezioni
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-dark table-hover align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Data</th>
+                                <th>Orario</th>
+                                <th>Cliente</th>
+                                <th>Insegnante</th>
+                                <th>Stato</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php if ($nextLessons === []): ?>
+                            <tr>
+                                <td colspan="5" class="text-center text-secondary py-4">Nessuna lezione programmata.</td>
+                            </tr>
+                            <?php else: ?>
+                                <?php foreach ($nextLessons as $lesson): ?>
+                                <tr>
+                                    <td><?= htmlspecialchars(formatDate((string)$lesson['data'])) ?></td>
+                                    <td><?= htmlspecialchars(substr((string)$lesson['ora_inizio'], 0, 5) . ' - ' . substr((string)$lesson['ora_fine'], 0, 5)) ?></td>
+                                    <td><?= htmlspecialchars(trim((string)$lesson['nome'] . ' ' . (string)$lesson['cognome'])) ?></td>
+                                    <td><?= htmlspecialchars(trim((string)$lesson['ins_nome'] . ' ' . (string)$lesson['ins_cognome'])) ?></td>
+                                    <td><?= statusBadge((string)$lesson['stato']) ?></td>
+                                </tr>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-xl-5">
+        <div class="card h-100">
+            <div class="card-header">
+                <i class="fas fa-triangle-exclamation"></i>
+                Pacchetti quasi esauriti
+            </div>
+            <div class="card-body">
+                <?php if ($expiringPackages === []): ?>
+                <div class="alert alert-success mb-0">
+                    <i class="fas fa-check-circle me-2"></i>Nessun pacchetto in scadenza imminente.
+                </div>
+                <?php else: ?>
+                <div class="list-group list-group-flush gap-3">
+                    <?php foreach ($expiringPackages as $package): ?>
+                    <div class="rounded-3 border p-3 package-alert-item">
+                        <div class="d-flex justify-content-between align-items-start gap-3">
+                            <div>
+                                <div class="fw-semibold"><?= htmlspecialchars(trim((string)$package['nome'] . ' ' . (string)$package['cognome'])) ?></div>
+                                <div class="text-secondary small"><?= htmlspecialchars((string)$package['pacchetto_nome']) ?></div>
+                            </div>
+                            <span class="badge bg-warning text-dark">
+                                <?= htmlspecialchars((string)$package['lezioni_rimanenti']) ?> rim.
+                            </span>
+                        </div>
+                        <div class="small text-secondary mt-2">
+                            Svolte: <?= htmlspecialchars((string)$package['lezioni_svolte']) ?> /
+                            <?= htmlspecialchars((string)$package['numero_lezioni']) ?>
+                        </div>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+                <?php endif; ?>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-12 col-xl-6">
+        <div class="card h-100">
+            <div class="card-header">
+                <i class="fas fa-chart-column"></i>
+                Lezioni per giorno (settimana corrente)
+            </div>
+            <div class="card-body">
+                <canvas id="weeklyLessonsChart" height="140"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-xl-6">
+        <div class="card h-100">
+            <div class="card-header">
+                <i class="fas fa-chart-line"></i>
+                Ricavi mensili (anno corrente)
+            </div>
+            <div class="card-body">
+                <canvas id="monthlyRevenueChart" height="140"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.text-secondary { color: var(--text-secondary) !important; }
+.table-dark {
+    --bs-table-bg: var(--bg-card);
+    --bs-table-striped-bg: rgba(255,255,255,0.02);
+    --bs-table-hover-bg: rgba(124,106,247,0.12);
+    --bs-table-color: var(--text-primary);
+    --bs-table-border-color: var(--border-color);
+}
+.package-alert-item {
+    background: rgba(255,255,255,0.02);
+    border-color: var(--border-color) !important;
+}
+.stat-icon.orange { background: rgba(249,226,175,0.18); color: #f9e2af; }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const weekdayLabels = <?= json_encode($weekdayLabels, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+    const weekdayData = <?= json_encode($weekdayChartData, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+    const monthLabels = <?= json_encode($monthLabels, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+    const revenueData = <?= json_encode($revenueChartData, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+
+    const chartTextColor = getComputedStyle(document.documentElement).getPropertyValue('--text-secondary').trim() || '#a6adc8';
+    const chartGridColor = 'rgba(166, 173, 200, 0.15)';
+
+    const weeklyCanvas = document.getElementById('weeklyLessonsChart');
+    if (weeklyCanvas && typeof Chart !== 'undefined') {
+        new Chart(weeklyCanvas, {
+            type: 'bar',
+            data: {
+                labels: weekdayLabels,
+                datasets: [{
+                    label: 'Lezioni',
+                    data: weekdayData,
+                    backgroundColor: 'rgba(124, 106, 247, 0.75)',
+                    borderColor: 'rgba(124, 106, 247, 1)',
+                    borderWidth: 1,
+                    borderRadius: 8
+                }]
+            },
+            options: {
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { ticks: { color: chartTextColor }, grid: { color: chartGridColor } },
+                    y: { beginAtZero: true, ticks: { color: chartTextColor, precision: 0 }, grid: { color: chartGridColor } }
+                }
+            }
+        });
+    }
+
+    const revenueCanvas = document.getElementById('monthlyRevenueChart');
+    if (revenueCanvas && typeof Chart !== 'undefined') {
+        new Chart(revenueCanvas, {
+            type: 'line',
+            data: {
+                labels: monthLabels,
+                datasets: [{
+                    label: 'Ricavi',
+                    data: revenueData,
+                    borderColor: 'rgba(137, 220, 235, 1)',
+                    backgroundColor: 'rgba(137, 220, 235, 0.16)',
+                    tension: 0.35,
+                    fill: true,
+                    pointRadius: 4,
+                    pointBackgroundColor: 'rgba(137, 220, 235, 1)'
+                }]
+            },
+            options: {
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: (context) => '€ ' + Number(context.raw || 0).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                        }
+                    }
+                },
+                scales: {
+                    x: { ticks: { color: chartTextColor }, grid: { color: chartGridColor } },
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            color: chartTextColor,
+                            callback: (value) => '€ ' + Number(value).toLocaleString('it-IT')
+                        },
+                        grid: { color: chartGridColor }
+                    }
+                }
+            }
+        });
+    }
+});
+</script>
+<?php require_once __DIR__ . '/includes/footer.php'; ?>
