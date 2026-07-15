@@ -280,7 +280,7 @@ require_once __DIR__ . '/includes/header.php';
                         $telefonoDigits = dashboardWhatsAppNumber($package['telefono'] ?? null);
                         $pacchettoNome  = (string)($package['pacchetto_nome'] ?: 'Pacchetto sconosciuto');
                         $lezioniRim     = (string)$package['lezioni_rimanenti'];
-                        $waMsg          = 'Ciao ' . $clienteNome . ', il tuo pacchetto ' . $pacchettoNome . ' è quasi esaurito (' . $lezioniRim . ' lezioni rimanenti). [messaggio automatico]]';
+                        $waMsg          = 'Ciao ' . $clienteNome . ', il tuo pacchetto ' . $pacchettoNome . ' è quasi esaurito (' . $lezioniRim . ' lezioni rimanenti). [messaggio automatico]';
                     ?>
                     <div class="rounded-3 border p-3 package-alert-item">
                         <div class="d-flex justify-content-between align-items-start gap-3">
