@@ -64,26 +64,47 @@ function fixXMLEncoding(string $content): string
         }
     }
 
+    // 2c. Detect Windows-1252 / ISO-8859-1 content that is not valid UTF-8.
+    //     When the bytes are not valid UTF-8 and the content does not contain
+    //     null bytes (ruling out remaining UTF-16 cases), attempt a conversion
+    //     from Windows-1252 which is a superset of ISO-8859-1 and covers the
+    //     typical Western-European characters used in Italian music school data.
+    if (!mb_check_encoding($content, 'UTF-8') && !str_contains($content, "\x00")) {
+        $candidates = ['Windows-1252', 'ISO-8859-1'];
+        foreach ($candidates as $enc) {
+            $converted = mb_convert_encoding($content, 'UTF-8', $enc);
+            if ($converted !== false && mb_check_encoding($converted, 'UTF-8') && str_contains(ltrim($converted), '<')) {
+                $content = $converted;
+                break;
+            }
+        }
+    }
+
     // 3. Rewrite the XML encoding declaration to UTF-8 (handles utf-16,
     //    UTF-16, Windows-1252, ISO-8859-1, etc.)
     $content = preg_replace_callback(
         '/<\?xml\b[^?]*\?>/i',
         static function (array $m): string {
-            return preg_replace(
+            $decl = preg_replace(
                 '/\bencoding=["\'][^"\']*["\']/i',
                 'encoding="UTF-8"',
                 $m[0]
             ) ?? $m[0];
+            // If no encoding attribute was present, add one.
+            if (!str_contains(strtolower($decl), 'encoding=')) {
+                $decl = str_ireplace('?>', ' encoding="UTF-8"?>', $decl);
+            }
+            return $decl;
         },
         $content,
         1
     ) ?? $content;
 
-    // 4. Safety net: if the declaration still references utf-16 (the regex
-    //    above may fail on malformed declarations), replace it directly.
-    if (preg_match('/encoding=["\']utf-?16/i', substr($content, 0, 200))) {
+    // 4. Safety net: if the declaration still references a non-UTF-8 encoding
+    //    (the regex above may fail on malformed declarations), replace it directly.
+    if (preg_match('/encoding=["\'](?!utf-8)[^"\']+["\']/i', substr($content, 0, 400))) {
         $content = preg_replace(
-            '/(<\?xml\b[^?]*?)encoding=["\']utf-?16[a-z]*["\']/i',
+            '/(<\?xml\b[^?]*?)encoding=["\'][^"\']+["\']/i',
             '$1encoding="UTF-8"',
             $content,
             1

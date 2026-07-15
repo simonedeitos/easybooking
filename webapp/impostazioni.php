@@ -56,7 +56,10 @@ function settingsConfigValue(PDO $pdo, string $key, string $default = ''): strin
 }
 
 $activeTab = get('tab', 'generale');
-$requestAction = $_SERVER['REQUEST_METHOD'] === 'POST' ? post('action') : get('action');
+// Check both POST body and URL query string for the action so that
+// requests like POST /impostazioni.php?action=set_theme are handled
+// correctly even when action is not duplicated in the request body.
+$requestAction = post('action') !== '' ? post('action') : get('action');
 
 if ($requestAction !== '') {
     try {

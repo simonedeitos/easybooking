@@ -17,6 +17,22 @@ const EASYBOOKING_LOGIN_URL = 'index.php';
 
 function requireAuth(): void {
     if (empty($_SESSION['user_id'])) {
+        // For AJAX / API requests (identified by the X-CSRF-Token or
+        // X-Requested-With headers that our front-end attaches) return a
+        // JSON 401 so the client can show a helpful error message instead
+        // of trying to parse an HTML redirect page as JSON.
+        $isAjaxRequest = !empty($_SERVER['HTTP_X_CSRF_TOKEN'])
+            || (!empty($_SERVER['HTTP_X_REQUESTED_WITH'])
+                && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest');
+
+        if ($isAjaxRequest) {
+            while (ob_get_level() > 0) { ob_end_clean(); }
+            http_response_code(401);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['success' => false, 'message' => 'Sessione scaduta. Ricarica la pagina e accedi di nuovo.']);
+            exit;
+        }
+
         // Store requested URL for post-login redirect
         $_SESSION['redirect_after_login'] = $_SERVER['REQUEST_URI'];
         header('Location: ' . EASYBOOKING_LOGIN_URL);

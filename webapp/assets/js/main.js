@@ -37,8 +37,18 @@ const ThemeManager = (() => {
     }
 
     function init() {
-        const stored = localStorage.getItem(KEY) || document.body.dataset.theme || DARK;
-        apply(stored);
+        // The server sets the authoritative theme on the <html> element via
+        // the data-theme attribute.  Use that as the source of truth and
+        // sync localStorage so the two stay in agreement.  This prevents
+        // a stale localStorage value from overriding the user's saved
+        // database preference on every page load.
+        const serverTheme = document.documentElement.dataset.theme
+                         || document.body.dataset.theme;
+        const stored = localStorage.getItem(KEY);
+        const resolved = serverTheme || stored || DARK;
+        // Keep localStorage in sync with the server value.
+        localStorage.setItem(KEY, resolved);
+        apply(resolved);
     }
 
     return { init, toggle, apply };
