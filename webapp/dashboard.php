@@ -223,25 +223,28 @@ require_once __DIR__ . '/includes/header.php';
                 <?php else: ?>
                 <div class="list-group list-group-flush gap-3">
                     <?php foreach ($expiringPackages as $package):
-                        $clienteNomeDisplay = htmlspecialchars(trim(decryptField((string)$package['nome']) . ' ' . decryptField((string)$package['cognome'])));
-                        $telefonoRaw = decryptField((string)($package['telefono'] ?? ''));
+                        $clienteNome    = trim(decryptField((string)$package['nome']) . ' ' . decryptField((string)$package['cognome']));
+                        $telefonoRaw    = decryptField((string)($package['telefono'] ?? ''));
                         $telefonoDigits = preg_replace('/[^0-9+]/', '', $telefonoRaw);
+                        $pacchettoNome  = (string)$package['pacchetto_nome'];
+                        $lezioniRim     = (string)$package['lezioni_rimanenti'];
+                        $waMsg          = 'Ciao ' . $clienteNome . ', il tuo pacchetto ' . $pacchettoNome . ' è quasi esaurito (' . $lezioniRim . ' lezioni rimanenti). Vuoi rinnovarlo?';
                     ?>
                     <div class="rounded-3 border p-3 package-alert-item">
                         <div class="d-flex justify-content-between align-items-start gap-3">
                             <div>
-                                <div class="fw-semibold"><?= $clienteNomeDisplay ?></div>
-                                <div class="text-secondary small"><?= htmlspecialchars((string)$package['pacchetto_nome']) ?></div>
+                                <div class="fw-semibold"><?= htmlspecialchars($clienteNome) ?></div>
+                                <div class="text-secondary small"><?= htmlspecialchars($pacchettoNome) ?></div>
                             </div>
                             <div class="d-flex align-items-center gap-2">
                                 <?php if ($telefonoDigits !== ''): ?>
-                                <a href="https://wa.me/<?= htmlspecialchars($telefonoDigits) ?>?text=<?= urlencode('Ciao ' . trim(decryptField((string)$package['nome']) . ' ' . decryptField((string)$package['cognome'])) . ', il tuo pacchetto ' . (string)$package['pacchetto_nome'] . ' è quasi esaurito (' . (string)$package['lezioni_rimanenti'] . ' lezioni rimanenti). Vuoi rinnovarlo?') ?>"
+                                <a href="https://wa.me/<?= htmlspecialchars($telefonoDigits) ?>?text=<?= urlencode($waMsg) ?>"
                                    class="btn btn-sm btn-success" target="_blank" rel="noopener noreferrer" title="Contatta via WhatsApp">
                                     <i class="fab fa-whatsapp"></i>
                                 </a>
                                 <?php endif; ?>
                                 <span class="badge bg-warning text-dark">
-                                    <?= htmlspecialchars((string)$package['lezioni_rimanenti']) ?> rim.
+                                    <?= htmlspecialchars($lezioniRim) ?> rim.
                                 </span>
                             </div>
                         </div>

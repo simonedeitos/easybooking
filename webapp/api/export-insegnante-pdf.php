@@ -103,7 +103,12 @@ function lesson_duration(?string $start, ?string $end): string {
     $e = strtotime('1970-01-01 ' . $end);
     if ($s === false || $e === false || $e <= $s) return '—';
     $mins = (int)(($e - $s) / 60);
-    return $mins >= 60 ? floor($mins / 60) . 'h ' . ($mins % 60 > 0 ? ($mins % 60) . 'min' : '') : $mins . 'min';
+    if ($mins < 60) {
+        return $mins . 'min';
+    }
+    $hours   = (int)floor($mins / 60);
+    $minutes = $mins % 60;
+    return $minutes > 0 ? $hours . 'h ' . $minutes . 'min' : $hours . 'h';
 }
 function lesson_compenso(float $tariffa, ?string $start, ?string $end): string {
     if (!$start || !$end) return '—';

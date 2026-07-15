@@ -61,19 +61,25 @@ function requireAdmin(): void {
 }
 
 function currentUser(): array {
-    // Sync theme from DB on every page load so that direct DB changes
-    // (e.g. via phpMyAdmin) are picked up without requiring re-login.
+    // Sync theme from DB so direct DB changes (e.g. via phpMyAdmin) are
+    // picked up without requiring re-login.  We cache the result in the
+    // session and only re-query when the session value is missing or after
+    // a short grace period so the overhead is minimal.
     if (!empty($_SESSION['user_id'])) {
-        try {
-            $pdo  = Database::getInstance();
-            $stmt = $pdo->prepare('SELECT theme_preference FROM users WHERE id = ? LIMIT 1');
-            $stmt->execute([(int)$_SESSION['user_id']]);
-            $row  = $stmt->fetch(PDO::FETCH_ASSOC);
-            if ($row) {
-                $_SESSION['user_theme'] = $row['theme_preference'] ?? 'dark';
+        $lastSync = $_SESSION['_theme_synced_at'] ?? 0;
+        if (!isset($_SESSION['user_theme']) || (time() - $lastSync) > 60) {
+            try {
+                $pdo  = Database::getInstance();
+                $stmt = $pdo->prepare('SELECT theme_preference FROM users WHERE id = ? LIMIT 1');
+                $stmt->execute([(int)$_SESSION['user_id']]);
+                $row  = $stmt->fetch(PDO::FETCH_ASSOC);
+                if ($row) {
+                    $_SESSION['user_theme']        = $row['theme_preference'] ?? 'dark';
+                    $_SESSION['_theme_synced_at']  = time();
+                }
+            } catch (PDOException $e) {
+                // Non-fatal – keep session value
             }
-        } catch (PDOException $e) {
-            // Non-fatal – keep session value
         }
     }
     return [
