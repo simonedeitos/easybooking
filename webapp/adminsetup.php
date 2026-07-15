@@ -1166,19 +1166,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             session_regenerate_id(true);
             $_SESSION['cf_verified'] = true;
             $cfVerified = true;
-            $successMessage = 'Codice fiscale verificato correttamente.';
+            $successMessage = 'CF verificato correttamente.';
 
             if ($loginRequired && empty($_SESSION['user_id'])) {
                 $_SESSION['redirect_after_login'] = adminSetupUrl($activeTab);
                 redirect('index.php');
             }
         } else {
-            $errorMessage = 'Codice fiscale non valido.';
+            $errorMessage = 'CF non valido.';
         }
     } else {
         if (!$cfVerified) {
             http_response_code(403);
-            $errorMessage = 'Verifica prima il codice fiscale del webmaster.';
+            $errorMessage = 'Verifica prima il codice del webmaster.';
         } else {
             requireLoginForAdminSetup($loginRequired);
 
@@ -1603,7 +1603,7 @@ $flashHtml = renderFlashMessages();
         <div class="hero-card cf-card text-center">
             <div class="mb-3"><i class="fa-solid fa-shield-halved fa-3x text-info"></i></div>
             <h1 class="hero-title mb-2">Verifica Webmaster</h1>
-            <p class="hero-subtitle mb-4">Inserisci il codice fiscale del webmaster per accedere alla configurazione amministrativa.</p>
+            <p class="hero-subtitle mb-4">Inserisci il codice del webmaster per accedere alla configurazione amministrativa.</p>
             <?php if ($errorMessage !== ''): ?>
                 <div class="alert alert-danger text-start"><i class="fa-solid fa-circle-xmark me-2"></i><?= h($errorMessage) ?></div>
             <?php endif; ?>
@@ -1614,7 +1614,7 @@ $flashHtml = renderFlashMessages();
                 <?= csrfField() ?>
                 <input type="hidden" name="action" value="verify_cf">
                 <div class="mb-3">
-                    <label for="webmaster_cf" class="form-label">Codice Fiscale</label>
+                    <label for="webmaster_cf" class="form-label">Codice</label>
                     <div class="input-group">
                         <span class="input-group-text"><i class="fa-solid fa-id-card"></i></span>
                         <input type="text" id="webmaster_cf" name="webmaster_cf" class="form-control" maxlength="16" required autocomplete="off" placeholder="Inserisci CF webmaster">
