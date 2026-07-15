@@ -333,7 +333,7 @@ require_once __DIR__ . '/includes/header.php';
                         <th>Strumento</th>
                         <th>Stato</th>
                         <th>Pacchetto</th>
-                        <th>Actions</th>
+                        <th>Azioni</th>
                     </tr>
                 </thead>
                 <tbody>

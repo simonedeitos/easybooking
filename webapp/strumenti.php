@@ -264,7 +264,7 @@ require_once __DIR__ . '/includes/header.php';
                         <th>Giorni Attivi</th>
                         <th>Orario Mattina</th>
                         <th>Orario Pomeriggio</th>
-                        <th>Actions</th>
+                        <th>Azioni</th>
                     </tr>
                 </thead>
                 <tbody>

@@ -26,7 +26,9 @@ function reportStatuses(): array
 
 function reportHourString(int $minutes): string
 {
-    return number_format($minutes / 60, 2, ',', '.');
+    $hours = intdiv($minutes, 60);
+    $mins  = $minutes % 60;
+    return sprintf('%dh %02dm', $hours, $mins);
 }
 
 function reportCsvCell(mixed $value): string

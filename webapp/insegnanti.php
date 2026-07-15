@@ -240,7 +240,7 @@ require_once __DIR__ . '/includes/header.php';
                         <th>Telefono</th>
                         <th>Tariffa Oraria</th>
                         <th>Strumenti</th>
-                        <th>Actions</th>
+                        <th>Azioni</th>
                     </tr>
                 </thead>
                 <tbody>

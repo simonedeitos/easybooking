@@ -22,7 +22,8 @@ define('DB_HOST',         getenv('DB_HOST')     ?: 'mysql');
 define('DB_HOST_FALLBACK', getenv('DB_HOST_FALLBACK') ?: 'localhost');
 define('DB_NAME',         getenv('DB_NAME')     ?: 'u362062795_easybooking');
 define('DB_USER',         getenv('DB_USER')     ?: 'u362062795_easybooking');
-define('DB_PASS',         getenv('DB_PASS')     ?: 'D4tabas3-EasyB00k1ng-vocefutura');
+// Password MUST be set via .env file or environment variable; no default provided here.
+define('DB_PASS',         getenv('DB_PASS')     ?: '');
 define('DB_CHARSET',      'utf8mb4');
 
 class Database {

@@ -291,7 +291,7 @@ require_once __DIR__ . '/includes/header.php';
                         <th>Importo Pagato</th>
                         <th>Stato Pagamento</th>
                         <th>Fattura</th>
-                        <th>Actions</th>
+                        <th>Azioni</th>
                     </tr>
                 </thead>
                 <tbody>

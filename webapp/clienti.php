@@ -169,7 +169,7 @@ require_once __DIR__ . '/includes/header.php';
                         <th>Telefono</th>
                         <th>Email</th>
                         <th>Note</th>
-                        <th>Actions</th>
+                        <th>Azioni</th>
                     </tr>
                 </thead>
                 <tbody>
