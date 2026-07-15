@@ -185,6 +185,12 @@ function isAjax(): bool {
            strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
 }
 
+function wantsJsonResponse(): bool
+{
+    $accept = strtolower((string)($_SERVER['HTTP_ACCEPT'] ?? ''));
+    return isAjax() || str_contains($accept, 'application/json');
+}
+
 function jsonResponse(array $data, int $status = 200): never {
     // Discard any buffered output (PHP warnings, notices, HTML fragments)
     // so only clean JSON is sent to the client.
@@ -195,6 +201,21 @@ function jsonResponse(array $data, int $status = 200): never {
     header('Content-Type: application/json; charset=utf-8');
     echo json_encode($data, JSON_UNESCAPED_UNICODE);
     exit;
+}
+
+function respondOperationResult(
+    bool $success,
+    string $message,
+    string $redirectUrl,
+    int $status = 200,
+    array $payload = []
+): never {
+    if (wantsJsonResponse()) {
+        jsonResponse(array_merge(['success' => $success, 'message' => $message], $payload), $status);
+    }
+
+    setFlash($success ? 'success' : ($status >= 500 ? 'danger' : 'warning'), $message);
+    redirect($redirectUrl);
 }
 
 function appName(): string {

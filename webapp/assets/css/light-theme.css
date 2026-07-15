@@ -284,3 +284,38 @@ body[data-theme="light"] .small {
 body[data-theme="light"] .badge {
     color: inherit;
 }
+
+body[data-theme="light"] .btn-outline-light {
+    color: var(--text-primary) !important;
+    border-color: var(--border-color) !important;
+    background-color: #ffffff;
+}
+
+body[data-theme="light"] .btn-outline-light:hover,
+body[data-theme="light"] .btn-outline-light:focus {
+    color: var(--text-primary) !important;
+    background-color: #f8f9fa !important;
+    border-color: var(--border-color) !important;
+}
+
+body[data-theme="light"] .btn-close-white {
+    filter: none;
+}
+
+body[data-theme="light"] .detail-box,
+body[data-theme="light"] .instrument-option,
+body[data-theme="light"] .package-alert-item {
+    background: #ffffff !important;
+    color: var(--text-primary) !important;
+}
+
+body[data-theme="light"] .fc,
+body[data-theme="light"] .fc-theme-standard td,
+body[data-theme="light"] .fc-theme-standard th,
+body[data-theme="light"] .fc .fc-col-header-cell-cushion,
+body[data-theme="light"] .fc .fc-timegrid-axis-cushion,
+body[data-theme="light"] .fc .fc-timegrid-slot-label-cushion,
+body[data-theme="light"] .fc .fc-toolbar-title,
+body[data-theme="light"] #cal-title {
+    color: var(--text-primary) !important;
+}

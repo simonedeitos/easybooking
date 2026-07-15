@@ -53,6 +53,8 @@ const ThemeManager = (() => {
 })();
 
 // ── CSRF Helpers ─────────────────────────────────────────────
+const MAX_ERROR_MESSAGE_LENGTH = 240;
+
 function getCsrfToken() {
     const meta = document.querySelector('meta[name="csrf-token"]');
     return meta ? meta.getAttribute('content') : '';
@@ -61,14 +63,36 @@ function getCsrfToken() {
 // Auto-attach CSRF and AJAX marker to all non-GET fetch requests
 const _origFetch = window.fetch;
 window.fetch = function(url, opts = {}) {
+    if (!opts.headers) opts.headers = {};
+    opts.headers['X-Requested-With'] = 'XMLHttpRequest';
+
     if (opts.method && opts.method.toUpperCase() !== 'GET') {
-        if (!opts.headers) opts.headers = {};
         opts.headers['X-CSRF-Token'] = getCsrfToken();
-        // Mark as XMLHttpRequest so the server can detect AJAX calls
-        // and return JSON error responses instead of HTML redirects.
-        opts.headers['X-Requested-With'] = 'XMLHttpRequest';
     }
-    return _origFetch(url, opts);
+    return _origFetch(url, opts).then((response) => {
+        const responseClone = response.clone();
+        const originalJson = response.json.bind(response);
+
+        response.json = async () => {
+            try {
+                return await originalJson();
+            } catch (error) {
+                const rawBody = await responseClone.text();
+                const parsedDocument = new DOMParser().parseFromString(rawBody, 'text/html');
+                const cleanText = (parsedDocument.body?.textContent || rawBody)
+                    .replace(/\s+/g, ' ')
+                    .trim();
+
+                throw new Error(
+                    cleanText !== ''
+                        ? cleanText.slice(0, MAX_ERROR_MESSAGE_LENGTH)
+                        : `Risposta non valida dal server${response.status ? ` (HTTP ${response.status})` : ''}.`
+                );
+            }
+        };
+
+        return response;
+    });
 };
 
 // ── Sidebar Toggle ────────────────────────────────────────────

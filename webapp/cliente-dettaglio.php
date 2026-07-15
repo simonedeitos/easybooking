@@ -649,4 +649,26 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 </script>
+<style>
+body[data-theme="light"] .detail-box,
+body[data-theme="light"] #tab-dati .card,
+body[data-theme="light"] #tab-lezioni .card,
+body[data-theme="light"] #tab-acquisti .card,
+body[data-theme="light"] #tab-rinnovo .card,
+body[data-theme="light"] #spostaModal .modal-content {
+    background: #ffffff;
+    color: var(--text-primary);
+}
+
+body[data-theme="light"] #clienteTabs .nav-link,
+body[data-theme="light"] #clienteTabsContent dt,
+body[data-theme="light"] #clienteTabsContent dd,
+body[data-theme="light"] #clienteTabsContent .form-text {
+    color: var(--text-primary) !important;
+}
+
+body[data-theme="light"] #clienteTabsContent .text-secondary {
+    color: var(--text-secondary) !important;
+}
+</style>
 <?php require_once __DIR__ . '/includes/footer.php'; ?>

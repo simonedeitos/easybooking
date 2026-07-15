@@ -66,7 +66,7 @@ if ($requestAction !== '') {
                      WHERE id = ?'
                 );
                 $stmt->execute([$nome, $cognome, $telefono, $email, $indirizzo, $codiceFiscale, $note, $megaPubblica, $megaLocale, $id]);
-                jsonResponse(['success' => true, 'message' => 'Cliente aggiornato con successo.']);
+                respondOperationResult(true, 'Cliente aggiornato con successo.', 'clienti.php');
             }
 
             $stmt = $pdo->prepare(
@@ -74,7 +74,7 @@ if ($requestAction !== '') {
                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
             );
             $stmt->execute([$nome, $cognome, $telefono, $email, $indirizzo, $codiceFiscale, $note, $megaPubblica, $megaLocale]);
-            jsonResponse(['success' => true, 'message' => 'Cliente creato con successo.', 'id' => (int)$pdo->lastInsertId()]);
+            respondOperationResult(true, 'Cliente creato con successo.', 'clienti.php', 200, ['id' => (int)$pdo->lastInsertId()]);
         }
 
         if ($requestAction === 'delete' && $_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -104,7 +104,7 @@ if ($requestAction !== '') {
                 jsonResponse(['success' => false, 'message' => 'Cliente non trovato.'], 404);
             }
 
-            jsonResponse(['success' => true, 'message' => 'Cliente eliminato con successo.']);
+            respondOperationResult(true, 'Cliente eliminato con successo.', 'clienti.php');
         }
 
         if ($requestAction === 'get') {
@@ -124,7 +124,7 @@ if ($requestAction !== '') {
             jsonResponse(['success' => true, 'client' => $client]);
         }
     } catch (PDOException $e) {
-        jsonResponse(['success' => false, 'message' => 'Errore durante l\'operazione richiesta.'], 500);
+        respondOperationResult(false, 'Errore durante l\'operazione richiesta.', 'clienti.php', 500);
     }
 }
 

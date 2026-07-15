@@ -137,7 +137,7 @@ if ($requestAction !== '') {
                     $pomFine,
                     $id,
                 ]);
-                jsonResponse(['success' => true, 'message' => 'Strumento aggiornato con successo.']);
+                respondOperationResult(true, 'Strumento aggiornato con successo.', 'strumenti.php');
             }
 
             $stmt = $pdo->prepare(
@@ -160,7 +160,7 @@ if ($requestAction !== '') {
                 $pomFine,
             ]);
 
-            jsonResponse(['success' => true, 'message' => 'Strumento creato con successo.', 'id' => (int)$pdo->lastInsertId()]);
+            respondOperationResult(true, 'Strumento creato con successo.', 'strumenti.php', 200, ['id' => (int)$pdo->lastInsertId()]);
         }
 
         if ($requestAction === 'delete' && $_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -194,7 +194,7 @@ if ($requestAction !== '') {
 
             $stmt = $pdo->prepare('DELETE FROM strumenti WHERE id = ?');
             $stmt->execute([$id]);
-            jsonResponse(['success' => true, 'message' => 'Strumento eliminato con successo.']);
+            respondOperationResult(true, 'Strumento eliminato con successo.', 'strumenti.php');
         }
 
         if ($requestAction === 'get') {
@@ -213,7 +213,7 @@ if ($requestAction !== '') {
             jsonResponse(['success' => true, 'strumento' => $instrument]);
         }
     } catch (PDOException $e) {
-        jsonResponse(['success' => false, 'message' => 'Errore durante la gestione degli strumenti.'], 500);
+        respondOperationResult(false, 'Errore durante la gestione degli strumenti.', 'strumenti.php', 500);
     }
 }
 
