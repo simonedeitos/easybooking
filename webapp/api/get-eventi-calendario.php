@@ -27,9 +27,7 @@ function calendarRequestDate(?string $value): ?string
         return null;
     }
 
-    // Defensive guard: valid Unix timestamps should format successfully.
-    $formatted = date('Y-m-d', $timestamp);
-    return $formatted === false ? null : $formatted;
+    return date('Y-m-d', $timestamp);
 }
 
 function calendarContrastColor(string $hexColor): string
@@ -92,8 +90,8 @@ try {
 
     $events = [];
     foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
-        $cliente    = trim(decryptField((string)$row['cliente_nome']) . ' ' . decryptField((string)$row['cliente_cognome'])) ?: 'N/D';
-        $insegnante = trim(decryptField((string)$row['insegnante_nome']) . ' ' . decryptField((string)$row['insegnante_cognome'])) ?: 'N/D';
+        $cliente    = decryptFullName($row['cliente_nome'], $row['cliente_cognome'], 'N/D');
+        $insegnante = decryptFullName($row['insegnante_nome'], $row['insegnante_cognome'], 'N/D');
         $strumento  = trim((string)($row['strumento'] ?? ''));
         $stato      = (string)$row['stato'];
         $title      = $cliente;

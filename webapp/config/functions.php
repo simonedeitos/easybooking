@@ -236,3 +236,17 @@ function paymentBadge(string $stato): string {
     $color = $map[$stato] ?? 'secondary';
     return '<span class="badge bg-' . $color . '">' . htmlspecialchars($stato) . '</span>';
 }
+
+function decryptFullName(?string $nome, ?string $cognome, string $fallback = ''): string
+{
+    $parts = [];
+    if ($nome !== null && $nome !== '') {
+        $parts[] = decryptField($nome);
+    }
+    if ($cognome !== null && $cognome !== '') {
+        $parts[] = decryptField($cognome);
+    }
+
+    $fullName = trim(implode(' ', array_filter($parts, static fn(string $part): bool => $part !== '')));
+    return $fullName !== '' ? $fullName : $fallback;
+}

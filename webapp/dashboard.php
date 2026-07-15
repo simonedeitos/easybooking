@@ -22,19 +22,14 @@ $weekdayChartData = array_fill(0, 7, 0);
 $revenueChartData = array_fill(0, 12, 0.0);
 $dashboardError = '';
 
-function dashboardDecryptPart(?string $value): string
-{
-    return $value === null ? '' : decryptField($value);
-}
-
 function dashboardDecryptName(?string $nome, ?string $cognome): string
 {
-    return trim(dashboardDecryptPart($nome) . ' ' . dashboardDecryptPart($cognome));
+    return decryptFullName($nome, $cognome, 'N/D');
 }
 
 function dashboardWhatsAppNumber(?string $telefono): string
 {
-    return preg_replace('/[^0-9+]/', '', dashboardDecryptPart($telefono));
+    return preg_replace('/[^0-9+]/', '', $telefono === null ? '' : decryptField($telefono));
 }
 
 try {
@@ -93,7 +88,7 @@ try {
     $stmt->execute();
     $expiringPackagesCount = (int)$stmt->fetchColumn();
 
-    $stmt = $pdo->prepare($expiringSql . ' ORDER BY lezioni_rimanenti ASC, a.data_acquisto DESC LIMIT ?');
+    $stmt = $pdo->prepare($expiringSql . ' ORDER BY (COALESCE(a.numero_lezioni, pk.numero_lezioni, 0) - COALESCE(ls.lezioni_svolte, 0)) ASC, a.data_acquisto DESC LIMIT ?');
     $stmt->bindValue(1, $maxExpiringPackages, PDO::PARAM_INT);
     $stmt->execute();
     $expiringPackages = $stmt->fetchAll();
@@ -218,8 +213,8 @@ require_once __DIR__ . '/includes/header.php';
                                 <tr>
                                     <td><?= htmlspecialchars(formatDate((string)$lesson['data'])) ?></td>
                                     <td><?= htmlspecialchars(substr((string)$lesson['ora_inizio'], 0, 5) . ' - ' . substr((string)$lesson['ora_fine'], 0, 5)) ?></td>
-                                    <td><?= htmlspecialchars(dashboardDecryptName($lesson['nome'], $lesson['cognome']) ?: 'N/D') ?></td>
-                                    <td><?= htmlspecialchars(dashboardDecryptName($lesson['ins_nome'], $lesson['ins_cognome']) ?: 'N/D') ?></td>
+                                    <td><?= htmlspecialchars(dashboardDecryptName($lesson['nome'], $lesson['cognome'])) ?></td>
+                                    <td><?= htmlspecialchars(dashboardDecryptName($lesson['ins_nome'], $lesson['ins_cognome'])) ?></td>
                                     <td><?= statusBadge((string)$lesson['stato']) ?></td>
                                 </tr>
                                 <?php endforeach; ?>

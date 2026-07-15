@@ -20,8 +20,7 @@ const CalendarColors = {
 
 function getTeacherColor(teacherId) {
     if (!CalendarColors.teacherMap[teacherId]) {
-        let numericId = Number.parseInt(String(teacherId), 10);
-        numericId = Number.isFinite(numericId) ? Math.abs(numericId) : 0;
+        const numericId = Math.abs(parseInt(teacherId, 10) || 0);
         const idx = numericId % CalendarColors.byTeacher.length;
         CalendarColors.teacherMap[teacherId] = CalendarColors.byTeacher[idx];
     }
@@ -74,7 +73,7 @@ function initCalendar(options = {}) {
                     })
                     .then((data) => {
                         if (!Array.isArray(data)) {
-                            const message = data?.error || 'Risposta calendario non valida.';
+                            const message = data?.error || 'Formato risposta calendario non valido. Contatta il supporto se il problema persiste.';
                             throw new Error(message);
                         }
                         successCallback(data);
