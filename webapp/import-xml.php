@@ -35,8 +35,57 @@ function xmlImportSplitTeacherInstruments(SimpleXMLElement $node): array {
 
 function xmlImportEnsureRuntimeDir(): string { if (!is_dir(EASYBOOKING_XML_IMPORT_DIR) && !mkdir(EASYBOOKING_XML_IMPORT_DIR, 0700, true) && !is_dir(EASYBOOKING_XML_IMPORT_DIR)) throw new RuntimeException('Impossibile creare la directory di importazione XML.'); return EASYBOOKING_XML_IMPORT_DIR; }
 function xmlImportMoveUpload(array $file): string { $dir = xmlImportEnsureRuntimeDir(); $safe = preg_replace('/[^a-zA-Z0-9._-]/', '-', basename((string)($file['name'] ?? 'upload.xml'))) ?: 'upload.xml'; $target = $dir . '/' . date('YmdHis') . '_' . bin2hex(random_bytes(6)) . '_' . $safe; if (!move_uploaded_file((string)$file['tmp_name'], $target)) throw new RuntimeException('Impossibile spostare il file caricato ' . $safe . '.'); @chmod($target, 0600); return $target; }
-function xmlImportLoadContent(string $path, string $originalName, array &$log): string { $content = decryptXMLFile($path); if ($content !== false) { $content = preg_replace('/^\xEF\xBB\xBF/', '', $content) ?? $content; if (str_starts_with(ltrim($content), '<')) { $log[] = '🔐 ' . $originalName . ': decrittazione completata'; return $content; } } $raw = file_get_contents($path); if ($raw === false) throw new RuntimeException('Impossibile leggere il file ' . $originalName . '.'); $raw = preg_replace('/^\xEF\xBB\xBF/', '', $raw) ?? $raw; if (!str_starts_with(ltrim($raw), '<')) throw new RuntimeException('Il file ' . $originalName . ' non contiene XML valido.'); $log[] = 'ℹ️ ' . $originalName . ': importato come XML non cifrato'; return $raw; }
-function xmlImportParseDocument(string $content, string $name): SimpleXMLElement { libxml_use_internal_errors(true); $xml = simplexml_load_string($content, SimpleXMLElement::class, LIBXML_NONET | LIBXML_NOCDATA); if ($xml === false) { $errors = []; foreach (libxml_get_errors() as $error) $errors[] = trim($error->message); libxml_clear_errors(); throw new RuntimeException('XML non valido per ' . $name . ': ' . implode('; ', $errors)); } libxml_clear_errors(); return $xml; }
+function xmlImportFixEncoding(string $content, string &$detectedEncoding): string
+{
+    // Detect encoding via BOM (most reliable)
+    if (str_starts_with($content, "\xFF\xFE")) {
+        $detectedEncoding = 'UTF-16LE';
+        $content = mb_convert_encoding(substr($content, 2), 'UTF-8', 'UTF-16LE');
+    } elseif (str_starts_with($content, "\xFE\xFF")) {
+        $detectedEncoding = 'UTF-16BE';
+        $content = mb_convert_encoding(substr($content, 2), 'UTF-8', 'UTF-16BE');
+    } elseif (str_starts_with($content, "\xEF\xBB\xBF")) {
+        $detectedEncoding = 'UTF-8';
+        $content = substr($content, 3);
+    } else {
+        $enc = mb_detect_encoding($content, ['UTF-8', 'UTF-16LE', 'UTF-16BE', 'UTF-16', 'Windows-1252', 'ISO-8859-1'], true);
+        $detectedEncoding = $enc ?: 'UTF-8';
+        if ($enc && $enc !== 'UTF-8') {
+            $converted = mb_convert_encoding($content, 'UTF-8', $enc);
+            if ($converted !== false) {
+                $content = $converted;
+            }
+        }
+    }
+    // Fix wrong encoding declaration (e.g. UTF-16 declared but content is now UTF-8)
+    $content = preg_replace(
+        '/<\?xml\s+version="1\.0"\s+encoding="UTF-16[^"]*"\s*\?>/i',
+        '<?xml version="1.0" encoding="UTF-8"?>',
+        $content
+    ) ?? $content;
+    return $content;
+}
+function xmlImportLoadContent(string $path, string $originalName, array &$log, string &$detectedEncoding = ''): string
+{
+    $detectedEncoding = 'UTF-8';
+    $content = decryptXMLFile($path);
+    if ($content !== false) {
+        $content = xmlImportFixEncoding($content, $detectedEncoding);
+        $log[] = '🔍 ' . $originalName . ': encoding rilevato: ' . $detectedEncoding . ($detectedEncoding !== 'UTF-8' ? ' → convertito a UTF-8' : '');
+        if (str_starts_with(ltrim($content), '<')) {
+            $log[] = '🔐 ' . $originalName . ': decrittazione completata';
+            return $content;
+        }
+    }
+    $raw = file_get_contents($path);
+    if ($raw === false) throw new RuntimeException('Impossibile leggere il file ' . $originalName . '.');
+    $raw = xmlImportFixEncoding($raw, $detectedEncoding);
+    $log[] = '🔍 ' . $originalName . ': encoding rilevato: ' . $detectedEncoding . ($detectedEncoding !== 'UTF-8' ? ' → convertito a UTF-8' : '');
+    if (!str_starts_with(ltrim($raw), '<')) throw new RuntimeException('Il file ' . $originalName . ' non contiene XML valido.');
+    $log[] = 'ℹ️ ' . $originalName . ': importato come XML non cifrato';
+    return $raw;
+}
+function xmlImportParseDocument(string $content, string $name, string $detectedEncoding = ''): SimpleXMLElement { libxml_use_internal_errors(true); $xml = simplexml_load_string($content, SimpleXMLElement::class, LIBXML_NONET | LIBXML_NOCDATA); if ($xml === false) { $errors = []; foreach (libxml_get_errors() as $error) $errors[] = trim($error->message); libxml_clear_errors(); $suffix = $detectedEncoding !== '' ? ' (Encoding rilevato: ' . $detectedEncoding . ')' : ''; throw new RuntimeException('XML non valido per ' . $name . ': ' . implode('; ', $errors) . $suffix); } libxml_clear_errors(); return $xml; }
 function xmlImportDetectType(SimpleXMLElement $xml, string $fileName): ?string { $root = strtolower($xml->getName()); $byRoot = ['clienti' => 'clienti', 'insegnanti' => 'insegnanti', 'prenotazioni' => 'prenotazioni', 'acquisti' => 'acquisti', 'pacchetti' => 'pacchetti', 'strumentilist' => 'strumenti', 'tariffedicoppia' => 'tariffe_coppia', 'impostazionigenerali' => 'impostazioni_generali']; if (isset($byRoot[$root])) return $byRoot[$root]; $byFile = ['clienti.xml' => 'clienti', 'insegnanti.xml' => 'insegnanti', 'prenotazioni.xml' => 'prenotazioni', 'acquisti.xml' => 'acquisti', 'pacchetti.xml' => 'pacchetti', 'strumenti.xml' => 'strumenti', 'impostazioni-generali.xml' => 'impostazioni_generali', 'tariffe_coppia.xml' => 'tariffe_coppia']; return $byFile[strtolower(basename($fileName))] ?? null; }
 function xmlImportEnsureInstrumentByName(PDO $pdo, string $name, array &$log): int { $name = xmlImportCleanText($name, 100); if ($name === '') throw new RuntimeException('Nome strumento non valido.'); $stmt = $pdo->prepare('SELECT id FROM strumenti WHERE nome = ? LIMIT 1'); $stmt->execute([$name]); $id = $stmt->fetchColumn(); if ($id !== false) return (int)$id; $stmt = $pdo->prepare('INSERT INTO strumenti (nome, lun_attivo, mar_attivo, mer_attivo, gio_attivo, ven_attivo, sab_attivo, dom_attivo, matt_inizio, matt_fine, pom_inizio, pom_fine) VALUES (?, 1, 1, 1, 1, 1, 0, 0, "09:00:00", "13:00:00", "15:00:00", "19:00:00")'); $stmt->execute([$name]); $log[] = 'ℹ️ Creato strumento mancante: ' . $name; return (int)$pdo->lastInsertId(); }
 
@@ -111,8 +160,9 @@ if ($requestAction === 'import_xml' && $_SERVER['REQUEST_METHOD'] === 'POST') {
 
         foreach ($uploaded as $file) {
             $currentRuntimePath = xmlImportMoveUpload($file);
-            $content = xmlImportLoadContent($currentRuntimePath, $file['name'], $log);
-            $xml = xmlImportParseDocument($content, $file['name']);
+            $detectedEncoding = '';
+            $content = xmlImportLoadContent($currentRuntimePath, $file['name'], $log, $detectedEncoding);
+            $xml = xmlImportParseDocument($content, $file['name'], $detectedEncoding);
             $type = xmlImportDetectType($xml, $file['name']);
             if ($type === null) throw new RuntimeException('Tipo XML non riconosciuto per ' . $file['name']);
             $processedFiles[] = ['name' => $file['name'], 'type' => $type, 'xml' => $xml, 'path' => $currentRuntimePath];

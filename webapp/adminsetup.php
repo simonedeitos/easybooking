@@ -423,11 +423,44 @@ function moveUploadedXmlToProject(array $file): string
     return $targetPath;
 }
 
-function loadXmlContentFromEncryptedFile(string $filePath, string $originalName, array &$log): string
+function fixXmlEncoding(string $content, string &$detectedEncoding): string
 {
+    // Detect encoding via BOM (most reliable)
+    if (str_starts_with($content, "\xFF\xFE")) {
+        $detectedEncoding = 'UTF-16LE';
+        $content = mb_convert_encoding(substr($content, 2), 'UTF-8', 'UTF-16LE');
+    } elseif (str_starts_with($content, "\xFE\xFF")) {
+        $detectedEncoding = 'UTF-16BE';
+        $content = mb_convert_encoding(substr($content, 2), 'UTF-8', 'UTF-16BE');
+    } elseif (str_starts_with($content, "\xEF\xBB\xBF")) {
+        $detectedEncoding = 'UTF-8';
+        $content = substr($content, 3);
+    } else {
+        $enc = mb_detect_encoding($content, ['UTF-8', 'UTF-16LE', 'UTF-16BE', 'UTF-16', 'Windows-1252', 'ISO-8859-1'], true);
+        $detectedEncoding = $enc ?: 'UTF-8';
+        if ($enc && $enc !== 'UTF-8') {
+            $converted = mb_convert_encoding($content, 'UTF-8', $enc);
+            if ($converted !== false) {
+                $content = $converted;
+            }
+        }
+    }
+    // Fix wrong encoding declaration (e.g. UTF-16 declared but content is now UTF-8)
+    $content = preg_replace(
+        '/<\?xml\s+version="1\.0"\s+encoding="UTF-16[^"]*"\s*\?>/i',
+        '<?xml version="1.0" encoding="UTF-8"?>',
+        $content
+    ) ?? $content;
+    return $content;
+}
+
+function loadXmlContentFromEncryptedFile(string $filePath, string $originalName, array &$log, string &$detectedEncoding = ''): string
+{
+    $detectedEncoding = 'UTF-8';
     $content = decryptXMLFile($filePath);
     if ($content !== false) {
-        $content = preg_replace('/^\xEF\xBB\xBF/', '', $content) ?? $content;
+        $content = fixXmlEncoding($content, $detectedEncoding);
+        $log[] = '🔍 ' . $originalName . ': encoding rilevato: ' . $detectedEncoding . ($detectedEncoding !== 'UTF-8' ? ' → convertito a UTF-8' : '');
         if (str_starts_with(ltrim($content), '<')) {
             $log[] = '🔐 ' . $originalName . ': decrittazione completata.';
             return $content;
@@ -439,7 +472,8 @@ function loadXmlContentFromEncryptedFile(string $filePath, string $originalName,
         throw new RuntimeException('Impossibile leggere il file ' . $originalName . '.');
     }
 
-    $fallback = preg_replace('/^\xEF\xBB\xBF/', '', $fallback) ?? $fallback;
+    $fallback = fixXmlEncoding($fallback, $detectedEncoding);
+    $log[] = '🔍 ' . $originalName . ': encoding rilevato: ' . $detectedEncoding . ($detectedEncoding !== 'UTF-8' ? ' → convertito a UTF-8' : '');
     if (!str_starts_with(ltrim($fallback), '<')) {
         throw new RuntimeException('Il file ' . $originalName . ' non contiene XML valido dopo la decrittazione.');
     }
@@ -448,7 +482,7 @@ function loadXmlContentFromEncryptedFile(string $filePath, string $originalName,
     return $fallback;
 }
 
-function parseXmlDocument(string $content, string $originalName): SimpleXMLElement
+function parseXmlDocument(string $content, string $originalName, string $detectedEncoding = ''): SimpleXMLElement
 {
     libxml_use_internal_errors(true);
     $xml = simplexml_load_string($content, SimpleXMLElement::class, LIBXML_NONET | LIBXML_NOCDATA);
@@ -458,7 +492,8 @@ function parseXmlDocument(string $content, string $originalName): SimpleXMLEleme
             $messages[] = trim($error->message);
         }
         libxml_clear_errors();
-        throw new RuntimeException('XML non valido per ' . $originalName . ': ' . implode('; ', $messages));
+        $suffix = $detectedEncoding !== '' ? ' (Encoding rilevato: ' . $detectedEncoding . ')' : '';
+        throw new RuntimeException('XML non valido per ' . $originalName . ': ' . implode('; ', $messages) . $suffix);
     }
     libxml_clear_errors();
     return $xml;
@@ -1091,8 +1126,9 @@ function handleXmlImportAction(): never
 
                 $log[] = '➡️ Avvio importazione: ' . $expectedName;
                 $temporaryPath = moveUploadedXmlToProject($uploadedFiles[$expectedName]);
-                $xmlContent = loadXmlContentFromEncryptedFile($temporaryPath, $expectedName, $log);
-                $xml = parseXmlDocument($xmlContent, $expectedName);
+                $detectedEncoding = '';
+                $xmlContent = loadXmlContentFromEncryptedFile($temporaryPath, $expectedName, $log, $detectedEncoding);
+                $xml = parseXmlDocument($xmlContent, $expectedName, $detectedEncoding);
                 $handler = $handlers[$expectedName] ?? null;
                 if ($handler === null || !function_exists($handler)) {
                     throw new RuntimeException('Handler mancante per ' . $expectedName . '.');

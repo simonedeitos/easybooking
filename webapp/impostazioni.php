@@ -53,7 +53,7 @@ function settingsConfigValue(PDO $pdo, string $key, string $default = ''): strin
 }
 
 $activeTab = get('tab', 'generale');
-$requestAction = $_SERVER['REQUEST_METHOD'] === 'POST' ? post('action') : get('action');
+$requestAction = $_SERVER['REQUEST_METHOD'] === 'POST' ? (post('action') ?: get('action')) : get('action');
 
 if ($requestAction !== '') {
     try {
