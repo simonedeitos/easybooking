@@ -1,10 +1,29 @@
 <?php
-define('DB_HOST', 'mysql');
-define('DB_HOST_FALLBACK', 'localhost');
-define('DB_NAME', 'u362062795_easybooking');
-define('DB_USER', 'u362062795_easybooking');
-define('DB_PASS', 'D4tabas3-EasyB00k1ng-vocefutura');
-define('DB_CHARSET', 'utf8mb4');
+// Load optional .env file (if present, takes precedence over defaults below)
+$_envFile = dirname(__DIR__) . '/.env';
+if (is_file($_envFile)) {
+    foreach (file($_envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $_line) {
+        $_line = trim($_line);
+        if ($_line === '' || $_line[0] === '#' || strpos($_line, '=') === false) {
+            continue;
+        }
+        [$_k, $_v] = array_map('trim', explode('=', $_line, 2));
+        if (!isset($_SERVER[$_k]) && !isset($_ENV[$_k])) {
+            putenv("{$_k}={$_v}");
+            $_ENV[$_k] = $_v;
+        }
+    }
+    unset($_envFile, $_line, $_k, $_v);
+} else {
+    unset($_envFile);
+}
+
+define('DB_HOST',         getenv('DB_HOST')     ?: 'mysql');
+define('DB_HOST_FALLBACK', getenv('DB_HOST_FALLBACK') ?: 'localhost');
+define('DB_NAME',         getenv('DB_NAME')     ?: 'u362062795_easybooking');
+define('DB_USER',         getenv('DB_USER')     ?: 'u362062795_easybooking');
+define('DB_PASS',         getenv('DB_PASS')     ?: 'D4tabas3-EasyB00k1ng-vocefutura');
+define('DB_CHARSET',      'utf8mb4');
 
 class Database {
     private static ?PDO $instance = null;

@@ -1,6 +1,10 @@
 <?php
 require_once __DIR__ . '/database.php';
 
+// These constants are fixed for compatibility with the C# EasyBooking desktop app.
+// They replicate the Rfc2898DeriveBytes(password, UTF8("EasyBookingSalt")) defaults
+// used by the WinForms exe to AES-encrypt the XML data files.
+// They MUST NOT be changed – they are algorithmic constants, not secrets.
 define('XML_ENCRYPTION_PASSWORD', 'EasyBooking!2025');
 define('XML_ENCRYPTION_SALT',     'EasyBookingSalt');
 define('XML_PBKDF2_ITERATIONS',   1000);

@@ -1,0 +1,13 @@
+# Environment / secrets – NEVER commit these
+webapp/.env
+
+# Admin setup upload temp directory
+webapp/.adminsetup-imports/
+
+# PHP cache / vendor
+vendor/
+*.cache
+
+# OS files
+.DS_Store
+Thumbs.db

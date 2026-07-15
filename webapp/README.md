@@ -92,14 +92,25 @@ Se i file XML non sono criptati (plain XML), vengono importati direttamente.
 
 ## Credenziali Database
 
-Configurate in `config/database.php`:
+Configurate tramite variabili d'ambiente o file `.env` nella cartella `webapp/`.
 
-| Parametro | Valore |
-|-----------|--------|
-| Host | `mysql` (fallback: `localhost`) |
-| Database | `u362062795_easybooking` |
-| Username | `u362062795_easybooking` |
-| Password | `D4tabas3-EasyB00k1ng-vocefutura` |
+### Opzione A – File `.env` (raccomandato)
+
+Copia `.env.example` in `.env` e inserisci le tue credenziali:
+
+```
+DB_HOST=mysql
+DB_HOST_FALLBACK=localhost
+DB_NAME=il_tuo_database
+DB_USER=il_tuo_utente
+DB_PASS=la_tua_password
+```
+
+Il file `.env` non deve mai essere committato nel repository (già aggiunto al `.gitignore`).
+
+### Opzione B – Valori di default in `config/database.php`
+
+I valori di fallback (usati se `.env` non è presente) si trovano nelle costanti PHP in `config/database.php`. Per ambienti di produzione si raccomanda di utilizzare sempre l'Opzione A.
 
 ---
 
