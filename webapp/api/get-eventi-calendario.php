@@ -23,7 +23,12 @@ function calendarRequestDate(?string $value): ?string
     }
 
     $timestamp = strtotime($value);
-    return $timestamp === false ? null : date('Y-m-d', $timestamp);
+    if ($timestamp === false) {
+        return null;
+    }
+
+    $formatted = date('Y-m-d', $timestamp);
+    return $formatted === false ? null : $formatted;
 }
 
 function calendarContrastColor(string $hexColor): string
@@ -79,8 +84,8 @@ try {
     $stmt->execute($params);
 
     $teacherColors = [
-        '#7c6af7', '#16a34a', '#dc2626', '#d97706', '#0891b2',
-        '#8b5cf6', '#06b6d4', '#f59e0b', '#10b981', '#ef4444',
+        '#7c6af7', '#89dceb', '#a6e3a1', '#f9e2af', '#f38ba8',
+        '#cba6f7', '#fab387', '#94e2d5', '#eba0ac', '#b4befe',
     ];
     $colorCount = count($teacherColors);
 
@@ -111,10 +116,6 @@ try {
                 'stato'         => $stato,
                 'cliente'       => $cliente,
                 'insegnante'    => $insegnante,
-                'cliente_nome'  => decryptField((string)$row['cliente_nome']),
-                'cliente_cognome' => decryptField((string)$row['cliente_cognome']),
-                'insegnante_nome' => decryptField((string)$row['insegnante_nome']),
-                'insegnante_cognome' => decryptField((string)$row['insegnante_cognome']),
                 'insegnante_id' => $insegnanteId,
                 'strumento'     => $strumento,
                 'note'          => (string)($row['note'] ?? ''),

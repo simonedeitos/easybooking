@@ -22,7 +22,9 @@ function getTeacherColor(teacherId) {
     if (!CalendarColors.teacherMap[teacherId]) {
         let numericId = Number.parseInt(String(teacherId), 10);
         if (!Number.isFinite(numericId)) {
-            numericId = Array.from(String(teacherId)).reduce((hash, char) => hash + char.charCodeAt(0), 0);
+            numericId = Array.from(String(teacherId)).reduce((hash, char) => {
+                return ((hash << 5) - hash + char.charCodeAt(0)) >>> 0;
+            }, 0);
         }
         numericId = Math.abs(numericId);
         const idx = numericId % CalendarColors.byTeacher.length;
@@ -92,7 +94,7 @@ function initCalendar(options = {}) {
             // Color events
             eventDidMount(info) {
                 const ev = info.event;
-                const extProps = ev.extendedProps || {};
+                const extProps = ev.extendedProps;
                 let color = ev.backgroundColor || '#7c6af7';
                 if (colorMode === 'teacher') {
                     color = getTeacherColor(extProps.insegnante_id);

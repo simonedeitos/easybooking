@@ -93,7 +93,8 @@ try {
     $stmt->execute();
     $expiringPackagesCount = (int)$stmt->fetchColumn();
 
-    $stmt = $pdo->prepare($expiringSql . ' ORDER BY (COALESCE(a.numero_lezioni, pk.numero_lezioni, 0) - COALESCE(ls.lezioni_svolte, 0)) ASC, a.data_acquisto DESC LIMIT ' . (int)$maxExpiringPackages);
+    $stmt = $pdo->prepare($expiringSql . ' ORDER BY (COALESCE(a.numero_lezioni, pk.numero_lezioni, 0) - COALESCE(ls.lezioni_svolte, 0)) ASC, a.data_acquisto DESC LIMIT ?');
+    $stmt->bindValue(1, $maxExpiringPackages, PDO::PARAM_INT);
     $stmt->execute();
     $expiringPackages = $stmt->fetchAll();
 
@@ -217,8 +218,8 @@ require_once __DIR__ . '/includes/header.php';
                                 <tr>
                                     <td><?= htmlspecialchars(formatDate((string)$lesson['data'])) ?></td>
                                     <td><?= htmlspecialchars(substr((string)$lesson['ora_inizio'], 0, 5) . ' - ' . substr((string)$lesson['ora_fine'], 0, 5)) ?></td>
-                                    <td><?= htmlspecialchars(dashboardDecryptName((string)$lesson['nome'], (string)$lesson['cognome']) ?: 'N/D') ?></td>
-                                    <td><?= htmlspecialchars(dashboardDecryptName((string)$lesson['ins_nome'], (string)$lesson['ins_cognome']) ?: 'N/D') ?></td>
+                                    <td><?= htmlspecialchars(dashboardDecryptName($lesson['nome'], $lesson['cognome']) ?: 'N/D') ?></td>
+                                    <td><?= htmlspecialchars(dashboardDecryptName($lesson['ins_nome'], $lesson['ins_cognome']) ?: 'N/D') ?></td>
                                     <td><?= statusBadge((string)$lesson['stato']) ?></td>
                                 </tr>
                                 <?php endforeach; ?>
@@ -244,8 +245,8 @@ require_once __DIR__ . '/includes/header.php';
                 <?php else: ?>
                 <div class="list-group list-group-flush gap-3">
                     <?php foreach ($expiringPackages as $package):
-                        $clienteNome    = dashboardDecryptName((string)$package['nome'], (string)$package['cognome']);
-                        $telefonoDigits = dashboardWhatsAppNumber((string)($package['telefono'] ?? ''));
+                        $clienteNome    = dashboardDecryptName($package['nome'], $package['cognome']);
+                        $telefonoDigits = dashboardWhatsAppNumber($package['telefono'] ?? null);
                         $pacchettoNome  = (string)($package['pacchetto_nome'] ?: 'Pacchetto manuale');
                         $lezioniRim     = (string)$package['lezioni_rimanenti'];
                         $waMsg          = 'Ciao ' . $clienteNome . ', il tuo pacchetto ' . $pacchettoNome . ' è quasi esaurito (' . $lezioniRim . ' lezioni rimanenti). Vuoi rinnovarlo?';
