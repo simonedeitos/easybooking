@@ -19,6 +19,11 @@ $pdo = Database::getInstance();
 
 function esc(mixed $v): string { return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
 function fmt_date(?string $d): string { if (!$d) return '—'; $dt = DateTime::createFromFormat('Y-m-d', $d); return $dt ? $dt->format('d/m/Y') : esc($d); }
+/**
+ * Validates that $value is a strictly formatted Y-m-d date string.
+ * Returns $value if valid, or $fallback if the format check fails.
+ * This prevents SQL injection via date parameters while accepting only canonical dates.
+ */
 function sanitizeReportDate(string $value, string $fallback): string {
     $value = trim($value);
     $dt = DateTime::createFromFormat('Y-m-d', $value);

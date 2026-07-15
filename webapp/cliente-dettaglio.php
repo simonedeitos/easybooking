@@ -16,6 +16,11 @@ if ($clienteId <= 0) {
     redirect('clienti.php');
 }
 
+// ── Helper: normalise HH:MM or HH:MM:SS time strings to HH:MM:SS ──────────────
+function normalizeTime(string $t): string {
+    return strlen($t) === 5 ? $t . ':00' : substr($t, 0, 8);
+}
+
 // ── Handle actions ────────────────────────────────────────────
 $requestAction = $_SERVER['REQUEST_METHOD'] === 'POST' ? post('action') : '';
 
@@ -89,8 +94,9 @@ if ($requestAction === 'rinnovo') {
                 $lastDate  = new DateTime($lezioniPrecedenti[count($lezioniPrecedenti) - 1]['data']);
                 $spanInterval = $firstDate->diff($lastDate);
                 $spanDays  = $spanInterval->days !== false ? (int)$spanInterval->days : 0;
-                // Shift = (number of full weeks in span + 1) * 7 days
-                $shiftDays = ((int)ceil($spanDays / 7) + 1) * 7;
+                // Shift = (number of full weeks in span + 1) * 7 days (DAYS_PER_WEEK)
+                $daysPerWeek = 7;
+                $shiftDays = ((int)ceil($spanDays / $daysPerWeek) + 1) * $daysPerWeek;
 
                 $stmtIns = $pdo->prepare(
                     'INSERT INTO prenotazioni (data, ora_inizio, ora_fine, cliente_id, insegnante_id, strumento, stato, pacchetto_nome, acquisto_id, note)
@@ -151,8 +157,8 @@ if ($requestAction === 'sposta' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             jsonResponse(['success' => false, 'message' => 'Dati non validi.'], 422);
         }
 
-        $nuovaOraInizio = strlen($nuovaOraInizio) === 5 ? $nuovaOraInizio . ':00' : substr($nuovaOraInizio, 0, 8);
-        $nuovaOraFine   = strlen($nuovaOraFine) === 5   ? $nuovaOraFine . ':00'   : substr($nuovaOraFine, 0, 8);
+        $nuovaOraInizio = normalizeTime($nuovaOraInizio);
+        $nuovaOraFine   = normalizeTime($nuovaOraFine);
 
         if (strtotime('1970-01-01 ' . $nuovaOraFine) <= strtotime('1970-01-01 ' . $nuovaOraInizio)) {
             jsonResponse(['success' => false, 'message' => 'L\'ora di fine deve essere successiva all\'ora di inizio.'], 422);
