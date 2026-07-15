@@ -1,6 +1,7 @@
 /* ── EasyBooking Calendar (FullCalendar v6) ─────────────────── */
 
 let calendarInstance = null;
+let calendarToolbarBound = false;
 
 const CalendarColors = {
     byStatus: {
@@ -19,7 +20,8 @@ const CalendarColors = {
 
 function getTeacherColor(teacherId) {
     if (!CalendarColors.teacherMap[teacherId]) {
-        const idx = Object.keys(CalendarColors.teacherMap).length % CalendarColors.byTeacher.length;
+        const numericId = Math.abs(parseInt(teacherId, 10) || 0);
+        const idx = numericId % CalendarColors.byTeacher.length;
         CalendarColors.teacherMap[teacherId] = CalendarColors.byTeacher[idx];
     }
     return CalendarColors.teacherMap[teacherId];
@@ -31,81 +33,114 @@ function initCalendar(options = {}) {
     if (!calEl) return;
 
     const colorMode = options.colorMode || 'status'; // 'status' | 'teacher'
+    const teacherFilter = document.getElementById('calendarTeacherFilter');
 
-    calendarInstance = new FullCalendar.Calendar(calEl, {
-        initialView: options.initialView || 'timeGridWeek',
-        locale: 'it',
-        headerToolbar: false, // custom toolbar
-        height: 'auto',
-        allDaySlot: false,
-        slotMinTime: options.slotMin || '08:00:00',
-        slotMaxTime: options.slotMax || '21:00:00',
-        slotDuration: '00:30:00',
-        slotLabelInterval: '01:00:00',
-        nowIndicator: true,
-        editable: true,
-        selectable: true,
-        selectMirror: true,
-        businessHours: options.businessHours || true,
-        scrollTime: '09:00:00',
+    try {
+        calendarInstance = new FullCalendar.Calendar(calEl, {
+            initialView: options.initialView || 'timeGridWeek',
+            locale: 'it',
+            headerToolbar: false, // custom toolbar
+            height: 'auto',
+            allDaySlot: false,
+            slotMinTime: options.slotMin || '08:00:00',
+            slotMaxTime: options.slotMax || '21:00:00',
+            slotDuration: '00:30:00',
+            slotLabelInterval: '01:00:00',
+            nowIndicator: true,
+            editable: true,
+            selectable: true,
+            selectMirror: true,
+            businessHours: options.businessHours || true,
+            scrollTime: '09:00:00',
 
-        // Load events from server
-        events: {
-            url: 'api/get-eventi-calendario.php',
-            method: 'GET',
-            failure: () => {
-                showToast('Errore nel caricamento degli eventi', 'danger');
+            // Load events from server
+            events(info, successCallback, failureCallback) {
+                const params = new URLSearchParams({
+                    start: info.startStr,
+                    end: info.endStr
+                });
+                const teacherId = teacherFilter?.value || '';
+                if (teacherId !== '') {
+                    params.append('insegnante_id', teacherId);
+                }
+
+                fetch('api/get-eventi-calendario.php?' + params.toString())
+                    .then((response) => {
+                        if (!response.ok) {
+                            throw new Error('HTTP ' + response.status);
+                        }
+                        return response.json();
+                    })
+                    .then((data) => {
+                        if (!Array.isArray(data)) {
+                            const message = data?.error || 'Errore nel caricamento del calendario.';
+                            throw new Error(message);
+                        }
+                        successCallback(data);
+                    })
+                    .catch((error) => {
+                        console.error('Calendar events error:', error);
+                        showToast('Impossibile caricare il calendario. Riprova.', 'danger');
+                        failureCallback(error);
+                    });
+            },
+
+            // Color events
+            eventDidMount(info) {
+                const ev = info.event;
+                const extProps = ev.extendedProps;
+                let color = ev.backgroundColor || '#7c6af7';
+                if (colorMode === 'teacher') {
+                    color = getTeacherColor(extProps.insegnante_id);
+                } else {
+                    color = CalendarColors.byStatus[extProps.stato] || color;
+                }
+                info.el.style.backgroundColor    = color;
+                info.el.style.borderColor        = color;
+                info.el.style.color              = isDark(color) ? '#fff' : '#1e1e2e';
+                info.el.style.borderRadius       = '5px';
+                info.el.style.fontSize           = '0.78rem';
+                info.el.setAttribute('data-bs-toggle', 'tooltip');
+                info.el.setAttribute('title', buildTooltip(extProps));
+                new bootstrap.Tooltip(info.el, { trigger: 'hover', html: true });
+            },
+
+            // Click existing event → open edit modal
+            eventClick(info) {
+                openEventModal(info.event);
+            },
+
+            // Click empty slot → open create modal
+            select(info) {
+                openNewEventModal(info.startStr, info.endStr);
+                calendarInstance.unselect();
+            },
+
+            // Drag to move
+            eventDrop(info) {
+                saveEventMove(info.event, info.revert);
+            },
+
+            // Resize
+            eventResize(info) {
+                saveEventResize(info.event, info.revert);
             }
-        },
+        });
 
-        // Color events
-        eventDidMount(info) {
-            const ev = info.event;
-            const extProps = ev.extendedProps;
-            let color;
-            if (colorMode === 'teacher') {
-                color = getTeacherColor(extProps.insegnante_id);
-            } else {
-                color = CalendarColors.byStatus[extProps.stato] || '#7c6af7';
-            }
-            info.el.style.backgroundColor    = color;
-            info.el.style.borderColor        = color;
-            info.el.style.color              = isDark(color) ? '#fff' : '#1e1e2e';
-            info.el.style.borderRadius       = '5px';
-            info.el.style.fontSize           = '0.78rem';
-            info.el.setAttribute('data-bs-toggle', 'tooltip');
-            info.el.setAttribute('title', buildTooltip(extProps));
-            new bootstrap.Tooltip(info.el, { trigger: 'hover', html: true });
-        },
-
-        // Click existing event → open edit modal
-        eventClick(info) {
-            openEventModal(info.event);
-        },
-
-        // Click empty slot → open create modal
-        select(info) {
-            openNewEventModal(info.startStr, info.endStr);
-            calendarInstance.unselect();
-        },
-
-        // Drag to move
-        eventDrop(info) {
-            saveEventMove(info.event, info.revert);
-        },
-
-        // Resize
-        eventResize(info) {
-            saveEventResize(info.event, info.revert);
-        }
-    });
-
-    calendarInstance.render();
-    bindCalendarToolbar();
+        calendarInstance.render();
+        bindCalendarToolbar();
+    } catch (error) {
+        console.error('Calendar initialization failed:', error);
+        calEl.innerHTML = '<div class="alert alert-danger mb-0">Errore inizializzazione calendario. Controlla la console.</div>';
+    }
 }
 
 // ── Toolbar bindings ──────────────────────────────────────────
 function bindCalendarToolbar() {
+    if (calendarToolbarBound) {
+        return;
+    }
+    calendarToolbarBound = true;
     document.getElementById('cal-prev')?.addEventListener('click', () => calendarInstance?.prev());
     document.getElementById('cal-next')?.addEventListener('click', () => calendarInstance?.next());
     document.getElementById('cal-today')?.addEventListener('click', () => calendarInstance?.today());
@@ -134,8 +169,10 @@ function bindCalendarToolbar() {
 
 // ── Build tooltip HTML ────────────────────────────────────────
 function buildTooltip(props) {
-    return `<b>${escapeHtml(props.cliente || '')}</b><br>
-            ${escapeHtml(props.insegnante || '')} – ${escapeHtml(props.strumento || '')}<br>
+    const cliente = props.cliente || 'N/D';
+    const insegnante = props.insegnante || 'N/D';
+    return `<b>${escapeHtml(cliente)}</b><br>
+            ${escapeHtml(insegnante)}${props.strumento ? ' – ' + escapeHtml(props.strumento) : ''}<br>
             Stato: ${escapeHtml(props.stato || '')}`;
 }
 
