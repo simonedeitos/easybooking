@@ -500,7 +500,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const eventForm = document.getElementById('eventForm');
     const newEventForm = document.getElementById('newEventForm');
     const teacherFilter = document.getElementById('calendarTeacherFilter');
-    let currentColorMode = 'status';
+    let currentColorMode = 'teacher';
 
     function resetEventForm() {
         eventForm.reset();
@@ -524,11 +524,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!calendarInstance) {
             return;
         }
-        const selectedTeacher = teacherFilter.value || '';
-        calendarInstance.getEvents().forEach((event) => {
-            const teacherId = String(event.extendedProps.insegnante_id || '');
-            event.setProp('display', selectedTeacher === '' || teacherId === selectedTeacher ? 'auto' : 'none');
-        });
+        calendarInstance.refetchEvents();
     }
 
     function updateColorButtons() {
@@ -654,9 +650,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     resetEventForm();
     resetNewEventForm();
-    initCalendar({slotMin:'08:00:00', slotMax:'21:00:00'});
-    document.getElementById('cal-title').textContent = calendarInstance?.view?.title || 'Calendario';
-    calendarInstance?.on('eventsSet', applyTeacherFilter);
+    renderCalendar();
 });
 </script>
 <?php require_once __DIR__ . '/includes/footer.php'; ?>

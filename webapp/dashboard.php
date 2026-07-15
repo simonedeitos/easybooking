@@ -21,6 +21,16 @@ $weekdayChartData = array_fill(0, 7, 0);
 $revenueChartData = array_fill(0, 12, 0.0);
 $dashboardError = '';
 
+function dashboardDecryptName(?string $nome, ?string $cognome): string
+{
+    return trim(decryptField((string)$nome) . ' ' . decryptField((string)$cognome));
+}
+
+function dashboardWhatsAppNumber(?string $telefono): string
+{
+    return preg_replace('/[^0-9+]/', '', decryptField((string)$telefono));
+}
+
 try {
     $stmt = $pdo->prepare('SELECT COUNT(*) FROM clienti');
     $stmt->execute();
@@ -35,10 +45,14 @@ try {
     $lessonsThisWeek = (int)$stmt->fetchColumn();
 
     $stmt = $pdo->prepare(
-        "SELECT p.*, c.nome, c.cognome, i.nome AS ins_nome, i.cognome AS ins_cognome
+        "SELECT p.*,
+                COALESCE(c.nome, '') AS nome,
+                COALESCE(c.cognome, '') AS cognome,
+                COALESCE(i.nome, '') AS ins_nome,
+                COALESCE(i.cognome, '') AS ins_cognome
          FROM prenotazioni p
-         INNER JOIN clienti c ON p.cliente_id = c.id
-         INNER JOIN insegnanti i ON p.insegnante_id = i.id
+         LEFT JOIN clienti c ON p.cliente_id = c.id
+         LEFT JOIN insegnanti i ON p.insegnante_id = i.id
          WHERE p.data >= CURDATE() AND p.stato = 'Programmata'
          ORDER BY p.data ASC, p.ora_inizio ASC
          LIMIT 10"
@@ -53,12 +67,12 @@ try {
             c.cognome,
             c.telefono,
             pk.nome AS pacchetto_nome,
-            pk.numero_lezioni,
+            COALESCE(a.numero_lezioni, pk.numero_lezioni, 0) AS numero_lezioni,
             COALESCE(ls.lezioni_svolte, 0) AS lezioni_svolte,
-            (pk.numero_lezioni - COALESCE(ls.lezioni_svolte, 0)) AS lezioni_rimanenti
+            (COALESCE(a.numero_lezioni, pk.numero_lezioni, 0) - COALESCE(ls.lezioni_svolte, 0)) AS lezioni_rimanenti
         FROM acquisti a
         INNER JOIN clienti c ON a.cliente_id = c.id
-        INNER JOIN pacchetti pk ON a.pacchetto_id = pk.id
+        LEFT JOIN pacchetti pk ON a.pacchetto_id = pk.id
         LEFT JOIN (
             SELECT acquisto_id, COUNT(*) AS lezioni_svolte
             FROM prenotazioni
@@ -66,14 +80,14 @@ try {
             GROUP BY acquisto_id
         ) ls ON ls.acquisto_id = a.id
         WHERE a.stato_pagamento != 'Rimborso'
-          AND (pk.numero_lezioni - COALESCE(ls.lezioni_svolte, 0)) BETWEEN 1 AND 3
+          AND (COALESCE(a.numero_lezioni, pk.numero_lezioni, 0) - COALESCE(ls.lezioni_svolte, 0)) BETWEEN 1 AND 3
     ";
 
     $stmt = $pdo->prepare("SELECT COUNT(*) FROM ({$expiringSql}) AS expiring_packages");
     $stmt->execute();
     $expiringPackagesCount = (int)$stmt->fetchColumn();
 
-    $stmt = $pdo->prepare($expiringSql . ' ORDER BY lezioni_svolte DESC, a.data_acquisto DESC LIMIT 5');
+    $stmt = $pdo->prepare($expiringSql . ' ORDER BY lezioni_rimanenti ASC, a.data_acquisto DESC LIMIT 10');
     $stmt->execute();
     $expiringPackages = $stmt->fetchAll();
 
@@ -96,16 +110,17 @@ try {
     $stmt = $pdo->prepare(
         'SELECT MONTH(data_acquisto) AS m, SUM(importo_pagato) AS totale
          FROM acquisti
-         WHERE YEAR(data_acquisto) = YEAR(CURDATE()) AND stato_pagamento = ?
+         WHERE YEAR(data_acquisto) = YEAR(CURDATE()) AND stato_pagamento IN (?, ?)
          GROUP BY m
          ORDER BY m ASC'
     );
-    $stmt->execute(['Pagato']);
+    $stmt->execute(['Pagato', 'Parziale']);
     foreach ($stmt->fetchAll() as $row) {
         $monthIndex = max(1, (int)$row['m']) - 1;
         $revenueChartData[$monthIndex] = (float)$row['totale'];
     }
 } catch (PDOException $e) {
+    error_log('Dashboard Error: ' . $e->getMessage());
     $dashboardError = 'Impossibile caricare tutti i dati della dashboard.';
 }
 
@@ -196,8 +211,8 @@ require_once __DIR__ . '/includes/header.php';
                                 <tr>
                                     <td><?= htmlspecialchars(formatDate((string)$lesson['data'])) ?></td>
                                     <td><?= htmlspecialchars(substr((string)$lesson['ora_inizio'], 0, 5) . ' - ' . substr((string)$lesson['ora_fine'], 0, 5)) ?></td>
-                                    <td><?= htmlspecialchars(trim((string)$lesson['nome'] . ' ' . (string)$lesson['cognome'])) ?></td>
-                                    <td><?= htmlspecialchars(trim((string)$lesson['ins_nome'] . ' ' . (string)$lesson['ins_cognome'])) ?></td>
+                                    <td><?= htmlspecialchars(dashboardDecryptName((string)$lesson['nome'], (string)$lesson['cognome']) ?: 'N/D') ?></td>
+                                    <td><?= htmlspecialchars(dashboardDecryptName((string)$lesson['ins_nome'], (string)$lesson['ins_cognome']) ?: 'N/D') ?></td>
                                     <td><?= statusBadge((string)$lesson['stato']) ?></td>
                                 </tr>
                                 <?php endforeach; ?>
@@ -223,10 +238,9 @@ require_once __DIR__ . '/includes/header.php';
                 <?php else: ?>
                 <div class="list-group list-group-flush gap-3">
                     <?php foreach ($expiringPackages as $package):
-                        $clienteNome    = trim(decryptField((string)$package['nome']) . ' ' . decryptField((string)$package['cognome']));
-                        $telefonoRaw    = decryptField((string)($package['telefono'] ?? ''));
-                        $telefonoDigits = preg_replace('/[^0-9+]/', '', $telefonoRaw);
-                        $pacchettoNome  = (string)$package['pacchetto_nome'];
+                        $clienteNome    = dashboardDecryptName((string)$package['nome'], (string)$package['cognome']);
+                        $telefonoDigits = dashboardWhatsAppNumber((string)($package['telefono'] ?? ''));
+                        $pacchettoNome  = (string)($package['pacchetto_nome'] ?: 'Pacchetto manuale');
                         $lezioniRim     = (string)$package['lezioni_rimanenti'];
                         $waMsg          = 'Ciao ' . $clienteNome . ', il tuo pacchetto ' . $pacchettoNome . ' è quasi esaurito (' . $lezioniRim . ' lezioni rimanenti). Vuoi rinnovarlo?';
                     ?>
