@@ -201,7 +201,7 @@ try {
     foreach ($purchases as $purchase) {
         $remaining = (int)$purchase['lezioni_rimanenti'];
         $total = (int)$purchase['totale_lezioni'];
-        if ($total > 0 && $remaining <= 2 && (string)$purchase['stato_pagamento'] !== 'Rimborso') {
+        if ($total > 0 && $remaining >= 1 && $remaining <= 3 && (string)$purchase['stato_pagamento'] !== 'Rimborso') {
             $alerts[] = $purchase;
         }
     }
@@ -228,18 +228,36 @@ require_once __DIR__ . '/includes/header.php';
 <?php endif; ?>
 
 <?php if ($alerts !== []): ?>
-<div class="alert alert-warning">
-    <div class="fw-semibold mb-2"><i class="fas fa-triangle-exclamation me-2"></i>Pacchetti quasi esauriti</div>
-    <ul class="mb-0 ps-3">
-        <?php foreach ($alerts as $alert): ?>
-        <li>
-            <?= htmlspecialchars(trim((string)$alert['cliente_nome'] . ' ' . (string)$alert['cliente_cognome'])) ?> –
-            <?= htmlspecialchars((string)($alert['pacchetto_nome'] ?: 'Pacchetto manuale')) ?>:
-            <?= htmlspecialchars((string)$alert['lezioni_rimanenti']) ?> lezioni rimanenti
-            (<?= htmlspecialchars((string)$alert['lezioni_svolte']) ?>/<?= htmlspecialchars((string)$alert['totale_lezioni']) ?> svolte)
-        </li>
-        <?php endforeach; ?>
-    </ul>
+<div class="card mb-4 border-warning">
+    <div class="card-header text-warning">
+        <i class="fas fa-triangle-exclamation me-2"></i>Pacchetti quasi esauriti
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Cliente</th>
+                        <th>Pacchetto</th>
+                        <th>Lezioni svolte</th>
+                        <th>Rimanenti</th>
+                        <th>Stato</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($alerts as $alert): ?>
+                    <tr>
+                        <td><?= htmlspecialchars(trim((string)$alert['cliente_nome'] . ' ' . (string)$alert['cliente_cognome'])) ?></td>
+                        <td><?= htmlspecialchars((string)($alert['pacchetto_nome'] ?: 'Pacchetto manuale')) ?></td>
+                        <td><?= htmlspecialchars((string)$alert['lezioni_svolte']) ?> / <?= htmlspecialchars((string)$alert['totale_lezioni']) ?></td>
+                        <td><span class="badge bg-warning text-dark"><?= htmlspecialchars((string)$alert['lezioni_rimanenti']) ?></span></td>
+                        <td><?= htmlspecialchars((string)$alert['stato_pagamento']) ?></td>
+                    </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
 </div>
 <?php endif; ?>
 

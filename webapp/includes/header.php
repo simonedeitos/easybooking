@@ -9,19 +9,20 @@ $currentPage = basename($_SERVER['PHP_SELF'], '.php');
 
 // Page titles map
 $pageTitles = [
-    'dashboard'    => 'Dashboard',
-    'clienti'      => 'Clienti',
-    'insegnanti'   => 'Insegnanti',
-    'prenotazioni' => 'Prenotazioni',
-    'calendario'   => 'Calendario',
-    'pacchetti'    => 'Pacchetti',
-    'acquisti'     => 'Acquisti',
-    'strumenti'    => 'Strumenti',
-    'report'       => 'Report',
-    'impostazioni' => 'Impostazioni',
-    'notifiche'    => 'Notifiche',
-    'backup'       => 'Backup',
-    'import-xml'   => 'Importa XML',
+    'dashboard'          => 'Dashboard',
+    'clienti'            => 'Clienti',
+    'cliente-dettaglio'  => 'Dettaglio Cliente',
+    'insegnanti'         => 'Insegnanti',
+    'prenotazioni'       => 'Prenotazioni',
+    'calendario'         => 'Calendario',
+    'pacchetti'          => 'Pacchetti',
+    'acquisti'           => 'Acquisti',
+    'strumenti'          => 'Strumenti',
+    'report'             => 'Report',
+    'impostazioni'       => 'Impostazioni',
+    'notifiche'          => 'Notifiche',
+    'backup'             => 'Backup',
+    'import-xml'         => 'Importa XML',
 ];
 $pageTitle = $pageTitles[$currentPage] ?? 'EasyBooking';
 ?>

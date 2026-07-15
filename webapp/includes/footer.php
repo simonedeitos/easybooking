@@ -19,7 +19,6 @@
 <?php if (basename($_SERVER['PHP_SELF'], '.php') === 'calendario'): ?>
 <!-- FullCalendar -->
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@fullcalendar/core@6.1.10/locales/it.global.min.js"></script>
 <script src="assets/js/calendar.js"></script>
 <?php endif; ?>
 <!-- Main JS -->

@@ -375,8 +375,9 @@ require_once __DIR__ . '/includes/header.php';
                 </select>
             </div>
             <div class="col-md-1 d-grid"><button type="submit" class="btn btn-primary"><i class="fas fa-search"></i></button></div>
-            <div class="col-12 d-flex justify-content-end">
+            <div class="col-12 d-flex justify-content-end gap-2">
                 <a class="btn btn-outline-success" href="<?= h('report.php?' . http_build_query(['report_type' => $reportType, 'date_from' => $dateFrom, 'date_to' => $dateTo, 'insegnante_id' => $insegnanteId, 'cliente_id' => $clienteId, 'export' => 'csv'])) ?>"><i class="fas fa-file-csv me-2"></i>Esporta CSV</a>
+                <a class="btn btn-outline-danger" href="<?= h('api/export-report-pdf.php?' . http_build_query(['report_type' => $reportType, 'date_from' => $dateFrom, 'date_to' => $dateTo, 'insegnante_id' => $insegnanteId, 'cliente_id' => $clienteId])) ?>" target="_blank"><i class="fas fa-file-pdf me-2"></i>Esporta PDF</a>
             </div>
         </form>
     </div>
