@@ -51,11 +51,8 @@ function initCalendar(options = {}) {
 
         // Load events from server
         events: {
-            url: 'calendario.php?action=get_events',
+            url: 'api/get-eventi-calendario.php',
             method: 'GET',
-            extraParams: () => ({
-                csrf_token: document.querySelector('meta[name="csrf-token"]')?.content || ''
-            }),
             failure: () => {
                 showToast('Errore nel caricamento degli eventi', 'danger');
             }

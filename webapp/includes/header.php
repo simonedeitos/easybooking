@@ -47,11 +47,11 @@ $pageTitle = $pageTitles[$currentPage] ?? 'EasyBooking';
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;450;500;600;700&display=swap" rel="stylesheet">
 
-    <!-- Theme CSS -->
-    <link id="theme-dark-css"  rel="stylesheet" href="assets/css/dark-theme.css"  <?= $theme !== 'dark'  ? 'disabled' : '' ?>>
-    <link id="theme-light-css" rel="stylesheet" href="assets/css/light-theme.css" <?= $theme !== 'light' ? 'disabled' : '' ?>>
     <!-- Main CSS -->
     <link rel="stylesheet" href="assets/css/style.css">
+    <!-- Theme CSS (loaded after style.css so theme variables override defaults) -->
+    <link id="theme-dark-css"  rel="stylesheet" href="assets/css/dark-theme.css"  <?= $theme !== 'dark'  ? 'disabled' : '' ?>>
+    <link id="theme-light-css" rel="stylesheet" href="assets/css/light-theme.css" <?= $theme !== 'light' ? 'disabled' : '' ?>>
 </head>
 <body data-theme="<?= $theme ?>">
 <div class="app-wrapper">
