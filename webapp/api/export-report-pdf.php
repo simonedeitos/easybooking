@@ -55,7 +55,7 @@ $pageError  = '';
 try {
     if ($reportType === 'ore_insegnanti') {
         $params = [$dateFrom, $dateTo];
-        $joinClient = $insegnanteId > 0 || $clienteId > 0 ? '' : '';
+        $joinClient = '';
         if ($clienteId > 0) {
             $joinClient = ' AND p.cliente_id = ?';
             $params[] = $clienteId;

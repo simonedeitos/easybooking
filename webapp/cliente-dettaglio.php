@@ -76,11 +76,11 @@ if ($requestAction === 'rinnovo') {
                  WHERE a.cliente_id = ?
                    AND p.acquisto_id != ?
                    AND p.stato = "Programmata"
-                 ORDER BY p.data DESC, p.ora_inizio DESC
+                 ORDER BY p.data ASC, p.ora_inizio ASC
                  LIMIT ?'
             );
             $stmtLez->execute([$clienteId, $nuovoAcquistoId, $numeroLezioni]);
-            $lezioniPrecedenti = array_reverse($stmtLez->fetchAll());
+            $lezioniPrecedenti = $stmtLez->fetchAll();
 
             if ($lezioniPrecedenti) {
                 // Find the last lesson date to start scheduling after it
@@ -97,7 +97,8 @@ if ($requestAction === 'rinnovo') {
                     if ($scheduledCount >= $numeroLezioni) { break; }
                     // Calculate offset in days from the original last lesson
                     $orig = new DateTime($lez['data']);
-                    $diff = $lastDate->diff($orig)->days;
+                    $interval = $lastDate->diff($orig);
+                    $diff = $interval->days !== false ? (int)$interval->days : 0;
                     $newLezDate = (clone $nextDate)->modify("-{$diff} days");
 
                     // Get package name
@@ -553,7 +554,7 @@ require_once __DIR__ . '/includes/header.php';
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title"><i class="fas fa-arrows-alt me-2"></i>Sposta Lezione</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Chiudi"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Chiudi"></button>
             </div>
             <div class="modal-body">
                 <input type="hidden" id="sposta_id" value="">
