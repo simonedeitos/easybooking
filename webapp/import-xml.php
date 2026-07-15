@@ -58,10 +58,21 @@ function xmlImportInsegnanti(PDO $pdo, SimpleXMLElement $xml, string $mode, arra
     $log[] = '✅ Insegnanti importati: ' . $count; return $count;
 }
 function xmlImportPrenotazioni(PDO $pdo, SimpleXMLElement $xml, string $mode, array &$log): int {
+    // Load valid acquisto IDs to prevent FK violations when acquisti are not in this import batch
+    $validAcquistoIds = [];
+    try {
+        $stmtA = $pdo->query('SELECT id FROM acquisti');
+        foreach ($stmtA->fetchAll(PDO::FETCH_COLUMN) as $aid) {
+            $validAcquistoIds[(int)$aid] = true;
+        }
+    } catch (PDOException $e) {
+        $log[] = '⚠️ Impossibile verificare acquisto_id: tutti saranno impostati a NULL';
+    }
     $sql = 'INSERT INTO prenotazioni (id, data, ora_inizio, ora_fine, cliente_id, insegnante_id, strumento, stato, pacchetto_nome, acquisto_id, note) VALUES (:id, :data, :ora_inizio, :ora_fine, :cliente_id, :insegnante_id, :strumento, :stato, :pacchetto_nome, :acquisto_id, :note)';
     if ($mode === 'update') $sql .= ' ON DUPLICATE KEY UPDATE data = VALUES(data), ora_inizio = VALUES(ora_inizio), ora_fine = VALUES(ora_fine), cliente_id = VALUES(cliente_id), insegnante_id = VALUES(insegnante_id), strumento = VALUES(strumento), stato = VALUES(stato), pacchetto_nome = VALUES(pacchetto_nome), acquisto_id = VALUES(acquisto_id), note = VALUES(note)';
-    $stmt = $pdo->prepare($sql); $count = 0;
-    foreach ($xml->Prenotazione as $item) { $id = xmlImportInt($item->Id ?? '0'); $date = xmlImportDate($item->Data ?? ''); $start = xmlImportTime($item->OraInizioStr ?? ''); $end = xmlImportTime($item->OraFineStr ?? ''); if ($id <= 0 || !$date || !$start || !$end) { $log[] = '⚠️ Prenotazione ignorata: dati obbligatori mancanti'; continue; } $acquistoId = xmlImportInt($item->AcquistoId ?? '0'); $stmt->execute([':id' => $id, ':data' => $date, ':ora_inizio' => $start, ':ora_fine' => $end, ':cliente_id' => xmlImportInt($item->ClienteId ?? '0'), ':insegnante_id' => xmlImportInt($item->InsegnanteId ?? '0'), ':strumento' => xmlImportNullableText($item->Strumento ?? '', 100), ':stato' => xmlImportCleanText($item->Stato ?? 'Programmata', 30) ?: 'Programmata', ':pacchetto_nome' => xmlImportNullableText($item->PacchettoNome ?? '', 150), ':acquisto_id' => $acquistoId > 0 ? $acquistoId : null, ':note' => xmlImportNullableText($item->Note ?? '')]); $count++; }
+    $stmt = $pdo->prepare($sql); $count = 0; $nullifiedCount = 0;
+    foreach ($xml->Prenotazione as $item) { $id = xmlImportInt($item->Id ?? '0'); $date = xmlImportDate($item->Data ?? ''); $start = xmlImportTime($item->OraInizioStr ?? ''); $end = xmlImportTime($item->OraFineStr ?? ''); if ($id <= 0 || !$date || !$start || !$end) { $log[] = '⚠️ Prenotazione ignorata: dati obbligatori mancanti'; continue; } $acquistoId = xmlImportInt($item->AcquistoId ?? '0'); if ($acquistoId > 0 && !isset($validAcquistoIds[$acquistoId])) { $acquistoId = 0; $nullifiedCount++; } $stmt->execute([':id' => $id, ':data' => $date, ':ora_inizio' => $start, ':ora_fine' => $end, ':cliente_id' => xmlImportInt($item->ClienteId ?? '0'), ':insegnante_id' => xmlImportInt($item->InsegnanteId ?? '0'), ':strumento' => xmlImportNullableText($item->Strumento ?? '', 100), ':stato' => xmlImportCleanText($item->Stato ?? 'Programmata', 30) ?: 'Programmata', ':pacchetto_nome' => xmlImportNullableText($item->PacchettoNome ?? '', 150), ':acquisto_id' => $acquistoId > 0 ? $acquistoId : null, ':note' => xmlImportNullableText($item->Note ?? '')]); $count++; }
+    if ($nullifiedCount > 0) $log[] = '⚠️ ' . $nullifiedCount . ' acquisto_id non trovati → impostati a NULL (importare acquisti.xml per ripristinare i collegamenti)';
     $log[] = '✅ Prenotazioni importate: ' . $count; return $count;
 }
 function xmlImportAcquisti(PDO $pdo, SimpleXMLElement $xml, string $mode, array &$log): int {

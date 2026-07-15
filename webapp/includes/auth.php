@@ -61,6 +61,21 @@ function requireAdmin(): void {
 }
 
 function currentUser(): array {
+    // Sync theme from DB on every page load so that direct DB changes
+    // (e.g. via phpMyAdmin) are picked up without requiring re-login.
+    if (!empty($_SESSION['user_id'])) {
+        try {
+            $pdo  = Database::getInstance();
+            $stmt = $pdo->prepare('SELECT theme_preference FROM users WHERE id = ? LIMIT 1');
+            $stmt->execute([(int)$_SESSION['user_id']]);
+            $row  = $stmt->fetch(PDO::FETCH_ASSOC);
+            if ($row) {
+                $_SESSION['user_theme'] = $row['theme_preference'] ?? 'dark';
+            }
+        } catch (PDOException $e) {
+            // Non-fatal – keep session value
+        }
+    }
     return [
         'id'       => $_SESSION['user_id']       ?? 0,
         'username' => $_SESSION['username']       ?? '',

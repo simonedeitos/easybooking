@@ -364,9 +364,17 @@ require_once __DIR__ . '/includes/header.php';
                             <div class="detail-label">Tariffa oraria</div>
                             <div class="detail-value" id="teacher_detail_tariffa">—</div>
                         </div>
-                        <div class="detail-box">
+                        <div class="detail-box mb-3">
                             <div class="detail-label">Strumenti</div>
                             <div class="detail-value" id="teacher_detail_strumenti">—</div>
+                        </div>
+                        <div class="d-flex flex-wrap gap-2">
+                            <a href="#" class="btn btn-primary d-none" id="teacher_pdf_futuri" target="_blank" rel="noopener noreferrer">
+                                <i class="fas fa-file-pdf me-2"></i>PDF Lezioni Future
+                            </a>
+                            <a href="#" class="btn btn-secondary d-none" id="teacher_pdf_storico" target="_blank" rel="noopener noreferrer">
+                                <i class="fas fa-file-pdf me-2"></i>PDF Storico
+                            </a>
                         </div>
                     </div>
                     <div class="col-lg-7">
@@ -548,6 +556,19 @@ document.addEventListener('DOMContentLoaded', () => {
                         `;
                         tbody.appendChild(row);
                     });
+                }
+
+                // PDF export links
+                const pdfFuturiT = document.getElementById('teacher_pdf_futuri');
+                const pdfStoricoT = document.getElementById('teacher_pdf_storico');
+                if (teacher.id) {
+                    pdfFuturiT.href = `api/export-insegnante-pdf.php?id=${encodeURIComponent(teacher.id)}&tipo=futuri`;
+                    pdfFuturiT.classList.remove('d-none');
+                    pdfStoricoT.href = `api/export-insegnante-pdf.php?id=${encodeURIComponent(teacher.id)}&tipo=storico`;
+                    pdfStoricoT.classList.remove('d-none');
+                } else {
+                    pdfFuturiT.classList.add('d-none');
+                    pdfStoricoT.classList.add('d-none');
                 }
 
                 teacherDetailModal.show();
