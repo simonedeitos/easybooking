@@ -107,7 +107,7 @@ try {
              GROUP BY acquisto_id
          ) ls ON ls.acquisto_id = a.id
          WHERE a.stato_pagamento <> 'Rimborso'
-         HAVING lezioni_acquistate > 0 AND lezioni_rimanenti BETWEEN 1 AND ?
+         HAVING lezioni_acquistate > 0 AND lezioni_rimanenti > 0 AND lezioni_rimanenti <= ?
          ORDER BY lezioni_rimanenti ASC, a.data_acquisto DESC, a.id DESC"
     );
     $stmt->execute([$expiringPackageThreshold]);
