@@ -1,3 +1,0 @@
-mysql database name: u362062795_easybooking
-mysql username: u362062795_easybooking
-password: D4tabas3-EasyB00k1ng-vocefutura
