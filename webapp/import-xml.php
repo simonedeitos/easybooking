@@ -1,4 +1,7 @@
 <?php
+ob_start();
+ini_set('log_errors', '1');
+ini_set('display_errors', '0');
 if (session_status() === PHP_SESSION_NONE) { session_start(); }
 require_once __DIR__ . '/config/database.php';
 require_once __DIR__ . '/config/functions.php';
@@ -86,7 +89,7 @@ function xmlImportImpostazioniGenerali(PDO $pdo, SimpleXMLElement $xml, string $
 function xmlImportTariffeCoppia(PDO $pdo, SimpleXMLElement $xml, string $mode, array &$log): int { $sql = 'INSERT INTO tariffe_coppia (insegnante_id, tariffa) VALUES (:insegnante_id, :tariffa)'; if ($mode === 'update') $sql .= ' ON DUPLICATE KEY UPDATE tariffa = VALUES(tariffa)'; $stmt = $pdo->prepare($sql); $count = 0; foreach ($xml->Tariffa as $item) { $insegnanteId = xmlImportInt($item->InsegnanteId ?? '0'); if ($insegnanteId <= 0) { $log[] = '⚠️ Tariffa coppia ignorata: InsegnanteId non valido'; continue; } $stmt->execute([':insegnante_id' => $insegnanteId, ':tariffa' => xmlImportFloat($item->Tariffa ?? '0')]); $count++; } $log[] = '✅ Tariffe coppia importate: ' . $count; return $count; }
 
 function xmlImportReplacementTables(array $types): array { $tables = []; foreach ($types as $type) { switch ($type) { case 'clienti': $tables = array_merge($tables, ['prenotazioni', 'acquisti', 'clienti']); break; case 'insegnanti': $tables = array_merge($tables, ['prenotazioni', 'tariffe_coppia', 'insegnanti_strumenti', 'insegnanti']); break; case 'prenotazioni': $tables[] = 'prenotazioni'; break; case 'acquisti': $tables = array_merge($tables, ['prenotazioni', 'acquisti']); break; case 'pacchetti': $tables = array_merge($tables, ['prenotazioni', 'acquisti', 'pacchetti']); break; case 'strumenti': $tables = array_merge($tables, ['insegnanti_strumenti', 'strumenti']); break; case 'impostazioni_generali': $tables[] = 'impostazioni_generali'; break; case 'tariffe_coppia': $tables[] = 'tariffe_coppia'; break; } } return array_values(array_intersect(['prenotazioni', 'acquisti', 'tariffe_coppia', 'insegnanti_strumenti', 'insegnanti', 'clienti', 'pacchetti', 'strumenti', 'impostazioni_generali'], array_unique($tables))); }
-function xmlImportClearTables(PDO $pdo, array $types, array &$log): void { $tables = xmlImportReplacementTables($types); if ($tables === []) return; $pdo->exec('SET FOREIGN_KEY_CHECKS = 0'); foreach ($tables as $table) { $pdo->exec('DELETE FROM `' . str_replace('`', '', $table) . '`'); $log[] = '🧹 Tabella svuotata: ' . $table; } $pdo->exec('SET FOREIGN_KEY_CHECKS = 1'); }
+function xmlImportClearTables(PDO $pdo, array $types, array &$log): void { $tables = xmlImportReplacementTables($types); if ($tables === []) return; foreach ($tables as $table) { $pdo->exec('DELETE FROM `' . str_replace('`', '', $table) . '`'); $log[] = '🧹 Tabella svuotata: ' . $table; } }
 function xmlImportCleanupDirectory(): void { if (!is_dir(EASYBOOKING_XML_IMPORT_DIR)) return; $items = scandir(EASYBOOKING_XML_IMPORT_DIR); if (!is_array($items)) return; foreach ($items as $item) { if ($item === '.' || $item === '..') continue; $path = EASYBOOKING_XML_IMPORT_DIR . '/' . $item; if (is_file($path)) @unlink($path); } $remaining = scandir(EASYBOOKING_XML_IMPORT_DIR); if (is_array($remaining) && count($remaining) <= 2) @rmdir(EASYBOOKING_XML_IMPORT_DIR); }
 
 $requestAction = $_SERVER['REQUEST_METHOD'] === 'POST' ? post('action') : get('action');
@@ -121,6 +124,7 @@ if ($requestAction === 'import_xml' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         usort($processedFiles, static fn(array $a, array $b): int => (array_flip(xmlImportProcessingOrder())[$a['type']] ?? 999) <=> (array_flip(xmlImportProcessingOrder())[$b['type']] ?? 999));
 
         $pdo->beginTransaction();
+        $pdo->exec('SET FOREIGN_KEY_CHECKS = 0');
         if ($mode === 'replace') xmlImportClearTables($pdo, array_column($processedFiles, 'type'), $log);
         $handlers = xmlImportHandlers();
         foreach ($processedFiles as $file) {
@@ -130,11 +134,13 @@ if ($requestAction === 'import_xml' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             $handler($pdo, $file['xml'], $mode, $log);
             $log[] = '✔️ Completato: ' . $file['name'];
         }
+        $pdo->exec('SET FOREIGN_KEY_CHECKS = 1');
         $pdo->commit();
         foreach ($processedFiles as $file) if (is_file($file['path'])) @unlink($file['path']);
         xmlImportCleanupDirectory();
         jsonResponse(['success' => true, 'log' => $log, 'errors' => $errors]);
     } catch (Throwable $e) {
+        try { $pdo->exec('SET FOREIGN_KEY_CHECKS = 1'); } catch (Throwable $fkErr) { error_log('import-xml.php: failed to re-enable FK checks: ' . $fkErr->getMessage()); }
         if ($pdo->inTransaction()) $pdo->rollBack();
         if ($currentRuntimePath && is_file($currentRuntimePath)) @unlink($currentRuntimePath);
         foreach ($processedFiles as $file) if (!empty($file['path']) && is_file($file['path'])) @unlink($file['path']);

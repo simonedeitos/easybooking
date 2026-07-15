@@ -42,6 +42,26 @@ function fixXMLEncoding(string $content): string
         if ($converted !== false) {
             $content = $converted;
         }
+    } else {
+        // 2b. Detect UTF-16 without BOM by verifying the alternating-null-byte
+        //     pattern across the first 4 bytes (two UTF-16 code units).
+        //     UTF-16 LE: bytes at odd  positions (1, 3) are 0x00 for ASCII chars.
+        //     UTF-16 BE: bytes at even positions (0, 2) are 0x00 for ASCII chars.
+        //     The converted result must contain valid XML-like content as an
+        //     additional safeguard against false positives on binary data.
+        $sample = substr($content, 0, 4);
+        if (strlen($sample) === 4) {
+            $isUtf16LE = ($sample[1] === "\x00" && $sample[3] === "\x00");
+            $isUtf16BE = ($sample[0] === "\x00" && $sample[2] === "\x00");
+            if ($isUtf16LE || $isUtf16BE) {
+                $encoding = $isUtf16BE ? 'UTF-16BE' : 'UTF-16LE';
+                $converted = mb_convert_encoding($content, 'UTF-8', $encoding);
+                // Accept conversion only when the result looks like XML content.
+                if ($converted !== false && strlen($converted) > 0 && str_contains(ltrim($converted), '<')) {
+                    $content = $converted;
+                }
+            }
+        }
     }
 
     // 3. Rewrite the XML encoding declaration to UTF-8 (handles utf-16,
@@ -58,6 +78,17 @@ function fixXMLEncoding(string $content): string
         $content,
         1
     ) ?? $content;
+
+    // 4. Safety net: if the declaration still references utf-16 (the regex
+    //    above may fail on malformed declarations), replace it directly.
+    if (preg_match('/encoding=["\']utf-?16/i', substr($content, 0, 200))) {
+        $content = preg_replace(
+            '/(<\?xml\b[^?]*?)encoding=["\']utf-?16[a-z]*["\']/i',
+            '$1encoding="UTF-8"',
+            $content,
+            1
+        ) ?? $content;
+    }
 
     return $content;
 }

@@ -2,6 +2,10 @@
 
 declare(strict_types=1);
 
+ob_start();
+ini_set('log_errors', '1');
+ini_set('display_errors', '0');
+
 if (session_status() === PHP_SESSION_NONE) {
     ini_set('session.use_only_cookies', '1');
     ini_set('session.use_strict_mode', '1');
@@ -1066,6 +1070,9 @@ function handleXmlImportAction(): never
     $log[] = '⚙️ Modalità record: ' . ($replaceMode === 'replace' ? 'Sostituisci' : 'Aggiorna');
     $log[] = '🛡️ Modalità elaborazione: ' . ($processingMode === 'atomic' ? 'Transazione unica' : 'Continua su errore');
 
+    // Disable FK checks for the entire import to allow inserting rows
+    // with forward references (e.g. acquisti before clienti in some edge cases).
+    $pdo->exec('SET FOREIGN_KEY_CHECKS = 0');
     try {
         if ($processingMode === 'atomic') {
             $pdo->beginTransaction();
@@ -1127,6 +1134,7 @@ function handleXmlImportAction(): never
         $errors[] = $exception->getMessage();
         $log[] = '⛔ Importazione annullata: ' . $exception->getMessage();
     } finally {
+        try { $pdo->exec('SET FOREIGN_KEY_CHECKS = 1'); } catch (Throwable $fkErr) { error_log('adminsetup.php: failed to re-enable FK checks: ' . $fkErr->getMessage()); }
         cleanupImportDirectory();
     }
 
