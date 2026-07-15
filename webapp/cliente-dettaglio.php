@@ -83,32 +83,35 @@ if ($requestAction === 'rinnovo') {
             $lezioniPrecedenti = $stmtLez->fetchAll();
 
             if ($lezioniPrecedenti) {
-                // Find the last lesson date to start scheduling after it
-                $lastDate = new DateTime($lezioniPrecedenti[count($lezioniPrecedenti) - 1]['data']);
-                $nextDate = (clone $lastDate)->modify('+1 week');
+                // Calculate shift: enough full weeks so that the first new lesson
+                // falls after the last old lesson, preserving day-of-week patterns.
+                $firstDate = new DateTime($lezioniPrecedenti[0]['data']);
+                $lastDate  = new DateTime($lezioniPrecedenti[count($lezioniPrecedenti) - 1]['data']);
+                $spanInterval = $firstDate->diff($lastDate);
+                $spanDays  = $spanInterval->days !== false ? (int)$spanInterval->days : 0;
+                // Shift = (number of full weeks in span + 1) * 7 days
+                $shiftDays = ((int)ceil($spanDays / 7) + 1) * 7;
 
                 $stmtIns = $pdo->prepare(
                     'INSERT INTO prenotazioni (data, ora_inizio, ora_fine, cliente_id, insegnante_id, strumento, stato, pacchetto_nome, acquisto_id, note)
                      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
                 );
 
+                // Get package name once if a new package was selected
+                $pkName = null;
+                if ($pacchettoId > 0) {
+                    $stmtPkN = $pdo->prepare('SELECT nome FROM pacchetti WHERE id = ? LIMIT 1');
+                    $stmtPkN->execute([$pacchettoId]);
+                    $pkRow = $stmtPkN->fetch();
+                    if ($pkRow) { $pkName = (string)$pkRow['nome']; }
+                }
+
                 $scheduledCount = 0;
                 foreach ($lezioniPrecedenti as $lez) {
                     if ($scheduledCount >= $numeroLezioni) { break; }
-                    // Calculate offset in days from the original last lesson
+                    // Shift each lesson by the same number of days to preserve relative spacing
                     $orig = new DateTime($lez['data']);
-                    $interval = $lastDate->diff($orig);
-                    $diff = $interval->days !== false ? (int)$interval->days : 0;
-                    $newLezDate = (clone $nextDate)->modify("-{$diff} days");
-
-                    // Get package name
-                    $pkName = $lez['pacchetto_nome'];
-                    if ($pacchettoId > 0) {
-                        $stmtPkN = $pdo->prepare('SELECT nome FROM pacchetti WHERE id = ? LIMIT 1');
-                        $stmtPkN->execute([$pacchettoId]);
-                        $pkRow = $stmtPkN->fetch();
-                        if ($pkRow) { $pkName = $pkRow['nome']; }
-                    }
+                    $newLezDate = (clone $orig)->modify("+{$shiftDays} days");
 
                     $stmtIns->execute([
                         $newLezDate->format('Y-m-d'),
@@ -118,7 +121,7 @@ if ($requestAction === 'rinnovo') {
                         $lez['insegnante_id'],
                         $lez['strumento'],
                         'Programmata',
-                        $pkName,
+                        $pkName ?? $lez['pacchetto_nome'],
                         $nuovoAcquistoId,
                         null,
                     ]);

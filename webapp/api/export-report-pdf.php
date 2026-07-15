@@ -406,7 +406,7 @@ tr:nth-child(even) td { background: #f8f8f8; }
         <tr>
             <td><?= esc($day['label']) ?></td>
             <td><?= esc(substr((string)$lez['ora_inizio'], 0, 5)) ?>–<?= esc(substr((string)$lez['ora_fine'], 0, 5)) ?></td>
-            <td><?= esc(trim(decryptField((string)($lez['cliente_cognome'] ?? '')) . ' ' . decryptField((string)($lez['cliente_nome'] ?? '')))) ?></td>
+            <td><?= esc(trim(decryptField((string)($lez['cliente_nome'] ?? '')) . ' ' . decryptField((string)($lez['cliente_cognome'] ?? '')))) ?></td>
             <td><?= esc($lez['strumento'] ?? '—') ?></td>
             <td><?= esc($lez['stato'] ?? '—') ?></td>
         </tr>
