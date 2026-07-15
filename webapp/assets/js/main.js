@@ -85,9 +85,8 @@ async function safeJsonResponse(response) {
     try {
         return JSON.parse(text);
     } catch (_parseError) {
-        const parser = document.createElement('div');
-        parser.innerHTML = text;
-        const cleanText = (parser.textContent || parser.innerText || '')
+        const parsed = new DOMParser().parseFromString(text, 'text/html');
+        const cleanText = (parsed.body?.textContent || '')
             .replace(/\s+/g, ' ')
             .trim();
         const fallback = cleanText !== '' ? cleanText.slice(0, 200) : `HTTP ${response.status}`;
@@ -100,7 +99,10 @@ function normalizeChartDataset(labels, values, expectedLength, chartName) {
         console.error(`${chartName}: formato dati non valido`, { labels, values });
         return { labels: [], values: [] };
     }
-    const safeLabels = labels.slice(0, expectedLength).map((label) => String(label ?? ''));
+    const safeLabels = labels.slice(0, expectedLength).map((label) => {
+        const value = String(label ?? '').trim();
+        return value !== '' ? value : '—';
+    });
     const safeValues = values.slice(0, expectedLength).map((value) => {
         const n = Number(value);
         return Number.isFinite(n) ? n : 0;

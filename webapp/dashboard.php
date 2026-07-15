@@ -61,7 +61,7 @@ try {
     $stmt->execute();
     $nextLessons = $stmt->fetchAll();
 
-    $expiringSql = "
+    $expiringBaseSql = "
         SELECT
             a.*,
             c.nome,
@@ -82,15 +82,22 @@ try {
         ) ls ON ls.acquisto_id = a.id
         WHERE a.stato_pagamento != 'Rimborso'
           AND COALESCE(a.numero_lezioni, pk.numero_lezioni, 0) > 0
-        HAVING lezioni_rimanenti <= 3
-        ORDER BY lezioni_rimanenti ASC, a.data_acquisto DESC, a.id DESC
     ";
 
-    $stmt = $pdo->prepare($expiringSql);
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM ({$expiringBaseSql}) AS expiring_packages WHERE lezioni_rimanenti <= 3");
     $stmt->execute();
-    $allExpiringPackages = $stmt->fetchAll();
-    $expiringPackagesCount = count($allExpiringPackages);
-    $expiringPackages = array_slice($allExpiringPackages, 0, $maxExpiringPackages);
+    $expiringPackagesCount = (int)$stmt->fetchColumn();
+
+    $stmt = $pdo->prepare(
+        "SELECT *
+         FROM ({$expiringBaseSql}) AS expiring_packages
+         WHERE lezioni_rimanenti <= 3
+         ORDER BY lezioni_rimanenti ASC, data_acquisto DESC, id DESC
+         LIMIT ?"
+    );
+    $stmt->bindValue(1, $maxExpiringPackages, PDO::PARAM_INT);
+    $stmt->execute();
+    $expiringPackages = $stmt->fetchAll();
 
     $stmt = $pdo->prepare(
         'SELECT DAYOFWEEK(data) AS dow, COUNT(*) AS cnt
