@@ -3,7 +3,6 @@
  * API endpoint: get-eventi-calendario.php
  * Returns calendar events in FullCalendar JSON format.
  */
-ob_start();
 ini_set('log_errors', '1');
 ini_set('display_errors', '0');
 if (session_status() === PHP_SESSION_NONE) { session_start(); }
@@ -12,7 +11,6 @@ require_once __DIR__ . '/../config/functions.php';
 require_once __DIR__ . '/../includes/auth.php';
 requireAuth();
 
-ob_end_clean();
 header('Content-Type: application/json; charset=UTF-8');
 header('Cache-Control: no-cache, no-store, must-revalidate');
 

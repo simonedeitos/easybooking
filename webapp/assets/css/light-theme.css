@@ -125,7 +125,7 @@ small, .small   { color: inherit; }
 .card, .card-body, .stat-card { background-color: #fff; color: var(--text-primary); }
 .card-header, .card-footer { background-color: #f8f9fa; color: var(--text-primary); border-color: var(--border-color); }
 .card-title, .card-subtitle { color: var(--text-primary); }
-.card-text { color: var(--text-secondary); }
+.card-text { color: var(--text-primary); }
 
 /* Light dropdown */
 .dropdown-menu {
