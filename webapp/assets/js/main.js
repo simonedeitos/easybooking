@@ -92,7 +92,8 @@ async function safeJsonResponse(response) {
         const fallback = cleanText !== ''
             ? (cleanText.length > 200 ? cleanText.slice(0, 200) + '...' : cleanText)
             : `HTTP ${response.status}`;
-        throw new Error(`Risposta non valida dal server (${fallback})`);
+        const source = response.url ? ` @ ${response.url}` : '';
+        throw new Error(`Risposta non valida dal server (${fallback})${source}`);
     }
 }
 
