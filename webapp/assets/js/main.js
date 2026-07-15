@@ -61,15 +61,59 @@ function getCsrfToken() {
 // Auto-attach CSRF and AJAX marker to all non-GET fetch requests
 const _origFetch = window.fetch;
 window.fetch = function(url, opts = {}) {
-    if (opts.method && opts.method.toUpperCase() !== 'GET') {
-        if (!opts.headers) opts.headers = {};
-        opts.headers['X-CSRF-Token'] = getCsrfToken();
-        // Mark as XMLHttpRequest so the server can detect AJAX calls
-        // and return JSON error responses instead of HTML redirects.
-        opts.headers['X-Requested-With'] = 'XMLHttpRequest';
+    const method = (opts.method || 'GET').toUpperCase();
+    if (!opts.headers) opts.headers = {};
+    const headers = new Headers(opts.headers);
+    const csrfToken = getCsrfToken();
+
+    if (!headers.has('X-Requested-With')) {
+        headers.set('X-Requested-With', 'XMLHttpRequest');
     }
+    if (!headers.has('Accept')) {
+        headers.set('Accept', 'application/json, text/plain, */*');
+    }
+    if (method !== 'GET' && method !== 'HEAD' && csrfToken && !headers.has('X-CSRF-Token')) {
+        headers.set('X-CSRF-Token', csrfToken);
+    }
+    opts.headers = headers;
+
     return _origFetch(url, opts);
 };
+
+async function safeJsonResponse(response) {
+    const text = await response.text();
+    try {
+        return JSON.parse(text);
+    } catch (_parseError) {
+        const parsed = new DOMParser().parseFromString(text, 'text/html');
+        const cleanText = (parsed.body?.textContent || '')
+            .replace(/\s+/g, ' ')
+            .trim();
+        const fallback = cleanText !== ''
+            ? (cleanText.length > 200 ? cleanText.slice(0, 200) + '...' : cleanText)
+            : `HTTP ${response.status}`;
+        const source = response.url ? ` @ ${response.url}` : '';
+        throw new Error(`Risposta non valida dal server (${fallback})${source}`);
+    }
+}
+
+function normalizeChartDataset(labels, values, expectedLength, chartName) {
+    if (!Array.isArray(labels) || !Array.isArray(values)) {
+        console.error(`${chartName}: formato dati non valido`, { labels, values });
+        return { labels: [], values: [] };
+    }
+    const safeLabels = labels.slice(0, expectedLength).map((label) => {
+        const value = String(label ?? '').trim();
+        return value !== '' ? value : 'N/A';
+    });
+    const safeValues = values.slice(0, expectedLength).map((value) => {
+        const n = Number(value);
+        return Number.isFinite(n) ? n : 0;
+    });
+    while (safeLabels.length < expectedLength) safeLabels.push('');
+    while (safeValues.length < expectedLength) safeValues.push(0);
+    return { labels: safeLabels, values: safeValues };
+}
 
 // ── Sidebar Toggle ────────────────────────────────────────────
 function initSidebar() {
@@ -177,7 +221,7 @@ function ajaxForm(formEl, onSuccess, onError) {
                 headers: { 'X-CSRF-Token': getCsrfToken() },
                 body: fd
             });
-            const data = await resp.json();
+            const data = await safeJsonResponse(resp);
             if (data.success) {
                 onSuccess(data);
             } else {
@@ -201,7 +245,7 @@ function updateStatus(url, id, newStatus, csrfToken) {
         },
         body: `id=${encodeURIComponent(id)}&stato=${encodeURIComponent(newStatus)}&action=update_status&csrf_token=${encodeURIComponent(csrfToken)}`
     })
-    .then(r => r.json())
+    .then((r) => safeJsonResponse(r))
     .then(data => {
         if (data.success) {
             showToast('Stato aggiornato', 'success');

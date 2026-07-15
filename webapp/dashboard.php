@@ -70,7 +70,7 @@ try {
             pk.nome AS pacchetto_nome,
             COALESCE(a.numero_lezioni, pk.numero_lezioni, 0) AS numero_lezioni,
             COALESCE(ls.lezioni_svolte, 0) AS lezioni_svolte,
-            (COALESCE(a.numero_lezioni, pk.numero_lezioni, 0) - COALESCE(ls.lezioni_svolte, 0)) AS lezioni_rimanenti
+            GREATEST(COALESCE(a.numero_lezioni, pk.numero_lezioni, 0) - COALESCE(ls.lezioni_svolte, 0), 0) AS lezioni_rimanenti
         FROM acquisti a
         INNER JOIN clienti c ON a.cliente_id = c.id
         LEFT JOIN pacchetti pk ON a.pacchetto_id = pk.id
@@ -81,14 +81,20 @@ try {
             GROUP BY acquisto_id
         ) ls ON ls.acquisto_id = a.id
         WHERE a.stato_pagamento != 'Rimborso'
-          AND (COALESCE(a.numero_lezioni, pk.numero_lezioni, 0) - COALESCE(ls.lezioni_svolte, 0)) BETWEEN 1 AND 3
+          AND COALESCE(a.numero_lezioni, pk.numero_lezioni, 0) > 0
     ";
 
-    $stmt = $pdo->prepare("SELECT COUNT(*) FROM ({$expiringBaseSql}) AS expiring_packages");
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM ({$expiringBaseSql}) AS expiring_packages WHERE lezioni_rimanenti <= 3");
     $stmt->execute();
     $expiringPackagesCount = (int)$stmt->fetchColumn();
 
-    $stmt = $pdo->prepare('SELECT * FROM (' . $expiringBaseSql . ') AS expiring_packages ORDER BY lezioni_rimanenti ASC, data_acquisto DESC LIMIT ?');
+    $stmt = $pdo->prepare(
+        "SELECT *
+         FROM ({$expiringBaseSql}) AS expiring_packages
+         WHERE lezioni_rimanenti <= 3
+         ORDER BY lezioni_rimanenti ASC, data_acquisto DESC, id DESC
+         LIMIT ?"
+    );
     $stmt->bindValue(1, $maxExpiringPackages, PDO::PARAM_INT);
     $stmt->execute();
     $expiringPackages = $stmt->fetchAll();
@@ -108,6 +114,21 @@ try {
             $weekdayChartData[$weekdayMap[$dow]] = (int)$row['cnt'];
         }
     }
+    if (array_sum($weekdayChartData) === 0) {
+        $stmt = $pdo->prepare(
+            'SELECT DAYOFWEEK(data) AS dow, COUNT(*) AS cnt
+             FROM prenotazioni
+             WHERE data >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+             GROUP BY dow'
+        );
+        $stmt->execute();
+        foreach ($stmt->fetchAll() as $row) {
+            $dow = (int)$row['dow'];
+            if (isset($weekdayMap[$dow])) {
+                $weekdayChartData[$weekdayMap[$dow]] = (int)$row['cnt'];
+            }
+        }
+    }
 
     $stmt = $pdo->prepare(
         'SELECT MONTH(data_acquisto) AS m, SUM(importo_pagato) AS totale
@@ -120,6 +141,21 @@ try {
     foreach ($stmt->fetchAll() as $row) {
         $monthIndex = max(1, (int)$row['m']) - 1;
         $revenueChartData[$monthIndex] = (float)$row['totale'];
+    }
+    if (array_sum($revenueChartData) === 0.0) {
+        $stmt = $pdo->prepare(
+            'SELECT MONTH(data_acquisto) AS m, SUM(importo_pagato) AS totale
+             FROM acquisti
+             WHERE data_acquisto >= DATE_SUB(CURDATE(), INTERVAL 12 MONTH)
+               AND stato_pagamento IN (?, ?)
+             GROUP BY m
+             ORDER BY m ASC'
+        );
+        $stmt->execute(['Pagato', 'Parziale']);
+        foreach ($stmt->fetchAll() as $row) {
+            $monthIndex = max(1, (int)$row['m']) - 1;
+            $revenueChartData[$monthIndex] = (float)$row['totale'];
+        }
     }
 } catch (PDOException $e) {
     error_log('Dashboard Error: ' . $e->getMessage());
@@ -320,10 +356,13 @@ require_once __DIR__ . '/includes/header.php';
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-    const weekdayLabels = <?= json_encode($weekdayLabels, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
-    const weekdayData = <?= json_encode($weekdayChartData, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
-    const monthLabels = <?= json_encode($monthLabels, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
-    const revenueData = <?= json_encode($revenueChartData, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+    const weekdayLabelsRaw = <?= json_encode($weekdayLabels, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+    const weekdayDataRaw = <?= json_encode($weekdayChartData, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+    const monthLabelsRaw = <?= json_encode($monthLabels, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+    const revenueDataRaw = <?= json_encode($revenueChartData, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+
+    const { labels: weekdayLabels, values: weekdayData } = normalizeChartDataset(weekdayLabelsRaw, weekdayDataRaw, 7, 'Grafico lezioni per giorno');
+    const { labels: monthLabels, values: revenueData } = normalizeChartDataset(monthLabelsRaw, revenueDataRaw, 12, 'Grafico ricavi mensili');
 
     const chartTextColor = getComputedStyle(document.documentElement).getPropertyValue('--text-secondary').trim() || '#a6adc8';
     const chartGridColor = 'rgba(166, 173, 200, 0.15)';

@@ -177,10 +177,11 @@ if ($requestAction !== '') {
 
             jsonResponse(['success' => true, 'teacher' => $teacher]);
         }
-    } catch (PDOException $e) {
+    } catch (Throwable $e) {
         if ($pdo->inTransaction()) {
             $pdo->rollBack();
         }
+        error_log('insegnanti.php action error [' . $requestAction . ']: ' . $e->getMessage());
         jsonResponse(['success' => false, 'message' => 'Errore durante l\'operazione richiesta.'], 500);
     }
 }
@@ -493,7 +494,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function fetchTeacher(id) {
         const response = await fetch(`insegnanti.php?action=get&id=${encodeURIComponent(id)}`);
-        const data = await response.json();
+        const data = await safeJsonResponse(response);
         if (!data.success) {
             throw new Error(data.message || 'Errore nel caricamento dell\'insegnante.');
         }
@@ -592,7 +593,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 formData.append('csrf_token', getCsrfToken());
 
                 const response = await fetch('insegnanti.php', { method: 'POST', body: formData });
-                const data = await response.json();
+                const data = await safeJsonResponse(response);
                 if (!data.success) {
                     throw new Error(data.message || 'Errore durante l\'eliminazione.');
                 }

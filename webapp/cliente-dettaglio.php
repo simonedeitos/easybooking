@@ -451,7 +451,7 @@ require_once __DIR__ . '/includes/header.php';
                                 <td>
                                     <?= htmlspecialchars((string)$svolte) ?>/<?= htmlspecialchars((string)$totLez) ?>
                                     <?php if ($rim > 0 && $rim <= 3): ?>
-                                    <span class="badge bg-warning text-dark ms-1"><?= $rim ?> rim.</span>
+                                    <span class="badge bg-warning eb-remaining-badge ms-1"><?= $rim ?> rim.</span>
                                     <?php elseif ($rim <= 0 && $totLez > 0): ?>
                                     <span class="badge bg-success ms-1">Completato</span>
                                     <?php endif; ?>
@@ -558,6 +558,11 @@ require_once __DIR__ . '/includes/header.php';
 </div>
 
 <!-- ── Modal Sposta Lezione ──────────────────────────────────── -->
+<style>
+[data-theme="light"] .eb-remaining-badge { color: #1e1e2e !important; }
+[data-theme="dark"] .eb-remaining-badge { color: var(--text-primary) !important; }
+</style>
+
 <div class="modal fade" id="spostaModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -638,7 +643,7 @@ document.addEventListener('DOMContentLoaded', () => {
             fd.append('nuova_ora_fine', oraFine);
             fd.append('csrf_token', getCsrfToken());
             const resp = await fetch('cliente-dettaglio.php?id=<?= $clienteId ?>', { method: 'POST', body: fd });
-            const result = await resp.json();
+            const result = await safeJsonResponse(resp);
             if (!result.success) { throw new Error(result.message || 'Errore durante lo spostamento.'); }
             showToast(result.message, 'success');
             spostaModal.hide();
