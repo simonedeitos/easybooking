@@ -86,7 +86,7 @@ window.fetch = async function(url, opts = {}) {
             throw new Error(
                 cleanText !== ''
                     ? cleanText.slice(0, MAX_ERROR_MESSAGE_LENGTH)
-                    : `Risposta non valida dal server${response.status ? ' (HTTP ' + response.status + ')' : ''}.`
+                    : `Risposta non valida dal server${response.status ? ` (HTTP ${response.status})` : ''}.`
             );
         }
     };

@@ -79,6 +79,9 @@ try {
 }
 
 try {
+    // NULLIF treats manually imported/stale zero-lesson purchases as "unset" so the
+    // package default can be used instead. The HAVING clause intentionally relies on
+    // MySQL alias support because this project targets MySQL/MariaDB only.
     $stmt = $pdo->prepare(
         "SELECT
             a.id,
@@ -360,7 +363,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const DEFAULT_CHART_TEXT_COLOR = '#a6adc8';
     const cssChartTextColor = getComputedStyle(document.documentElement).getPropertyValue('--text-secondary').trim();
-    const chartTextColor = cssChartTextColor !== '' ? cssChartTextColor : DEFAULT_CHART_TEXT_COLOR;
+    const chartTextColor = cssChartTextColor && CSS.supports('color', cssChartTextColor)
+        ? cssChartTextColor
+        : DEFAULT_CHART_TEXT_COLOR;
     const chartGridColor = 'rgba(166, 173, 200, 0.15)';
 
     function renderChartAvailabilityError(canvas, message) {
