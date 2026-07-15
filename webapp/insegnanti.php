@@ -88,7 +88,7 @@ if ($requestAction !== '') {
             }
 
             $pdo->commit();
-            jsonResponse(['success' => true, 'message' => 'Insegnante salvato con successo.', 'id' => $id]);
+            respondOperationResult(true, 'Insegnante salvato con successo.', 'insegnanti.php', 200, ['id' => $id]);
         }
 
         if ($requestAction === 'delete' && $_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -112,7 +112,7 @@ if ($requestAction !== '') {
                 jsonResponse(['success' => false, 'message' => 'Insegnante non trovato.'], 404);
             }
 
-            jsonResponse(['success' => true, 'message' => 'Insegnante eliminato con successo.']);
+            respondOperationResult(true, 'Insegnante eliminato con successo.', 'insegnanti.php');
         }
 
         if ($requestAction === 'save_tariffa_coppia' && $_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -181,7 +181,7 @@ if ($requestAction !== '') {
         if ($pdo->inTransaction()) {
             $pdo->rollBack();
         }
-        jsonResponse(['success' => false, 'message' => 'Errore durante l\'operazione richiesta.'], 500);
+        respondOperationResult(false, 'Errore durante l\'operazione richiesta.', 'insegnanti.php', 500);
     }
 }
 

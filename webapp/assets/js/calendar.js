@@ -128,6 +128,12 @@ function initCalendar(options = {}) {
         });
 
         calendarInstance.render();
+        calendarInstance.on('datesSet', () => {
+            const titleEl = document.getElementById('cal-title');
+            if (titleEl) {
+                titleEl.textContent = calendarInstance.view.title;
+            }
+        });
         bindCalendarToolbar();
     } catch (error) {
         console.error('Calendar initialization failed:', error);
@@ -158,12 +164,6 @@ function bindCalendarToolbar() {
         calendarInstance?.changeView('timeGridDay');
         document.querySelectorAll('.cal-view-btn').forEach(b => b.classList.remove('active'));
         document.getElementById('cal-view-day')?.classList.add('active');
-    });
-
-    // Update title on navigation
-    calendarInstance?.on('datesSet', () => {
-        const titleEl = document.getElementById('cal-title');
-        if (titleEl) titleEl.textContent = calendarInstance.view.title;
     });
 }
 

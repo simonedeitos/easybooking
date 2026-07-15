@@ -97,7 +97,7 @@ if ($requestAction !== '') {
                      WHERE id = ?'
                 );
                 $stmt->execute([$dataAcquisto, $clienteId, $pacchettoId, $importoPagato, $statoPagamento, $pianificato, $numeroFattura, $note, $numeroLezioni, $id]);
-                jsonResponse(['success' => true, 'message' => 'Acquisto aggiornato con successo.']);
+                respondOperationResult(true, 'Acquisto aggiornato con successo.', 'acquisti.php');
             }
 
             $stmt = $pdo->prepare(
@@ -105,7 +105,7 @@ if ($requestAction !== '') {
                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
             );
             $stmt->execute([$dataAcquisto, $clienteId, $pacchettoId, $importoPagato, $statoPagamento, $pianificato, $numeroFattura, $note, $numeroLezioni]);
-            jsonResponse(['success' => true, 'message' => 'Acquisto creato con successo.', 'id' => (int)$pdo->lastInsertId()]);
+            respondOperationResult(true, 'Acquisto creato con successo.', 'acquisti.php', 200, ['id' => (int)$pdo->lastInsertId()]);
         }
 
         if ($requestAction === 'delete' && $_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -127,7 +127,7 @@ if ($requestAction !== '') {
                 jsonResponse(['success' => false, 'message' => 'Acquisto non trovato.'], 404);
             }
 
-            jsonResponse(['success' => true, 'message' => 'Acquisto eliminato con successo.']);
+            respondOperationResult(true, 'Acquisto eliminato con successo.', 'acquisti.php');
         }
 
         if ($requestAction === 'get') {
@@ -159,7 +159,7 @@ if ($requestAction !== '') {
             jsonResponse(['success' => true, 'message' => 'Stato pagamento aggiornato con successo.']);
         }
     } catch (PDOException $e) {
-        jsonResponse(['success' => false, 'message' => 'Errore durante l\'operazione richiesta.'], 500);
+        respondOperationResult(false, 'Errore durante l\'operazione richiesta.', 'acquisti.php', 500);
     }
 }
 

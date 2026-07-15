@@ -20,7 +20,7 @@ $nextLessons = [];
 $expiringPackages = [];
 $weekdayChartData = array_fill(0, 7, 0);
 $revenueChartData = array_fill(0, 12, 0.0);
-$dashboardError = '';
+$dashboardErrors = [];
 
 function dashboardDecryptName(?string $nome, ?string $cognome): string
 {
@@ -36,15 +36,27 @@ try {
     $stmt = $pdo->prepare('SELECT COUNT(*) FROM clienti');
     $stmt->execute();
     $totalClients = (int)$stmt->fetchColumn();
+} catch (PDOException $e) {
+    $dashboardErrors[] = 'Impossibile caricare il totale clienti.';
+}
 
+try {
     $stmt = $pdo->prepare('SELECT COUNT(*) FROM prenotazioni WHERE data = CURDATE()');
     $stmt->execute();
     $lessonsToday = (int)$stmt->fetchColumn();
+} catch (PDOException $e) {
+    $dashboardErrors[] = 'Impossibile caricare le lezioni di oggi.';
+}
 
+try {
     $stmt = $pdo->prepare('SELECT COUNT(*) FROM prenotazioni WHERE YEARWEEK(data, 1) = YEARWEEK(CURDATE(), 1)');
     $stmt->execute();
     $lessonsThisWeek = (int)$stmt->fetchColumn();
+} catch (PDOException $e) {
+    $dashboardErrors[] = 'Impossibile caricare le lezioni della settimana.';
+}
 
+try {
     $stmt = $pdo->prepare(
         "SELECT p.*,
                 COALESCE(c.nome, '') AS nome,
@@ -60,70 +72,90 @@ try {
     );
     $stmt->execute();
     $nextLessons = $stmt->fetchAll();
+} catch (PDOException $e) {
+    error_log('Dashboard upcoming lessons error: ' . $e->getMessage());
+    $dashboardErrors[] = 'Impossibile caricare le prossime lezioni.';
+}
 
-    $expiringBaseSql = "
-        SELECT
-            a.*,
+try {
+    $stmt = $pdo->prepare(
+        "SELECT
+            a.id,
+            a.data_acquisto,
+            a.stato_pagamento,
+            a.importo_pagato,
+            a.numero_fattura,
+            a.note,
             c.nome,
             c.cognome,
             c.telefono,
             pk.nome AS pacchetto_nome,
-            COALESCE(a.numero_lezioni, pk.numero_lezioni, 0) AS numero_lezioni,
+            COALESCE(NULLIF(a.numero_lezioni, 0), pk.numero_lezioni, 0) AS totale_lezioni,
             COALESCE(ls.lezioni_svolte, 0) AS lezioni_svolte,
-            (COALESCE(a.numero_lezioni, pk.numero_lezioni, 0) - COALESCE(ls.lezioni_svolte, 0)) AS lezioni_rimanenti
-        FROM acquisti a
-        INNER JOIN clienti c ON a.cliente_id = c.id
-        LEFT JOIN pacchetti pk ON a.pacchetto_id = pk.id
-        LEFT JOIN (
-            SELECT acquisto_id, COUNT(*) AS lezioni_svolte
-            FROM prenotazioni
-            WHERE stato = 'Svolta' AND acquisto_id IS NOT NULL
-            GROUP BY acquisto_id
-        ) ls ON ls.acquisto_id = a.id
-        WHERE a.stato_pagamento != 'Rimborso'
-          AND (COALESCE(a.numero_lezioni, pk.numero_lezioni, 0) - COALESCE(ls.lezioni_svolte, 0)) BETWEEN 1 AND 3
-    ";
-
-    $stmt = $pdo->prepare("SELECT COUNT(*) FROM ({$expiringBaseSql}) AS expiring_packages");
-    $stmt->execute();
-    $expiringPackagesCount = (int)$stmt->fetchColumn();
-
-    $stmt = $pdo->prepare('SELECT * FROM (' . $expiringBaseSql . ') AS expiring_packages ORDER BY lezioni_rimanenti ASC, data_acquisto DESC LIMIT ?');
-    $stmt->bindValue(1, $maxExpiringPackages, PDO::PARAM_INT);
-    $stmt->execute();
-    $expiringPackages = $stmt->fetchAll();
-
-    $stmt = $pdo->prepare(
-        'SELECT DAYOFWEEK(data) AS dow, COUNT(*) AS cnt
-         FROM prenotazioni
-         WHERE YEARWEEK(data, 1) = YEARWEEK(CURDATE(), 1)
-         GROUP BY dow'
+            GREATEST(COALESCE(NULLIF(a.numero_lezioni, 0), pk.numero_lezioni, 0) - COALESCE(ls.lezioni_svolte, 0), 0) AS lezioni_rimanenti
+         FROM acquisti a
+         INNER JOIN clienti c ON a.cliente_id = c.id
+         LEFT JOIN pacchetti pk ON a.pacchetto_id = pk.id
+         LEFT JOIN (
+             SELECT acquisto_id, COUNT(*) AS lezioni_svolte
+             FROM prenotazioni
+             WHERE stato = 'Svolta' AND acquisto_id IS NOT NULL
+             GROUP BY acquisto_id
+         ) ls ON ls.acquisto_id = a.id
+         WHERE a.stato_pagamento <> 'Rimborso'
+         HAVING totale_lezioni > 0 AND lezioni_rimanenti BETWEEN 1 AND 3
+         ORDER BY lezioni_rimanenti ASC, a.data_acquisto DESC, a.id DESC"
     );
     $stmt->execute();
-    $weekdayRows = $stmt->fetchAll();
-    $weekdayMap = [2 => 0, 3 => 1, 4 => 2, 5 => 3, 6 => 4, 7 => 5, 1 => 6];
-    foreach ($weekdayRows as $row) {
-        $dow = (int)$row['dow'];
-        if (isset($weekdayMap[$dow])) {
-            $weekdayChartData[$weekdayMap[$dow]] = (int)$row['cnt'];
-        }
-    }
+    $expiringPackages = $stmt->fetchAll();
+    $expiringPackagesCount = count($expiringPackages);
+    $expiringPackages = array_slice($expiringPackages, 0, $maxExpiringPackages);
+} catch (PDOException $e) {
+    error_log('Dashboard expiring packages error: ' . $e->getMessage());
+    $dashboardErrors[] = 'Impossibile caricare i pacchetti quasi esauriti.';
+}
+
+try {
+    $weekStart = (new DateTimeImmutable('monday this week'))->format('Y-m-d');
+    $weekEnd = (new DateTimeImmutable('sunday this week'))->format('Y-m-d');
 
     $stmt = $pdo->prepare(
-        'SELECT MONTH(data_acquisto) AS m, SUM(importo_pagato) AS totale
+        'SELECT WEEKDAY(data) AS weekday_index, COUNT(*) AS cnt
+         FROM prenotazioni
+         WHERE data BETWEEN ? AND ?
+         GROUP BY WEEKDAY(data)'
+    );
+    $stmt->execute([$weekStart, $weekEnd]);
+    foreach ($stmt->fetchAll() as $row) {
+        $weekdayIndex = (int)$row['weekday_index'];
+        if ($weekdayIndex >= 0 && $weekdayIndex < 7) {
+            $weekdayChartData[$weekdayIndex] = (int)$row['cnt'];
+        }
+    }
+} catch (PDOException $e) {
+    error_log('Dashboard weekday chart error: ' . $e->getMessage());
+    $dashboardErrors[] = 'Impossibile caricare il grafico lezioni per giorno.';
+}
+
+try {
+    $stmt = $pdo->prepare(
+        'SELECT MONTH(data_acquisto) AS m, COALESCE(SUM(importo_pagato), 0) AS totale
          FROM acquisti
-         WHERE YEAR(data_acquisto) = YEAR(CURDATE()) AND stato_pagamento IN (?, ?)
-         GROUP BY m
-         ORDER BY m ASC'
+         WHERE YEAR(data_acquisto) = YEAR(CURDATE())
+           AND stato_pagamento IN (?, ?)
+         GROUP BY MONTH(data_acquisto)
+         ORDER BY MONTH(data_acquisto) ASC'
     );
     $stmt->execute(['Pagato', 'Parziale']);
     foreach ($stmt->fetchAll() as $row) {
-        $monthIndex = max(1, (int)$row['m']) - 1;
-        $revenueChartData[$monthIndex] = (float)$row['totale'];
+        $monthIndex = ((int)$row['m']) - 1;
+        if ($monthIndex >= 0 && $monthIndex < 12) {
+            $revenueChartData[$monthIndex] = (float)$row['totale'];
+        }
     }
 } catch (PDOException $e) {
-    error_log('Dashboard Error: ' . $e->getMessage());
-    $dashboardError = 'Impossibile caricare tutti i dati della dashboard.';
+    error_log('Dashboard revenue chart error: ' . $e->getMessage());
+    $dashboardErrors[] = 'Impossibile caricare il grafico ricavi mensili.';
 }
 
 $weekdayLabels = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'];
@@ -139,9 +171,9 @@ require_once __DIR__ . '/includes/header.php';
     <span class="badge bg-primary-subtle text-primary-emphasis px-3 py-2">Aggiornato in tempo reale</span>
 </div>
 
-<?php if ($dashboardError !== ''): ?>
+<?php if ($dashboardErrors !== []): ?>
 <div class="alert alert-warning">
-    <i class="fas fa-exclamation-triangle me-2"></i><?= htmlspecialchars($dashboardError) ?>
+    <i class="fas fa-exclamation-triangle me-2"></i><?= htmlspecialchars(implode(' ', $dashboardErrors)) ?>
 </div>
 <?php endif; ?>
 
@@ -325,11 +357,21 @@ document.addEventListener('DOMContentLoaded', () => {
     const monthLabels = <?= json_encode($monthLabels, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
     const revenueData = <?= json_encode($revenueChartData, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
 
-    const chartTextColor = getComputedStyle(document.documentElement).getPropertyValue('--text-secondary').trim() || '#a6adc8';
+    const cssChartTextColor = getComputedStyle(document.documentElement).getPropertyValue('--text-secondary').trim();
+    const chartTextColor = cssChartTextColor !== '' ? cssChartTextColor : '#a6adc8';
     const chartGridColor = 'rgba(166, 173, 200, 0.15)';
+
+    function renderChartAvailabilityError(canvas, message) {
+        const wrapper = canvas?.parentElement;
+        if (!wrapper) {
+            return;
+        }
+        wrapper.innerHTML = `<div class="alert alert-secondary mb-0">${escapeHtml(message)}</div>`;
+    }
 
     const weeklyCanvas = document.getElementById('weeklyLessonsChart');
     if (weeklyCanvas && typeof Chart !== 'undefined') {
+        Chart.getChart(weeklyCanvas)?.destroy();
         new Chart(weeklyCanvas, {
             type: 'bar',
             data: {
@@ -351,10 +393,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         });
+    } else if (weeklyCanvas) {
+        renderChartAvailabilityError(weeklyCanvas, 'Grafico lezioni per giorno non disponibile.');
     }
 
     const revenueCanvas = document.getElementById('monthlyRevenueChart');
     if (revenueCanvas && typeof Chart !== 'undefined') {
+        Chart.getChart(revenueCanvas)?.destroy();
         new Chart(revenueCanvas, {
             type: 'line',
             data: {
@@ -391,6 +436,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         });
+    } else if (revenueCanvas) {
+        renderChartAvailabilityError(revenueCanvas, 'Grafico ricavi mensili non disponibile.');
     }
 });
 </script>

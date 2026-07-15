@@ -60,15 +60,38 @@ function getCsrfToken() {
 
 // Auto-attach CSRF and AJAX marker to all non-GET fetch requests
 const _origFetch = window.fetch;
-window.fetch = function(url, opts = {}) {
+window.fetch = async function(url, opts = {}) {
+    if (!opts.headers) opts.headers = {};
+    opts.headers['X-Requested-With'] = 'XMLHttpRequest';
+
     if (opts.method && opts.method.toUpperCase() !== 'GET') {
-        if (!opts.headers) opts.headers = {};
         opts.headers['X-CSRF-Token'] = getCsrfToken();
-        // Mark as XMLHttpRequest so the server can detect AJAX calls
-        // and return JSON error responses instead of HTML redirects.
-        opts.headers['X-Requested-With'] = 'XMLHttpRequest';
     }
-    return _origFetch(url, opts);
+    const response = await _origFetch(url, opts);
+    const responseClone = response.clone();
+    const originalJson = response.json.bind(response);
+
+    response.json = async () => {
+        try {
+            return await originalJson();
+        } catch (error) {
+            const rawBody = await responseClone.text();
+            const cleanText = rawBody
+                .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+                .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+                .replace(/<[^>]+>/g, ' ')
+                .replace(/\s+/g, ' ')
+                .trim();
+
+            throw new Error(
+                cleanText !== ''
+                    ? cleanText.slice(0, 240)
+                    : `Risposta non valida dal server${response.status ? ' (HTTP ' + response.status + ')' : ''}.`
+            );
+        }
+    };
+
+    return response;
 };
 
 // ── Sidebar Toggle ────────────────────────────────────────────

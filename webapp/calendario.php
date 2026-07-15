@@ -541,7 +541,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         initCalendar({ slotMin: '08:00:00', slotMax: '21:00:00', colorMode: currentColorMode });
         document.getElementById('cal-title').textContent = calendarInstance?.view?.title || 'Calendario';
-        calendarInstance?.on('eventsSet', applyTeacherFilter);
         updateColorButtons();
     }
 
