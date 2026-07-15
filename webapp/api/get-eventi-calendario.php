@@ -53,8 +53,8 @@ try {
     $sql =
         'SELECT p.id, p.data, p.ora_inizio, p.ora_fine, p.stato, p.strumento, p.note,
                 p.cliente_id, p.insegnante_id, p.pacchetto_nome, p.acquisto_id,
-                COALESCE(c.nome, "N/A") AS cliente_nome, COALESCE(c.cognome, "") AS cliente_cognome,
-                COALESCE(i.nome, "N/A") AS insegnante_nome, COALESCE(i.cognome, "") AS insegnante_cognome
+                COALESCE(c.nome, \'N/A\') AS cliente_nome, COALESCE(c.cognome, \'\') AS cliente_cognome,
+                COALESCE(i.nome, \'N/A\') AS insegnante_nome, COALESCE(i.cognome, \'\') AS insegnante_cognome
          FROM prenotazioni p
          LEFT JOIN clienti c ON c.id = p.cliente_id
          LEFT JOIN insegnanti i ON i.id = p.insegnante_id
@@ -82,6 +82,7 @@ try {
         '#7c6af7', '#16a34a', '#dc2626', '#d97706', '#0891b2',
         '#8b5cf6', '#06b6d4', '#f59e0b', '#10b981', '#ef4444',
     ];
+    $colorCount = count($teacherColors);
 
     $events = [];
     foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
@@ -95,7 +96,7 @@ try {
         }
 
         $insegnanteId = (int)$row['insegnante_id'];
-        $bgColor = $teacherColors[abs($insegnanteId) % count($teacherColors)];
+        $bgColor = $teacherColors[abs($insegnanteId) % $colorCount];
         $textColor = calendarContrastColor($bgColor);
 
         $events[] = [

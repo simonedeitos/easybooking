@@ -20,7 +20,11 @@ const CalendarColors = {
 
 function getTeacherColor(teacherId) {
     if (!CalendarColors.teacherMap[teacherId]) {
-        const numericId = Math.abs(Number(teacherId) || 0);
+        let numericId = Number.parseInt(String(teacherId), 10);
+        if (!Number.isFinite(numericId)) {
+            numericId = Array.from(String(teacherId)).reduce((hash, char) => hash + char.charCodeAt(0), 0);
+        }
+        numericId = Math.abs(numericId);
         const idx = numericId % CalendarColors.byTeacher.length;
         CalendarColors.teacherMap[teacherId] = CalendarColors.byTeacher[idx];
     }
@@ -169,8 +173,8 @@ function bindCalendarToolbar() {
 
 // ── Build tooltip HTML ────────────────────────────────────────
 function buildTooltip(props) {
-    const cliente = props.cliente || [props.cliente_nome, props.cliente_cognome].filter(Boolean).join(' ');
-    const insegnante = props.insegnante || [props.insegnante_nome, props.insegnante_cognome].filter(Boolean).join(' ');
+    const cliente = props.cliente || 'N/D';
+    const insegnante = props.insegnante || 'N/D';
     return `<b>${escapeHtml(cliente || '')}</b><br>
             ${escapeHtml(insegnante || 'N/D')}${props.strumento ? ' – ' + escapeHtml(props.strumento) : ''}<br>
             Stato: ${escapeHtml(props.stato || '')}`;
