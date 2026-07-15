@@ -177,7 +177,9 @@ if ($requestAction !== '') {
 
             jsonResponse(['success' => true, 'teacher' => $teacher]);
         }
-    } catch (PDOException $e) {
+        jsonResponse(['success' => false, 'message' => 'Azione non riconosciuta.'], 400);
+    } catch (Throwable $e) {
+        error_log('[insegnanti.php] ' . get_class($e) . ': ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
         if ($pdo->inTransaction()) {
             $pdo->rollBack();
         }

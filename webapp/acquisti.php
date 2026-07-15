@@ -158,7 +158,12 @@ if ($requestAction !== '') {
             $stmt->execute([$status, $id]);
             jsonResponse(['success' => true, 'message' => 'Stato pagamento aggiornato con successo.']);
         }
-    } catch (PDOException $e) {
+        jsonResponse(['success' => false, 'message' => 'Azione non riconosciuta.'], 400);
+    } catch (Throwable $e) {
+        error_log('[acquisti.php] ' . get_class($e) . ': ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
         respondOperationResult(false, 'Errore durante l\'operazione richiesta.', 'acquisti.php', 500);
     }
 }

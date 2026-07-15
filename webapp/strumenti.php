@@ -212,7 +212,12 @@ if ($requestAction !== '') {
 
             jsonResponse(['success' => true, 'strumento' => $instrument]);
         }
-    } catch (PDOException $e) {
+        jsonResponse(['success' => false, 'message' => 'Azione non riconosciuta.'], 400);
+    } catch (Throwable $e) {
+        error_log('[strumenti.php] ' . get_class($e) . ': ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
         respondOperationResult(false, 'Errore durante la gestione degli strumenti.', 'strumenti.php', 500);
     }
 }

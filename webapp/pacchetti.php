@@ -110,7 +110,12 @@ if ($requestAction !== '') {
 
             jsonResponse(['success' => true, 'package' => $package]);
         }
-    } catch (PDOException $e) {
+        jsonResponse(['success' => false, 'message' => 'Azione non riconosciuta.'], 400);
+    } catch (Throwable $e) {
+        error_log('[pacchetti.php] ' . get_class($e) . ': ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
         respondOperationResult(false, 'Errore durante l\'operazione richiesta.', 'pacchetti.php', 500);
     }
 }

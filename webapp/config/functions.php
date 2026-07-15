@@ -14,8 +14,7 @@ function csrfField(): string {
 function verifyCsrf(): void {
     $token = $_POST['csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
     if (!hash_equals(csrfToken(), $token)) {
-        http_response_code(403);
-        die(json_encode(['success' => false, 'message' => 'Token CSRF non valido.']));
+        jsonResponse(['success' => false, 'message' => 'Token CSRF non valido.'], 403);
     }
 }
 

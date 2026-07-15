@@ -201,6 +201,11 @@ function ajaxForm(formEl, onSuccess, onError) {
                 headers: { 'X-CSRF-Token': getCsrfToken() },
                 body: fd
             });
+            const ct = resp.headers.get('Content-Type') || '';
+            if (!ct.includes('application/json')) {
+                onError('Il server ha restituito una risposta non valida.');
+                return;
+            }
             const data = await resp.json();
             if (data.success) {
                 onSuccess(data);
