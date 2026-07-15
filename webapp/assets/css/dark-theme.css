@@ -81,11 +81,12 @@ small, .small   { color: inherit; }
 .card, .card-body { background-color: var(--bg-card); color: var(--text-primary); }
 .card-header, .card-footer { background-color: transparent; color: var(--text-primary); border-color: var(--border-color); }
 .card-title, .card-subtitle { color: var(--text-primary); }
-.card-text { color: var(--text-secondary); }
+.card-text { color: var(--text-primary); }
 
 /* Bootstrap table */
 .table { --bs-table-color: var(--text-primary); --bs-table-bg: var(--bg-card); }
 .table > :not(caption) > * > * { color: var(--text-primary); background-color: var(--bg-card); }
+.table th, .table td { color: var(--text-primary) !important; }
 .table-striped > tbody > tr:nth-of-type(odd) > * { background-color: #282840; }
 
 /* Bootstrap forms */
