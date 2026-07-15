@@ -106,9 +106,7 @@ if ($requestAction !== '') {
             );
             $stmt->execute([$dataAcquisto, $clienteId, $pacchettoId, $importoPagato, $statoPagamento, $pianificato, $numeroFattura, $note, $numeroLezioni]);
             respondOperationResult(true, 'Acquisto creato con successo.', 'acquisti.php', 200, ['id' => (int)$pdo->lastInsertId()]);
-        }
-
-        if ($requestAction === 'delete' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+        } elseif ($requestAction === 'delete' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             verifyCsrf();
             $id = sanitizeInt(post('id'));
             if ($id <= 0) {
@@ -128,9 +126,7 @@ if ($requestAction !== '') {
             }
 
             respondOperationResult(true, 'Acquisto eliminato con successo.', 'acquisti.php');
-        }
-
-        if ($requestAction === 'get') {
+        } elseif ($requestAction === 'get') {
             $id = sanitizeInt($_GET['id'] ?? $_POST['id'] ?? 0);
             if ($id <= 0) {
                 jsonResponse(['success' => false, 'message' => 'Acquisto non valido.'], 422);
@@ -144,9 +140,7 @@ if ($requestAction !== '') {
             }
 
             jsonResponse(['success' => true, 'purchase' => $purchase]);
-        }
-
-        if ($requestAction === 'update_payment' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+        } elseif ($requestAction === 'update_payment' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             verifyCsrf();
             $id = sanitizeInt(post('id'));
             $status = trim(post('stato_pagamento'));
@@ -157,8 +151,14 @@ if ($requestAction !== '') {
             $stmt = $pdo->prepare('UPDATE acquisti SET stato_pagamento = ? WHERE id = ?');
             $stmt->execute([$status, $id]);
             jsonResponse(['success' => true, 'message' => 'Stato pagamento aggiornato con successo.']);
+        } else {
+            jsonResponse(['success' => false, 'message' => 'Azione non riconosciuta.'], 400);
         }
-    } catch (PDOException $e) {
+    } catch (Throwable $e) {
+        error_log('[acquisti.php] ' . get_class($e) . ': ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
         respondOperationResult(false, 'Errore durante l\'operazione richiesta.', 'acquisti.php', 500);
     }
 }

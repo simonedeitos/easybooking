@@ -89,9 +89,7 @@ if ($requestAction !== '') {
 
             $pdo->commit();
             respondOperationResult(true, 'Insegnante salvato con successo.', 'insegnanti.php', 200, ['id' => $id]);
-        }
-
-        if ($requestAction === 'delete' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+        } elseif ($requestAction === 'delete' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             verifyCsrf();
 
             $id = sanitizeInt(post('id'));
@@ -113,9 +111,7 @@ if ($requestAction !== '') {
             }
 
             respondOperationResult(true, 'Insegnante eliminato con successo.', 'insegnanti.php');
-        }
-
-        if ($requestAction === 'save_tariffa_coppia' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+        } elseif ($requestAction === 'save_tariffa_coppia' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             verifyCsrf();
 
             $teacherId = sanitizeInt(post('insegnante_id'));
@@ -133,9 +129,7 @@ if ($requestAction !== '') {
             $stmt->execute([$teacherId, $tariffa]);
 
             jsonResponse(['success' => true, 'message' => 'Tariffa di coppia aggiornata.', 'tariffa' => $tariffa]);
-        }
-
-        if ($requestAction === 'get') {
+        } elseif ($requestAction === 'get') {
             $id = sanitizeInt($_GET['id'] ?? $_POST['id'] ?? 0);
             if ($id <= 0) {
                 jsonResponse(['success' => false, 'message' => 'Insegnante non valido.'], 422);
@@ -176,8 +170,11 @@ if ($requestAction !== '') {
             $teacher['upcoming_lessons'] = $stmt->fetchAll();
 
             jsonResponse(['success' => true, 'teacher' => $teacher]);
+        } else {
+            jsonResponse(['success' => false, 'message' => 'Azione non riconosciuta.'], 400);
         }
-    } catch (PDOException $e) {
+    } catch (Throwable $e) {
+        error_log('[insegnanti.php] ' . get_class($e) . ': ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
         if ($pdo->inTransaction()) {
             $pdo->rollBack();
         }

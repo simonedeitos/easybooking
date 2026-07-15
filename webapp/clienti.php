@@ -75,9 +75,7 @@ if ($requestAction !== '') {
             );
             $stmt->execute([$nome, $cognome, $telefono, $email, $indirizzo, $codiceFiscale, $note, $megaPubblica, $megaLocale]);
             respondOperationResult(true, 'Cliente creato con successo.', 'clienti.php', 200, ['id' => (int)$pdo->lastInsertId()]);
-        }
-
-        if ($requestAction === 'delete' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+        } elseif ($requestAction === 'delete' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             verifyCsrf();
 
             $id = sanitizeInt(post('id'));
@@ -105,9 +103,7 @@ if ($requestAction !== '') {
             }
 
             respondOperationResult(true, 'Cliente eliminato con successo.', 'clienti.php');
-        }
-
-        if ($requestAction === 'get') {
+        } elseif ($requestAction === 'get') {
             $id = sanitizeInt($_GET['id'] ?? $_POST['id'] ?? 0);
             if ($id <= 0) {
                 jsonResponse(['success' => false, 'message' => 'Cliente non valido.'], 422);
@@ -122,8 +118,14 @@ if ($requestAction !== '') {
             }
 
             jsonResponse(['success' => true, 'client' => $client]);
+        } else {
+            jsonResponse(['success' => false, 'message' => 'Azione non riconosciuta.'], 400);
         }
-    } catch (PDOException $e) {
+    } catch (Throwable $e) {
+        error_log('[clienti.php] ' . get_class($e) . ': ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
         respondOperationResult(false, 'Errore durante l\'operazione richiesta.', 'clienti.php', 500);
     }
 }

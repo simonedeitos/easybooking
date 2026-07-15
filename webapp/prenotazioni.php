@@ -114,9 +114,7 @@ if ($requestAction !== '') {
             $stmt->execute([$data, $oraInizio, $oraFine, $clienteId, $insegnanteId, $strumento, $stato, $pacchettoNome, $acquistoId, $note]);
 
             jsonResponse(['success' => true, 'message' => 'Prenotazione creata con successo.', 'id' => (int)$pdo->lastInsertId()]);
-        }
-
-        if ($requestAction === 'delete' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+        } elseif ($requestAction === 'delete' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             verifyCsrf();
             $id = sanitizeInt(post('id'));
             if ($id <= 0) {
@@ -130,9 +128,7 @@ if ($requestAction !== '') {
             }
 
             jsonResponse(['success' => true, 'message' => 'Prenotazione eliminata con successo.']);
-        }
-
-        if ($requestAction === 'get') {
+        } elseif ($requestAction === 'get') {
             $id = sanitizeInt($_GET['id'] ?? $_POST['id'] ?? 0);
             if ($id <= 0) {
                 jsonResponse(['success' => false, 'message' => 'Prenotazione non valida.'], 422);
@@ -153,9 +149,7 @@ if ($requestAction !== '') {
             }
 
             jsonResponse(['success' => true, 'booking' => $booking]);
-        }
-
-        if ($requestAction === 'update_status' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+        } elseif ($requestAction === 'update_status' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             verifyCsrf();
             $id = sanitizeInt(post('id'));
             $stato = trim(post('stato'));
@@ -174,9 +168,7 @@ if ($requestAction !== '') {
             }
 
             jsonResponse(['success' => true, 'message' => 'Stato aggiornato con successo.']);
-        }
-
-        if ($requestAction === 'bulk_status' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+        } elseif ($requestAction === 'bulk_status' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             verifyCsrf();
             $stato = trim(post('stato'));
             $ids = $_POST['ids'] ?? [];
@@ -204,8 +196,14 @@ if ($requestAction !== '') {
             $stmt->execute(array_merge([$stato], $cleanIds));
 
             jsonResponse(['success' => true, 'message' => 'Stato aggiornato per le prenotazioni selezionate.']);
+        } else {
+            jsonResponse(['success' => false, 'message' => 'Azione non riconosciuta.'], 400);
         }
-    } catch (PDOException $e) {
+    } catch (Throwable $e) {
+        error_log('[prenotazioni.php] ' . get_class($e) . ': ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
         jsonResponse(['success' => false, 'message' => 'Errore durante l\'operazione richiesta.'], 500);
     }
 }
