@@ -73,7 +73,7 @@ function initCalendar(options = {}) {
                     })
                     .then((data) => {
                         if (!Array.isArray(data)) {
-                            const message = data?.error || 'Formato risposta calendario non valido. Contatta il supporto se il problema persiste.';
+                            const message = data?.error || 'Errore nel caricamento del calendario.';
                             throw new Error(message);
                         }
                         successCallback(data);

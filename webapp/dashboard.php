@@ -61,7 +61,7 @@ try {
     $stmt->execute();
     $nextLessons = $stmt->fetchAll();
 
-    $expiringSql = "
+    $expiringBaseSql = "
         SELECT
             a.*,
             c.nome,
@@ -84,11 +84,11 @@ try {
           AND (COALESCE(a.numero_lezioni, pk.numero_lezioni, 0) - COALESCE(ls.lezioni_svolte, 0)) BETWEEN 1 AND 3
     ";
 
-    $stmt = $pdo->prepare("SELECT COUNT(*) FROM ({$expiringSql}) AS expiring_packages");
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM ({$expiringBaseSql}) AS expiring_packages");
     $stmt->execute();
     $expiringPackagesCount = (int)$stmt->fetchColumn();
 
-    $stmt = $pdo->prepare($expiringSql . ' ORDER BY (COALESCE(a.numero_lezioni, pk.numero_lezioni, 0) - COALESCE(ls.lezioni_svolte, 0)) ASC, a.data_acquisto DESC LIMIT ?');
+    $stmt = $pdo->prepare('SELECT * FROM (' . $expiringBaseSql . ') AS expiring_packages ORDER BY lezioni_rimanenti ASC, data_acquisto DESC LIMIT ?');
     $stmt->bindValue(1, $maxExpiringPackages, PDO::PARAM_INT);
     $stmt->execute();
     $expiringPackages = $stmt->fetchAll();
@@ -242,7 +242,7 @@ require_once __DIR__ . '/includes/header.php';
                     <?php foreach ($expiringPackages as $package):
                         $clienteNome    = dashboardDecryptName($package['nome'], $package['cognome']);
                         $telefonoDigits = dashboardWhatsAppNumber($package['telefono'] ?? null);
-                        $pacchettoNome  = (string)($package['pacchetto_nome'] ?: 'Pacchetto manuale');
+                        $pacchettoNome  = (string)($package['pacchetto_nome'] ?: 'Pacchetto sconosciuto');
                         $lezioniRim     = (string)$package['lezioni_rimanenti'];
                         $waMsg          = 'Ciao ' . $clienteNome . ', il tuo pacchetto ' . $pacchettoNome . ' è quasi esaurito (' . $lezioniRim . ' lezioni rimanenti). Vuoi rinnovarlo?';
                     ?>

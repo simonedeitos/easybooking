@@ -86,6 +86,7 @@ try {
         '#7c6af7', '#89dceb', '#a6e3a1', '#f9e2af', '#f38ba8',
         '#cba6f7', '#fab387', '#94e2d5', '#eba0ac', '#b4befe',
     ];
+    $unassignedTeacherColor = '#6c757d';
     $colorCount = count($teacherColors);
 
     $events = [];
@@ -100,7 +101,7 @@ try {
         }
 
         $insegnanteId = (int)$row['insegnante_id'];
-        $bgColor = $teacherColors[abs($insegnanteId) % $colorCount];
+        $bgColor = $insegnanteId > 0 ? $teacherColors[abs($insegnanteId) % $colorCount] : $unassignedTeacherColor;
         $textColor = calendarContrastColor($bgColor);
 
         $events[] = [
