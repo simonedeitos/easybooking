@@ -212,7 +212,8 @@ if ($requestAction !== '') {
 
             jsonResponse(['success' => true, 'strumento' => $instrument]);
         }
-    } catch (PDOException $e) {
+    } catch (Throwable $e) {
+        error_log('strumenti.php action error [' . $requestAction . ']: ' . $e->getMessage());
         jsonResponse(['success' => false, 'message' => 'Errore durante la gestione degli strumenti.'], 500);
     }
 }

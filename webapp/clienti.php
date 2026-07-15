@@ -123,7 +123,8 @@ if ($requestAction !== '') {
 
             jsonResponse(['success' => true, 'client' => $client]);
         }
-    } catch (PDOException $e) {
+    } catch (Throwable $e) {
+        error_log('clienti.php action error [' . $requestAction . ']: ' . $e->getMessage());
         jsonResponse(['success' => false, 'message' => 'Errore durante l\'operazione richiesta.'], 500);
     }
 }

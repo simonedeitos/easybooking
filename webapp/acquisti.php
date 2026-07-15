@@ -158,7 +158,8 @@ if ($requestAction !== '') {
             $stmt->execute([$status, $id]);
             jsonResponse(['success' => true, 'message' => 'Stato pagamento aggiornato con successo.']);
         }
-    } catch (PDOException $e) {
+    } catch (Throwable $e) {
+        error_log('acquisti.php action error [' . $requestAction . ']: ' . $e->getMessage());
         jsonResponse(['success' => false, 'message' => 'Errore durante l\'operazione richiesta.'], 500);
     }
 }

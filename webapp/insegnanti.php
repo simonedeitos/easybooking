@@ -177,10 +177,11 @@ if ($requestAction !== '') {
 
             jsonResponse(['success' => true, 'teacher' => $teacher]);
         }
-    } catch (PDOException $e) {
+    } catch (Throwable $e) {
         if ($pdo->inTransaction()) {
             $pdo->rollBack();
         }
+        error_log('insegnanti.php action error [' . $requestAction . ']: ' . $e->getMessage());
         jsonResponse(['success' => false, 'message' => 'Errore durante l\'operazione richiesta.'], 500);
     }
 }

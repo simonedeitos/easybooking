@@ -61,14 +61,36 @@ function getCsrfToken() {
 // Auto-attach CSRF and AJAX marker to all non-GET fetch requests
 const _origFetch = window.fetch;
 window.fetch = function(url, opts = {}) {
-    if (opts.method && opts.method.toUpperCase() !== 'GET') {
-        if (!opts.headers) opts.headers = {};
-        opts.headers['X-CSRF-Token'] = getCsrfToken();
-        // Mark as XMLHttpRequest so the server can detect AJAX calls
-        // and return JSON error responses instead of HTML redirects.
-        opts.headers['X-Requested-With'] = 'XMLHttpRequest';
+    const method = String(opts.method || 'GET').toUpperCase();
+    if (!opts.headers) opts.headers = {};
+    const headers = new Headers(opts.headers);
+    const csrfToken = getCsrfToken();
+
+    if (!headers.has('X-Requested-With')) {
+        headers.set('X-Requested-With', 'XMLHttpRequest');
     }
-    return _origFetch(url, opts);
+    if (!headers.has('Accept')) {
+        headers.set('Accept', 'application/json, text/plain, */*');
+    }
+    if (method !== 'GET' && method !== 'HEAD' && csrfToken && !headers.has('X-CSRF-Token')) {
+        headers.set('X-CSRF-Token', csrfToken);
+    }
+    opts.headers = headers;
+
+    return _origFetch(url, opts).then((response) => {
+        response.json = async () => {
+            const clone = response.clone();
+            const text = await clone.text();
+            try {
+                return JSON.parse(text);
+            } catch (_parseError) {
+                const cleanText = text.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+                const fallback = cleanText !== '' ? cleanText.slice(0, 200) : `HTTP ${response.status}`;
+                throw new Error(`Risposta non valida dal server (${fallback})`);
+            }
+        };
+        return response;
+    });
 };
 
 // ── Sidebar Toggle ────────────────────────────────────────────
