@@ -396,7 +396,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const id = button.dataset.id;
             try {
                 const response = await fetch('strumenti.php?action=get&id=' + encodeURIComponent(id));
-                const data = await response.json();
+                const data = await safeJsonResponse(response);
                 if (!data.success) {
                     throw new Error(data.message || 'Errore nel caricamento dello strumento.');
                 }
@@ -434,7 +434,7 @@ document.addEventListener('DOMContentLoaded', () => {
             formData.append('csrf_token', getCsrfToken());
             try {
                 const response = await fetch('strumenti.php', { method: 'POST', body: formData });
-                const data = await response.json();
+                const data = await safeJsonResponse(response);
                 if (!data.success) {
                     throw new Error(data.message || 'Errore durante l\'eliminazione.');
                 }

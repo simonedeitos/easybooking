@@ -61,7 +61,7 @@ function getCsrfToken() {
 // Auto-attach CSRF and AJAX marker to all non-GET fetch requests
 const _origFetch = window.fetch;
 window.fetch = function(url, opts = {}) {
-    const method = String(opts.method || 'GET').toUpperCase();
+    const method = (opts.method || 'GET').toUpperCase();
     if (!opts.headers) opts.headers = {};
     const headers = new Headers(opts.headers);
     const csrfToken = getCsrfToken();
@@ -77,21 +77,19 @@ window.fetch = function(url, opts = {}) {
     }
     opts.headers = headers;
 
-    return _origFetch(url, opts).then((response) => {
-        response.json = async () => {
-            const clone = response.clone();
-            const text = await clone.text();
-            try {
-                return JSON.parse(text);
-            } catch (_parseError) {
-                const cleanText = text.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-                const fallback = cleanText !== '' ? cleanText.slice(0, 200) : `HTTP ${response.status}`;
-                throw new Error(`Risposta non valida dal server (${fallback})`);
-            }
-        };
-        return response;
-    });
+    return _origFetch(url, opts);
 };
+
+async function safeJsonResponse(response) {
+    const text = await response.text();
+    try {
+        return JSON.parse(text);
+    } catch (_parseError) {
+        const cleanText = text.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+        const fallback = cleanText !== '' ? cleanText.slice(0, 200) : `HTTP ${response.status}`;
+        throw new Error(`Risposta non valida dal server (${fallback})`);
+    }
+}
 
 // ── Sidebar Toggle ────────────────────────────────────────────
 function initSidebar() {
@@ -199,7 +197,7 @@ function ajaxForm(formEl, onSuccess, onError) {
                 headers: { 'X-CSRF-Token': getCsrfToken() },
                 body: fd
             });
-            const data = await resp.json();
+            const data = await safeJsonResponse(resp);
             if (data.success) {
                 onSuccess(data);
             } else {
@@ -223,7 +221,7 @@ function updateStatus(url, id, newStatus, csrfToken) {
         },
         body: `id=${encodeURIComponent(id)}&stato=${encodeURIComponent(newStatus)}&action=update_status&csrf_token=${encodeURIComponent(csrfToken)}`
     })
-    .then(r => r.json())
+    .then((r) => safeJsonResponse(r))
     .then(data => {
         if (data.success) {
             showToast('Stato aggiornato', 'success');

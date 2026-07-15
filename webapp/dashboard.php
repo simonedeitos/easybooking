@@ -80,7 +80,7 @@ try {
             WHERE stato = 'Svolta' AND acquisto_id IS NOT NULL
             GROUP BY acquisto_id
         ) ls ON ls.acquisto_id = a.id
-        WHERE a.stato_pagamento <> 'Rimborso'
+        WHERE a.stato_pagamento != 'Rimborso'
           AND COALESCE(a.numero_lezioni, pk.numero_lezioni, 0) > 0
           AND GREATEST(COALESCE(a.numero_lezioni, pk.numero_lezioni, 0) - COALESCE(ls.lezioni_svolte, 0), 0) <= 3
         ORDER BY lezioni_rimanenti ASC, a.data_acquisto DESC, a.id DESC

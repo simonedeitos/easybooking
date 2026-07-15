@@ -563,7 +563,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const response = await fetch('calendario.php', { method: 'POST', body: fd });
-        const result = await response.json();
+        const result = await safeJsonResponse(response);
         if (!result.success) {
             throw new Error(result.message || successMessage);
         }
@@ -617,7 +617,7 @@ document.addEventListener('DOMContentLoaded', () => {
             formData.append('id', id);
             formData.append('csrf_token', getCsrfToken());
             const response = await fetch('calendario.php', { method: 'POST', body: formData });
-            const result = await response.json();
+            const result = await safeJsonResponse(response);
             if (!result.success) {
                 throw new Error(result.message || 'Errore durante l\'eliminazione.');
             }

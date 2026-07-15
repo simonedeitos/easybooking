@@ -506,7 +506,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function fetchBooking(id) {
         const response = await fetch(`prenotazioni.php?action=get&id=${encodeURIComponent(id)}`);
-        const data = await response.json();
+        const data = await safeJsonResponse(response);
         if (!data.success) {
             throw new Error(data.message || 'Errore nel caricamento della prenotazione.');
         }
@@ -607,7 +607,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 formData.append('csrf_token', getCsrfToken());
 
                 const response = await fetch('prenotazioni.php', { method: 'POST', body: formData });
-                const data = await response.json();
+                const data = await safeJsonResponse(response);
                 if (!data.success) {
                     throw new Error(data.message || 'Errore durante l\'eliminazione.');
                 }
@@ -639,7 +639,7 @@ document.addEventListener('DOMContentLoaded', () => {
             ids.forEach((id) => formData.append('ids[]', id));
 
             const response = await fetch('prenotazioni.php', { method: 'POST', body: formData });
-            const data = await response.json();
+            const data = await safeJsonResponse(response);
             if (!data.success) {
                 throw new Error(data.message || 'Errore nell\'aggiornamento multiplo.');
             }

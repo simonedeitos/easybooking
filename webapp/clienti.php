@@ -380,7 +380,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function fetchClient(id) {
         const response = await fetch(`clienti.php?action=get&id=${encodeURIComponent(id)}`);
-        const data = await response.json();
+        const data = await safeJsonResponse(response);
         if (!data.success) {
             throw new Error(data.message || 'Errore nel caricamento del cliente.');
         }
@@ -495,7 +495,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 formData.append('csrf_token', getCsrfToken());
 
                 const response = await fetch('clienti.php', { method: 'POST', body: formData });
-                const data = await response.json();
+                const data = await safeJsonResponse(response);
                 if (!data.success) {
                     throw new Error(data.message || 'Errore durante l\'eliminazione.');
                 }

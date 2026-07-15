@@ -69,7 +69,7 @@ function initCalendar(options = {}) {
                         if (!response.ok) {
                             throw new Error('HTTP ' + response.status);
                         }
-                        return response.json();
+                        return safeJsonResponse(response);
                     })
                     .then((data) => {
                         if (!Array.isArray(data)) {
@@ -236,7 +236,7 @@ async function saveEventMove(event, revertFn) {
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: new URLSearchParams(data).toString()
         });
-        const result = await resp.json();
+        const result = await safeJsonResponse(resp);
         if (!result.success) { showToast(result.message || 'Errore salvataggio', 'danger'); revertFn(); }
         else showToast('Lezione spostata', 'success');
     } catch (e) {
@@ -258,7 +258,7 @@ async function saveEventResize(event, revertFn) {
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: new URLSearchParams(data).toString()
         });
-        const result = await resp.json();
+        const result = await safeJsonResponse(resp);
         if (!result.success) { showToast(result.message || 'Errore ridimensionamento', 'danger'); revertFn(); }
         else showToast('Orario fine aggiornato', 'success');
     } catch (e) {
@@ -277,7 +277,7 @@ async function checkConflict(excludeId, data, oraInizio, oraFine, insegnanteId) 
             csrf_token: getCsrfToken()
         });
         const resp   = await fetch('calendario.php?' + params.toString());
-        const result = await resp.json();
+        const result = await safeJsonResponse(resp);
         return !result.conflict;
     } catch (e) {
         return true; // allow on error

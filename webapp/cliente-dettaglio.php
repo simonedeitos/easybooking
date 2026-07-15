@@ -643,7 +643,7 @@ document.addEventListener('DOMContentLoaded', () => {
             fd.append('nuova_ora_fine', oraFine);
             fd.append('csrf_token', getCsrfToken());
             const resp = await fetch('cliente-dettaglio.php?id=<?= $clienteId ?>', { method: 'POST', body: fd });
-            const result = await resp.json();
+            const result = await safeJsonResponse(resp);
             if (!result.success) { throw new Error(result.message || 'Errore durante lo spostamento.'); }
             showToast(result.message, 'success');
             spostaModal.hide();
