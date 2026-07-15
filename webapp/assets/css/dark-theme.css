@@ -1,0 +1,17 @@
+/* Dark Theme – already the default in style.css.
+   This file is loaded explicitly when theme=dark to reinforce variables. */
+:root {
+    --bg-main:        #1e1e2e;
+    --bg-sidebar:     #252537;
+    --bg-card:        #2a2a3e;
+    --bg-input:       #1e1e2e;
+    --bg-table-hover: #33334d;
+    --bg-navbar:      #252537;
+    --text-primary:   #cdd6f4;
+    --text-secondary: #a6adc8;
+    --text-muted:     #6c7086;
+    --border-color:   #363655;
+    --shadow:         0 4px 24px rgba(0,0,0,0.3);
+    --shadow-sm:      0 2px 8px rgba(0,0,0,0.2);
+}
+body { background-color: var(--bg-main); color: var(--text-primary); }
