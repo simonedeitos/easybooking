@@ -27,6 +27,7 @@ function calendarRequestDate(?string $value): ?string
         return null;
     }
 
+    // Defensive guard: valid Unix timestamps should format successfully.
     $formatted = date('Y-m-d', $timestamp);
     return $formatted === false ? null : $formatted;
 }

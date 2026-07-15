@@ -93,7 +93,7 @@ try {
     $stmt->execute();
     $expiringPackagesCount = (int)$stmt->fetchColumn();
 
-    $stmt = $pdo->prepare($expiringSql . ' ORDER BY (COALESCE(a.numero_lezioni, pk.numero_lezioni, 0) - COALESCE(ls.lezioni_svolte, 0)) ASC, a.data_acquisto DESC LIMIT ?');
+    $stmt = $pdo->prepare($expiringSql . ' ORDER BY lezioni_rimanenti ASC, a.data_acquisto DESC LIMIT ?');
     $stmt->bindValue(1, $maxExpiringPackages, PDO::PARAM_INT);
     $stmt->execute();
     $expiringPackages = $stmt->fetchAll();

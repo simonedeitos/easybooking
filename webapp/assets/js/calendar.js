@@ -21,12 +21,7 @@ const CalendarColors = {
 function getTeacherColor(teacherId) {
     if (!CalendarColors.teacherMap[teacherId]) {
         let numericId = Number.parseInt(String(teacherId), 10);
-        if (!Number.isFinite(numericId)) {
-            numericId = Array.from(String(teacherId)).reduce((hash, char) => {
-                return ((hash << 5) - hash + char.charCodeAt(0)) >>> 0;
-            }, 0);
-        }
-        numericId = Math.abs(numericId);
+        numericId = Number.isFinite(numericId) ? Math.abs(numericId) : 0;
         const idx = numericId % CalendarColors.byTeacher.length;
         CalendarColors.teacherMap[teacherId] = CalendarColors.byTeacher[idx];
     }
