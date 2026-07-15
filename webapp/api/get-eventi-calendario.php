@@ -19,6 +19,10 @@ try {
 
     $teacherId = isset($_GET['insegnante_id']) ? (int)$_GET['insegnante_id'] : 0;
 
+    // FullCalendar sends start/end as ISO strings (e.g. 2025-01-01T00:00:00)
+    $startDate = isset($_GET['start']) ? date('Y-m-d', strtotime($_GET['start'])) : null;
+    $endDate   = isset($_GET['end'])   ? date('Y-m-d', strtotime($_GET['end']))   : null;
+
     $sql =
         'SELECT p.id, p.data, p.ora_inizio, p.ora_fine, p.stato, p.strumento, p.note,
                 p.cliente_id, p.insegnante_id, p.pacchetto_nome, p.acquisto_id,
@@ -26,12 +30,21 @@ try {
                 i.nome AS insegnante_nome, i.cognome AS insegnante_cognome
          FROM prenotazioni p
          INNER JOIN clienti c ON c.id = p.cliente_id
-         INNER JOIN insegnanti i ON i.id = p.insegnante_id';
+         INNER JOIN insegnanti i ON i.id = p.insegnante_id
+         WHERE 1=1';
 
     $params = [];
     if ($teacherId > 0) {
-        $sql .= ' WHERE p.insegnante_id = ?';
+        $sql .= ' AND p.insegnante_id = ?';
         $params[] = $teacherId;
+    }
+    if ($startDate !== null) {
+        $sql .= ' AND p.data >= ?';
+        $params[] = $startDate;
+    }
+    if ($endDate !== null) {
+        $sql .= ' AND p.data <= ?';
+        $params[] = $endDate;
     }
     $sql .= ' ORDER BY p.data ASC, p.ora_inizio ASC, p.id ASC';
 

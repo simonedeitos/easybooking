@@ -252,3 +252,35 @@ small, .small   { color: inherit; }
 .navbar-title { color: var(--text-primary); }
 .navbar-btn { color: var(--text-secondary); background: transparent; }
 .navbar-btn:hover { color: var(--text-primary); background: rgba(124,106,247,0.08); }
+
+/* ── body[data-theme="light"] scoped overrides ───────────────
+   Force any lingering white/light utility text to dark for readability. */
+body[data-theme="light"] .text-light,
+body[data-theme="light"] .text-white {
+    color: var(--text-primary) !important;
+}
+
+body[data-theme="light"] {
+    color: var(--text-primary);
+}
+
+body[data-theme="light"] .card-text,
+body[data-theme="light"] .card-body,
+body[data-theme="light"] .card-body * {
+    color: var(--text-primary);
+}
+
+body[data-theme="light"] .table td,
+body[data-theme="light"] .table th {
+    color: var(--text-primary) !important;
+}
+
+body[data-theme="light"] small,
+body[data-theme="light"] .small {
+    color: var(--text-secondary) !important;
+}
+
+/* Badge text inherits correctly */
+body[data-theme="light"] .badge {
+    color: inherit;
+}

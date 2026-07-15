@@ -329,6 +329,12 @@ require_once __DIR__ . '/includes/header.php';
                     <a href="#" class="btn btn-outline-light d-none" id="detail_mega_local" target="_blank" rel="noopener noreferrer">
                         <i class="fas fa-desktop me-2"></i>MEGA Locale
                     </a>
+                    <a href="#" class="btn btn-primary d-none" id="detail_pdf_futuri" target="_blank" rel="noopener noreferrer">
+                        <i class="fas fa-file-pdf me-2"></i>PDF Lezioni Future
+                    </a>
+                    <a href="#" class="btn btn-secondary d-none" id="detail_pdf_storico" target="_blank" rel="noopener noreferrer">
+                        <i class="fas fa-file-pdf me-2"></i>PDF Storico
+                    </a>
                 </div>
             </div>
         </div>
@@ -452,6 +458,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 } else {
                     megaLocal.classList.add('d-none');
                     megaLocal.removeAttribute('href');
+                }
+
+                const pdfFuturi = document.getElementById('detail_pdf_futuri');
+                const pdfStorico = document.getElementById('detail_pdf_storico');
+                if (client.id) {
+                    pdfFuturi.href = `api/export-cliente-pdf.php?id=${encodeURIComponent(client.id)}&tipo=futuri`;
+                    pdfFuturi.classList.remove('d-none');
+                    pdfStorico.href = `api/export-cliente-pdf.php?id=${encodeURIComponent(client.id)}&tipo=storico`;
+                    pdfStorico.classList.remove('d-none');
+                } else {
+                    pdfFuturi.classList.add('d-none');
+                    pdfStorico.classList.add('d-none');
                 }
 
                 detailModal.show();

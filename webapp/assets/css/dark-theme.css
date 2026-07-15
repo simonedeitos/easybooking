@@ -229,3 +229,59 @@ small, .small   { color: inherit; }
 /* Toast */
 .toast { background-color: var(--bg-card); color: var(--text-primary); border-color: var(--border-color); }
 .toast-header { background-color: var(--bg-sidebar); color: var(--text-secondary); border-color: var(--border-color); }
+
+/* ── body[data-theme="dark"] scoped overrides ────────────────
+   These selectors have higher specificity than Bootstrap defaults
+   and ensure any inline or utility styles become readable. */
+body[data-theme="dark"] .text-dark,
+body[data-theme="dark"] .text-black {
+    color: var(--text-primary) !important;
+}
+
+body[data-theme="dark"] .text-light,
+body[data-theme="dark"] .text-white {
+    color: var(--text-primary) !important;
+}
+
+body[data-theme="dark"] .card-text,
+body[data-theme="dark"] .card-body,
+body[data-theme="dark"] .card-body * {
+    color: var(--text-primary);
+}
+
+body[data-theme="dark"] .table td,
+body[data-theme="dark"] .table th {
+    color: var(--text-primary) !important;
+}
+
+body[data-theme="dark"] .form-label,
+body[data-theme="dark"] .form-text {
+    color: var(--text-secondary) !important;
+}
+
+body[data-theme="dark"] .list-group-item {
+    color: var(--text-primary) !important;
+}
+
+body[data-theme="dark"] .dropdown-item {
+    color: var(--text-primary) !important;
+}
+
+body[data-theme="dark"] .breadcrumb-item {
+    color: var(--text-secondary) !important;
+}
+
+body[data-theme="dark"] small,
+body[data-theme="dark"] .small {
+    color: var(--text-secondary) !important;
+}
+
+/* Badge text inherits correctly */
+body[data-theme="dark"] .badge {
+    color: inherit;
+}
+
+/* Warning badge stays dark on yellow */
+body[data-theme="dark"] .badge.bg-warning {
+    color: #1e1e2e !important;
+}

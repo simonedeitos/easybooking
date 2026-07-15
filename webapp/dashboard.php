@@ -51,6 +51,7 @@ try {
             a.*,
             c.nome,
             c.cognome,
+            c.telefono,
             pk.nome AS pacchetto_nome,
             pk.numero_lezioni,
             COALESCE(ls.lezioni_svolte, 0) AS lezioni_svolte,
@@ -221,16 +222,31 @@ require_once __DIR__ . '/includes/header.php';
                 </div>
                 <?php else: ?>
                 <div class="list-group list-group-flush gap-3">
-                    <?php foreach ($expiringPackages as $package): ?>
+                    <?php foreach ($expiringPackages as $package):
+                        $clienteNome    = trim(decryptField((string)$package['nome']) . ' ' . decryptField((string)$package['cognome']));
+                        $telefonoRaw    = decryptField((string)($package['telefono'] ?? ''));
+                        $telefonoDigits = preg_replace('/[^0-9+]/', '', $telefonoRaw);
+                        $pacchettoNome  = (string)$package['pacchetto_nome'];
+                        $lezioniRim     = (string)$package['lezioni_rimanenti'];
+                        $waMsg          = 'Ciao ' . $clienteNome . ', il tuo pacchetto ' . $pacchettoNome . ' è quasi esaurito (' . $lezioniRim . ' lezioni rimanenti). Vuoi rinnovarlo?';
+                    ?>
                     <div class="rounded-3 border p-3 package-alert-item">
                         <div class="d-flex justify-content-between align-items-start gap-3">
                             <div>
-                                <div class="fw-semibold"><?= htmlspecialchars(trim((string)$package['nome'] . ' ' . (string)$package['cognome'])) ?></div>
-                                <div class="text-secondary small"><?= htmlspecialchars((string)$package['pacchetto_nome']) ?></div>
+                                <div class="fw-semibold"><?= htmlspecialchars($clienteNome) ?></div>
+                                <div class="text-secondary small"><?= htmlspecialchars($pacchettoNome) ?></div>
                             </div>
-                            <span class="badge bg-warning text-dark">
-                                <?= htmlspecialchars((string)$package['lezioni_rimanenti']) ?> rim.
-                            </span>
+                            <div class="d-flex align-items-center gap-2">
+                                <?php if ($telefonoDigits !== ''): ?>
+                                <a href="https://wa.me/<?= htmlspecialchars($telefonoDigits) ?>?text=<?= urlencode($waMsg) ?>"
+                                   class="btn btn-sm btn-success" target="_blank" rel="noopener noreferrer" title="Contatta via WhatsApp">
+                                    <i class="fab fa-whatsapp"></i>
+                                </a>
+                                <?php endif; ?>
+                                <span class="badge bg-warning text-dark">
+                                    <?= htmlspecialchars($lezioniRim) ?> rim.
+                                </span>
+                            </div>
                         </div>
                         <div class="small text-secondary mt-2">
                             Svolte: <?= htmlspecialchars((string)$package['lezioni_svolte']) ?> /
