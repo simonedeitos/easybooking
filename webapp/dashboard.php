@@ -66,7 +66,7 @@ try {
             GROUP BY acquisto_id
         ) ls ON ls.acquisto_id = a.id
         WHERE a.stato_pagamento != 'Rimborso'
-          AND (pk.numero_lezioni - COALESCE(ls.lezioni_svolte, 0)) BETWEEN 0 AND 3
+          AND (pk.numero_lezioni - COALESCE(ls.lezioni_svolte, 0)) BETWEEN 1 AND 3
     ";
 
     $stmt = $pdo->prepare("SELECT COUNT(*) FROM ({$expiringSql}) AS expiring_packages");

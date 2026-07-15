@@ -190,9 +190,10 @@ require_once __DIR__ . '/includes/header.php';
                         <td><?= htmlspecialchars(clientPreview($client['note'] ?? null)) ?></td>
                         <td>
                             <div class="d-flex flex-wrap gap-2">
-                                <button type="button" class="btn btn-sm btn-outline-info btn-view-client" data-id="<?= htmlspecialchars((string)$client['id']) ?>">
+                                <a href="cliente-dettaglio.php?id=<?= htmlspecialchars((string)$client['id']) ?>"
+                                   class="btn btn-sm btn-outline-info">
                                     <i class="fas fa-eye"></i>
-                                </button>
+                                </a>
                                 <button type="button" class="btn btn-sm btn-outline-primary btn-edit-client" data-id="<?= htmlspecialchars((string)$client['id']) ?>">
                                     <i class="fas fa-pen"></i>
                                 </button>

@@ -8,6 +8,7 @@ ini_set('display_errors', '0');
 if (session_status() === PHP_SESSION_NONE) { session_start(); }
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../config/functions.php';
+require_once __DIR__ . '/../config/encryption.php';
 require_once __DIR__ . '/../includes/auth.php';
 requireAuth();
 
@@ -61,8 +62,8 @@ try {
 
     $events = [];
     foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
-        $cliente    = trim((string)$row['cliente_nome'] . ' ' . (string)$row['cliente_cognome']);
-        $insegnante = trim((string)$row['insegnante_nome'] . ' ' . (string)$row['insegnante_cognome']);
+        $cliente    = trim(decryptField((string)$row['cliente_nome']) . ' ' . decryptField((string)$row['cliente_cognome']));
+        $insegnante = trim(decryptField((string)$row['insegnante_nome']) . ' ' . decryptField((string)$row['insegnante_cognome']));
         $strumento  = trim((string)($row['strumento'] ?? ''));
         $stato      = (string)$row['stato'];
         $title      = $cliente;
