@@ -141,25 +141,25 @@ if ($requestAction === 'rinnovo') {
 if ($requestAction === 'sposta' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
         verifyCsrf();
-        $lezId     = sanitizeInt(post('prenotazione_id'));
-        $nuovaData = trim(post('nuova_data'));
-        $nuoraInizio = trim(post('nuova_ora_inizio'));
-        $nuoraFine   = trim(post('nuova_ora_fine'));
+        $lezId          = sanitizeInt(post('prenotazione_id'));
+        $nuovaData      = trim(post('nuova_data'));
+        $nuovaOraInizio = trim(post('nuova_ora_inizio'));
+        $nuovaOraFine   = trim(post('nuova_ora_fine'));
 
         $dt = DateTime::createFromFormat('Y-m-d', $nuovaData);
         if ($lezId <= 0 || !$dt || $dt->format('Y-m-d') !== $nuovaData) {
             jsonResponse(['success' => false, 'message' => 'Dati non validi.'], 422);
         }
 
-        $nuoraInizio = strlen($nuoraInizio) === 5 ? $nuoraInizio . ':00' : substr($nuoraInizio, 0, 8);
-        $nuoraFine   = strlen($nuoraFine) === 5   ? $nuoraFine . ':00'   : substr($nuoraFine, 0, 8);
+        $nuovaOraInizio = strlen($nuovaOraInizio) === 5 ? $nuovaOraInizio . ':00' : substr($nuovaOraInizio, 0, 8);
+        $nuovaOraFine   = strlen($nuovaOraFine) === 5   ? $nuovaOraFine . ':00'   : substr($nuovaOraFine, 0, 8);
 
-        if (strtotime('1970-01-01 ' . $nuoraFine) <= strtotime('1970-01-01 ' . $nuoraInizio)) {
+        if (strtotime('1970-01-01 ' . $nuovaOraFine) <= strtotime('1970-01-01 ' . $nuovaOraInizio)) {
             jsonResponse(['success' => false, 'message' => 'L\'ora di fine deve essere successiva all\'ora di inizio.'], 422);
         }
 
         $stmt = $pdo->prepare('UPDATE prenotazioni SET data = ?, ora_inizio = ?, ora_fine = ? WHERE id = ? AND cliente_id = ?');
-        $stmt->execute([$nuovaData, $nuoraInizio, $nuoraFine, $lezId, $clienteId]);
+        $stmt->execute([$nuovaData, $nuovaOraInizio, $nuovaOraFine, $lezId, $clienteId]);
 
         if ($stmt->rowCount() === 0) {
             jsonResponse(['success' => false, 'message' => 'Lezione non trovata.'], 404);

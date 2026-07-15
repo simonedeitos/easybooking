@@ -19,7 +19,7 @@ $pdo = Database::getInstance();
 
 function esc(mixed $v): string { return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
 function fmt_date(?string $d): string { if (!$d) return '—'; $dt = DateTime::createFromFormat('Y-m-d', $d); return $dt ? $dt->format('d/m/Y') : esc($d); }
-function reportDate2(string $value, string $fallback): string {
+function sanitizeReportDate(string $value, string $fallback): string {
     $value = trim($value);
     $dt = DateTime::createFromFormat('Y-m-d', $value);
     return ($dt instanceof DateTime && $dt->format('Y-m-d') === $value) ? $value : $fallback;
@@ -31,8 +31,8 @@ if (!in_array($reportType, $allowedTypes, true)) { $reportType = 'ore_insegnanti
 
 $defaultFrom = (new DateTime('first day of this month'))->format('Y-m-d');
 $defaultTo   = (new DateTime())->format('Y-m-d');
-$dateFrom    = reportDate2(isset($_GET['date_from']) ? trim($_GET['date_from']) : $defaultFrom, $defaultFrom);
-$dateTo      = reportDate2(isset($_GET['date_to'])   ? trim($_GET['date_to'])   : $defaultTo,   $defaultTo);
+$dateFrom    = sanitizeReportDate(isset($_GET['date_from']) ? trim($_GET['date_from']) : $defaultFrom, $defaultFrom);
+$dateTo      = sanitizeReportDate(isset($_GET['date_to'])   ? trim($_GET['date_to'])   : $defaultTo,   $defaultTo);
 if ($dateFrom > $dateTo) { [$dateFrom, $dateTo] = [$dateTo, $dateFrom]; }
 
 $insegnanteId = isset($_GET['insegnante_id']) ? (int)$_GET['insegnante_id'] : 0;
