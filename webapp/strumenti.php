@@ -161,9 +161,7 @@ if ($requestAction !== '') {
             ]);
 
             respondOperationResult(true, 'Strumento creato con successo.', 'strumenti.php', 200, ['id' => (int)$pdo->lastInsertId()]);
-        }
-
-        if ($requestAction === 'delete' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+        } elseif ($requestAction === 'delete' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             verifyCsrf();
             $id = sanitizeInt(post('id'));
             if ($id <= 0) {
@@ -195,9 +193,7 @@ if ($requestAction !== '') {
             $stmt = $pdo->prepare('DELETE FROM strumenti WHERE id = ?');
             $stmt->execute([$id]);
             respondOperationResult(true, 'Strumento eliminato con successo.', 'strumenti.php');
-        }
-
-        if ($requestAction === 'get') {
+        } elseif ($requestAction === 'get') {
             $id = sanitizeInt($_GET['id'] ?? $_POST['id'] ?? 0);
             if ($id <= 0) {
                 jsonResponse(['success' => false, 'message' => 'Strumento non valido.'], 422);
@@ -211,8 +207,9 @@ if ($requestAction !== '') {
             }
 
             jsonResponse(['success' => true, 'strumento' => $instrument]);
+        } else {
+            jsonResponse(['success' => false, 'message' => 'Azione non riconosciuta.'], 400);
         }
-        jsonResponse(['success' => false, 'message' => 'Azione non riconosciuta.'], 400);
     } catch (Throwable $e) {
         error_log('[strumenti.php] ' . get_class($e) . ': ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
         if ($pdo->inTransaction()) {

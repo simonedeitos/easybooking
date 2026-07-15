@@ -71,9 +71,7 @@ if ($requestAction !== '') {
             );
             $stmt->execute([$nome, $descrizione, $numeroLezioni, $durataMinuti, $frequenza, $prezzo, $strumento]);
             respondOperationResult(true, 'Pacchetto creato con successo.', 'pacchetti.php', 200, ['id' => (int)$pdo->lastInsertId()]);
-        }
-
-        if ($requestAction === 'delete' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+        } elseif ($requestAction === 'delete' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             verifyCsrf();
             $id = sanitizeInt(post('id'));
             if ($id <= 0) {
@@ -93,9 +91,7 @@ if ($requestAction !== '') {
             }
 
             respondOperationResult(true, 'Pacchetto eliminato con successo.', 'pacchetti.php');
-        }
-
-        if ($requestAction === 'get') {
+        } elseif ($requestAction === 'get') {
             $id = sanitizeInt($_GET['id'] ?? $_POST['id'] ?? 0);
             if ($id <= 0) {
                 jsonResponse(['success' => false, 'message' => 'Pacchetto non valido.'], 422);
@@ -109,8 +105,9 @@ if ($requestAction !== '') {
             }
 
             jsonResponse(['success' => true, 'package' => $package]);
+        } else {
+            jsonResponse(['success' => false, 'message' => 'Azione non riconosciuta.'], 400);
         }
-        jsonResponse(['success' => false, 'message' => 'Azione non riconosciuta.'], 400);
     } catch (Throwable $e) {
         error_log('[pacchetti.php] ' . get_class($e) . ': ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
         if ($pdo->inTransaction()) {
