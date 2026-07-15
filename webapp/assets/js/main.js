@@ -89,7 +89,9 @@ async function safeJsonResponse(response) {
         const cleanText = (parsed.body?.textContent || '')
             .replace(/\s+/g, ' ')
             .trim();
-        const fallback = cleanText !== '' ? cleanText.slice(0, 200) : `HTTP ${response.status}`;
+        const fallback = cleanText !== ''
+            ? (cleanText.length > 200 ? cleanText.slice(0, 200) + '...' : cleanText)
+            : `HTTP ${response.status}`;
         throw new Error(`Risposta non valida dal server (${fallback})`);
     }
 }
@@ -101,7 +103,7 @@ function normalizeChartDataset(labels, values, expectedLength, chartName) {
     }
     const safeLabels = labels.slice(0, expectedLength).map((label) => {
         const value = String(label ?? '').trim();
-        return value !== '' ? value : '—';
+        return value !== '' ? value : 'N/A';
     });
     const safeValues = values.slice(0, expectedLength).map((value) => {
         const n = Number(value);

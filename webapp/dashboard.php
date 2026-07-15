@@ -93,6 +93,8 @@ try {
          FROM ({$expiringBaseSql}) AS expiring_packages
          WHERE lezioni_rimanenti <= 3
          ORDER BY lezioni_rimanenti ASC, data_acquisto DESC, id DESC
+         -- id DESC keeps ordering deterministic when multiple records
+         -- share the same remaining lessons and purchase date.
          LIMIT ?"
     );
     $stmt->bindValue(1, $maxExpiringPackages, PDO::PARAM_INT);
