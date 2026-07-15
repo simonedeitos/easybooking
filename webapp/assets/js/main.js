@@ -62,36 +62,37 @@ function getCsrfToken() {
 
 // Auto-attach CSRF and AJAX marker to all non-GET fetch requests
 const _origFetch = window.fetch;
-window.fetch = async function(url, opts = {}) {
+window.fetch = function(url, opts = {}) {
     if (!opts.headers) opts.headers = {};
     opts.headers['X-Requested-With'] = 'XMLHttpRequest';
 
     if (opts.method && opts.method.toUpperCase() !== 'GET') {
         opts.headers['X-CSRF-Token'] = getCsrfToken();
     }
-    const response = await _origFetch(url, opts);
-    const responseClone = response.clone();
-    const originalJson = response.json.bind(response);
+    return _origFetch(url, opts).then((response) => {
+        const responseClone = response.clone();
+        const originalJson = response.json.bind(response);
 
-    response.json = async () => {
-        try {
-            return await originalJson();
-        } catch (error) {
-            const rawBody = await responseClone.text();
-            const parsedDocument = new DOMParser().parseFromString(rawBody, 'text/html');
-            const cleanText = (parsedDocument.body?.textContent || rawBody)
-                .replace(/\s+/g, ' ')
-                .trim();
+        response.json = async () => {
+            try {
+                return await originalJson();
+            } catch (error) {
+                const rawBody = await responseClone.text();
+                const parsedDocument = new DOMParser().parseFromString(rawBody, 'text/html');
+                const cleanText = (parsedDocument.body?.textContent || rawBody)
+                    .replace(/\s+/g, ' ')
+                    .trim();
 
-            throw new Error(
-                cleanText !== ''
-                    ? cleanText.slice(0, MAX_ERROR_MESSAGE_LENGTH)
-                    : `Risposta non valida dal server${response.status ? ` (HTTP ${response.status})` : ''}.`
-            );
-        }
-    };
+                throw new Error(
+                    cleanText !== ''
+                        ? cleanText.slice(0, MAX_ERROR_MESSAGE_LENGTH)
+                        : `Risposta non valida dal server${response.status ? ` (HTTP ${response.status})` : ''}.`
+                );
+            }
+        };
 
-    return response;
+        return response;
+    });
 };
 
 // ── Sidebar Toggle ────────────────────────────────────────────
