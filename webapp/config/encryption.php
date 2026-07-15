@@ -64,26 +64,51 @@ function fixXMLEncoding(string $content): string
         }
     }
 
+    // 2c. Detect Windows-1252 / ISO-8859-1 content that is not valid UTF-8.
+    //     The null-byte guard excludes UTF-16 encoded text: all ASCII characters
+    //     in UTF-16LE are represented as a non-null byte followed by 0x00, so
+    //     any UTF-16 document containing at least one ASCII character (every
+    //     XML file starts with '<' which is 0x3C 0x00 in UTF-16LE) will contain
+    //     null bytes and will not reach this branch.  This makes the Windows-1252
+    //     fallback safe to attempt on the remaining cases.
+    if (!mb_check_encoding($content, 'UTF-8') && !str_contains($content, "\x00")) {
+        $candidates = ['Windows-1252', 'ISO-8859-1'];
+        foreach ($candidates as $enc) {
+            $converted = mb_convert_encoding($content, 'UTF-8', $enc);
+            // Accept the conversion only when the result is valid UTF-8 and
+            // contains at least one XML tag to guard against false positives.
+            if ($converted !== false && mb_check_encoding($converted, 'UTF-8') && str_contains(ltrim($converted), '<')) {
+                $content = $converted;
+                break;
+            }
+        }
+    }
+
     // 3. Rewrite the XML encoding declaration to UTF-8 (handles utf-16,
     //    UTF-16, Windows-1252, ISO-8859-1, etc.)
     $content = preg_replace_callback(
         '/<\?xml\b[^?]*\?>/i',
         static function (array $m): string {
-            return preg_replace(
+            $decl = preg_replace(
                 '/\bencoding=["\'][^"\']*["\']/i',
                 'encoding="UTF-8"',
                 $m[0]
             ) ?? $m[0];
+            // If no encoding attribute was present, add one.
+            if (!str_contains(strtolower($decl), 'encoding=')) {
+                $decl = str_ireplace('?>', ' encoding="UTF-8"?>', $decl);
+            }
+            return $decl;
         },
         $content,
         1
     ) ?? $content;
 
-    // 4. Safety net: if the declaration still references utf-16 (the regex
-    //    above may fail on malformed declarations), replace it directly.
-    if (preg_match('/encoding=["\']utf-?16/i', substr($content, 0, 200))) {
+    // 4. Safety net: if the declaration still references a non-UTF-8 encoding
+    //    (the regex above may fail on malformed declarations), replace it directly.
+    if (preg_match('/encoding=["\'](?!utf-8)[^"\']+["\']/i', substr($content, 0, 400))) {
         $content = preg_replace(
-            '/(<\?xml\b[^?]*?)encoding=["\']utf-?16[a-z]*["\']/i',
+            '/(<\?xml\b[^?]*?)encoding=["\'][^"\']+["\']/i',
             '$1encoding="UTF-8"',
             $content,
             1

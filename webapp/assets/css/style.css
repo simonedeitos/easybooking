@@ -26,6 +26,17 @@
     --warning:        #f9e2af;
     --info:           #89dceb;
     --font:           'Inter', system-ui, -apple-system, sans-serif;
+
+    /* Bootstrap 5 CSS variable overrides (dark is default) */
+    --bs-body-color:       #cdd6f4;
+    --bs-body-bg:          #1e1e2e;
+    --bs-emphasis-color:   #cdd6f4;
+    --bs-secondary-color:  #a6adc8;
+    --bs-tertiary-color:   #6c7086;
+    --bs-border-color:     #363655;
+    --bs-heading-color:    #cdd6f4;
+    --bs-link-color:       #7c6af7;
+    --bs-link-hover-color: #6a57e0;
 }
 
 /* ── Reset & Base ───────────────────────────────────────────── */
