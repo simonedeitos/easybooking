@@ -85,10 +85,29 @@ async function safeJsonResponse(response) {
     try {
         return JSON.parse(text);
     } catch (_parseError) {
-        const cleanText = text.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+        const parser = document.createElement('div');
+        parser.innerHTML = text;
+        const cleanText = (parser.textContent || parser.innerText || '')
+            .replace(/\s+/g, ' ')
+            .trim();
         const fallback = cleanText !== '' ? cleanText.slice(0, 200) : `HTTP ${response.status}`;
         throw new Error(`Risposta non valida dal server (${fallback})`);
     }
+}
+
+function normalizeChartDataset(labels, values, expectedLength, chartName) {
+    if (!Array.isArray(labels) || !Array.isArray(values)) {
+        console.error(`${chartName}: formato dati non valido`, { labels, values });
+        return { labels: [], values: [] };
+    }
+    const safeLabels = labels.slice(0, expectedLength).map((label) => String(label ?? ''));
+    const safeValues = values.slice(0, expectedLength).map((value) => {
+        const n = Number(value);
+        return Number.isFinite(n) ? n : 0;
+    });
+    while (safeLabels.length < expectedLength) safeLabels.push('');
+    while (safeValues.length < expectedLength) safeValues.push(0);
+    return { labels: safeLabels, values: safeValues };
 }
 
 // ── Sidebar Toggle ────────────────────────────────────────────

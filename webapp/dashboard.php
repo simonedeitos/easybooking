@@ -82,7 +82,7 @@ try {
         ) ls ON ls.acquisto_id = a.id
         WHERE a.stato_pagamento != 'Rimborso'
           AND COALESCE(a.numero_lezioni, pk.numero_lezioni, 0) > 0
-          AND GREATEST(COALESCE(a.numero_lezioni, pk.numero_lezioni, 0) - COALESCE(ls.lezioni_svolte, 0), 0) <= 3
+        HAVING lezioni_rimanenti <= 3
         ORDER BY lezioni_rimanenti ASC, a.data_acquisto DESC, a.id DESC
     ";
 
@@ -354,23 +354,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const monthLabelsRaw = <?= json_encode($monthLabels, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
     const revenueDataRaw = <?= json_encode($revenueChartData, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
 
-    const normalizeChart = (labels, values, expectedLength, chartName) => {
-        if (!Array.isArray(labels) || !Array.isArray(values)) {
-            console.error(`${chartName}: formato dati non valido`, { labels, values });
-            return { labels: [], values: [] };
-        }
-        const safeLabels = labels.slice(0, expectedLength).map((label) => String(label ?? ''));
-        const safeValues = values.slice(0, expectedLength).map((value) => {
-            const n = Number(value);
-            return Number.isFinite(n) ? n : 0;
-        });
-        while (safeLabels.length < expectedLength) safeLabels.push('');
-        while (safeValues.length < expectedLength) safeValues.push(0);
-        return { labels: safeLabels, values: safeValues };
-    };
-
-    const { labels: weekdayLabels, values: weekdayData } = normalizeChart(weekdayLabelsRaw, weekdayDataRaw, 7, 'Grafico lezioni per giorno');
-    const { labels: monthLabels, values: revenueData } = normalizeChart(monthLabelsRaw, revenueDataRaw, 12, 'Grafico ricavi mensili');
+    const { labels: weekdayLabels, values: weekdayData } = normalizeChartDataset(weekdayLabelsRaw, weekdayDataRaw, 7, 'Grafico lezioni per giorno');
+    const { labels: monthLabels, values: revenueData } = normalizeChartDataset(monthLabelsRaw, revenueDataRaw, 12, 'Grafico ricavi mensili');
 
     const chartTextColor = getComputedStyle(document.documentElement).getPropertyValue('--text-secondary').trim() || '#a6adc8';
     const chartGridColor = 'rgba(166, 173, 200, 0.15)';
