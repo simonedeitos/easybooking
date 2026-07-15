@@ -65,14 +65,18 @@ function fixXMLEncoding(string $content): string
     }
 
     // 2c. Detect Windows-1252 / ISO-8859-1 content that is not valid UTF-8.
-    //     When the bytes are not valid UTF-8 and the content does not contain
-    //     null bytes (ruling out remaining UTF-16 cases), attempt a conversion
-    //     from Windows-1252 which is a superset of ISO-8859-1 and covers the
-    //     typical Western-European characters used in Italian music school data.
+    //     The null-byte guard excludes UTF-16 encoded text: all ASCII characters
+    //     in UTF-16LE are represented as a non-null byte followed by 0x00, so
+    //     any UTF-16 document containing at least one ASCII character (every
+    //     XML file starts with '<' which is 0x3C 0x00 in UTF-16LE) will contain
+    //     null bytes and will not reach this branch.  This makes the Windows-1252
+    //     fallback safe to attempt on the remaining cases.
     if (!mb_check_encoding($content, 'UTF-8') && !str_contains($content, "\x00")) {
         $candidates = ['Windows-1252', 'ISO-8859-1'];
         foreach ($candidates as $enc) {
             $converted = mb_convert_encoding($content, 'UTF-8', $enc);
+            // Accept the conversion only when the result is valid UTF-8 and
+            // contains at least one XML tag to guard against false positives.
             if ($converted !== false && mb_check_encoding($converted, 'UTF-8') && str_contains(ltrim($converted), '<')) {
                 $content = $converted;
                 break;

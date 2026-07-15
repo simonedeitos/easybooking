@@ -45,6 +45,16 @@ function requireAuth(): void {
 function requireAdmin(): void {
     requireAuth();
     if (($_SESSION['user_role'] ?? '') !== 'admin') {
+        $isAjaxRequest = !empty($_SERVER['HTTP_X_CSRF_TOKEN'])
+            || (!empty($_SERVER['HTTP_X_REQUESTED_WITH'])
+                && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest');
+        if ($isAjaxRequest) {
+            while (ob_get_level() > 0) { ob_end_clean(); }
+            http_response_code(403);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['success' => false, 'message' => 'Accesso negato: solo gli amministratori possono eseguire questa operazione.']);
+            exit;
+        }
         http_response_code(403);
         die('<h1>403 – Accesso negato</h1><p>Solo gli amministratori possono accedere a questa pagina.</p>');
     }

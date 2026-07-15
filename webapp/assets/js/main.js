@@ -42,10 +42,8 @@ const ThemeManager = (() => {
         // sync localStorage so the two stay in agreement.  This prevents
         // a stale localStorage value from overriding the user's saved
         // database preference on every page load.
-        const serverTheme = document.documentElement.dataset.theme
-                         || document.body.dataset.theme;
-        const stored = localStorage.getItem(KEY);
-        const resolved = serverTheme || stored || DARK;
+        const serverTheme = document.documentElement.dataset.theme;
+        const resolved = serverTheme || localStorage.getItem(KEY) || DARK;
         // Keep localStorage in sync with the server value.
         localStorage.setItem(KEY, resolved);
         apply(resolved);
@@ -60,12 +58,15 @@ function getCsrfToken() {
     return meta ? meta.getAttribute('content') : '';
 }
 
-// Auto-attach CSRF to all AJAX fetch requests
+// Auto-attach CSRF and AJAX marker to all non-GET fetch requests
 const _origFetch = window.fetch;
 window.fetch = function(url, opts = {}) {
     if (opts.method && opts.method.toUpperCase() !== 'GET') {
         if (!opts.headers) opts.headers = {};
         opts.headers['X-CSRF-Token'] = getCsrfToken();
+        // Mark as XMLHttpRequest so the server can detect AJAX calls
+        // and return JSON error responses instead of HTML redirects.
+        opts.headers['X-Requested-With'] = 'XMLHttpRequest';
     }
     return _origFetch(url, opts);
 };
