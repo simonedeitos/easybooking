@@ -228,9 +228,10 @@ function openNewEventModal(startStr, endStr) {
     m.show();
 }
 
-// ── Dialog for move confirmation and status change ────────────
+// ── Dialog for move confirmation and status change ──────────────────
 function askMoveConfirmation(event) {
-    const fallbackStatus = Object.hasOwn(CalendarColors.byStatus, 'Riprogrammata')
+    // Usa 'in' operator invece di Object.hasOwn (compatibile ES5)
+    const fallbackStatus = ('Riprogrammata' in CalendarColors.byStatus)
         ? 'Riprogrammata'
         : (Object.keys(CalendarColors.byStatus)[0] || 'Programmata');
 
@@ -321,43 +322,57 @@ async function saveEventMove(event, revertFn) {
         action: 'move_event',
         csrf_token: getCsrfToken()
     };
-    const ok = await checkConflict(event.id, data.data, data.ora_inizio, data.ora_fine, event.extendedProps.insegnante_id);
-    if (!ok) {
-        showToast('Conflitto: l\'insegnante ha già una lezione in questo orario', 'warning');
-        revertFn();
-        return;
-    }
-    const moveConfirmation = await askMoveConfirmation(event);
-    if (!moveConfirmation) {
-        revertFn();
-        return;
-    }
-    data.stato = moveConfirmation.stato;
+    console.debug('[EasyBooking] saveEventMove START → id=' + event.id);
+    
     try {
+        const ok = await checkConflict(event.id, data.data, data.ora_inizio, data.ora_fine, event.extendedProps.insegnante_id);
+        if (!ok) {
+            console.debug('[EasyBooking] saveEventMove CONFLICT detected');
+            showToast('Conflitto: l\'insegnante ha già una lezione in questo orario', 'warning');
+            revertFn();
+            return;
+        }
+        
+        console.debug('[EasyBooking] saveEventMove asking for confirmation');
+        const moveConfirmation = await askMoveConfirmation(event);
+        if (!moveConfirmation) {
+            console.debug('[EasyBooking] saveEventMove CANCELLED by user');
+            revertFn();
+            return;
+        }
+        
+        data.stato = moveConfirmation.stato;
+        console.debug('[EasyBooking] saveEventMove SAVING → stato=' + data.stato);
+        
         const resp = await fetch('calendario.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: new URLSearchParams(data).toString()
         });
         const result = await resp.json();
-        if (!result.success) { showToast(result.message || 'Errore salvataggio', 'danger'); revertFn(); }
-        else {
+        if (!result.success) {
+            console.debug('[EasyBooking] saveEventMove FAILED → ' + result.message);
+            showToast(result.message || 'Errore salvataggio', 'danger');
+            revertFn();
+        } else {
+            console.debug('[EasyBooking] saveEventMove SUCCESS');
             showToast('Lezione spostata', 'success');
             // Refresh the calendar to see the new status color
             setTimeout(() => {
                 const teacherFilter = document.getElementById('calendarTeacherFilter');
-                const currentColorMode = document.body.getAttribute('data-color-mode') || 'status';
                 const savedView = calendarInstance?.view?.type || 'timeGridWeek';
                 if (calendarInstance) {
                     calendarInstance.destroy();
                     document.getElementById('calendar').innerHTML = '';
                 }
                 const teacherFilterValue = teacherFilter?.value || '';
-                initCalendar({ slotMin: '08:00:00', slotMax: '21:00:00', colorMode: currentColorMode, initialView: savedView, teacherFilterValue });
+                initCalendar({ slotMin: '08:00:00', slotMax: '21:00:00', colorMode: 'status', initialView: savedView, teacherFilterValue });
             }, 500);
         }
     } catch (e) {
-        showToast('Errore di rete', 'danger'); revertFn();
+        console.error('[EasyBooking] saveEventMove ERROR:', e);
+        showToast('Errore: ' + (e.message || 'errore sconosciuto'), 'danger');
+        revertFn();
     }
 }
 
@@ -383,7 +398,7 @@ async function saveEventResize(event, revertFn) {
     }
 }
 
-// ── Conflict detection ────────────────────────────────────────
+// ── Conflict detection with timeout ────────────────────────────
 async function checkConflict(excludeId, data, oraInizio, oraFine, insegnanteId) {
     try {
         const params = new URLSearchParams({
@@ -393,11 +408,19 @@ async function checkConflict(excludeId, data, oraInizio, oraFine, insegnanteId) 
             insegnante_id: insegnanteId,
             csrf_token: getCsrfToken()
         });
-        const resp   = await fetch('calendario.php?' + params.toString());
+        
+        // Aggiungi timeout di 10 secondi
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
+        
+        const resp = await fetch('calendario.php?' + params.toString(), { signal: controller.signal });
+        clearTimeout(timeoutId);
+        
         const result = await resp.json();
         return !result.conflict;
     } catch (e) {
-        return true; // allow on error
+        console.warn('[EasyBooking] checkConflict error:', e.message);
+        return true; // allow on error/timeout
     }
 }
 
