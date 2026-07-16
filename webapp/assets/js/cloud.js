@@ -482,6 +482,10 @@
         let allClients = [];
         try {
             allClients = JSON.parse(listEl.dataset.clientsJson || '[]');
+            // Pre-compute a normalised search string for each client
+            allClients.forEach(c => {
+                c.searchText = (c.cognome + ' ' + c.nome + ' ' + c.email).toLowerCase();
+            });
         } catch (e) {
             allClients = [];
         }
@@ -490,8 +494,7 @@
         function renderClientsList(query) {
             const q = (query || '').toLowerCase().trim();
             const matches = q
-                ? allClients.filter(c =>
-                    (c.cognome + ' ' + c.nome + ' ' + c.email).toLowerCase().includes(q))
+                ? allClients.filter(c => c.searchText.includes(q))
                 : allClients;
 
             listEl.innerHTML = '';
@@ -515,10 +518,12 @@
                 btn.addEventListener('click', () => {
                     // Deselect all buttons
                     listEl.querySelectorAll('button[data-cliente-id]').forEach(b => {
-                        b.classList.replace('btn-primary', 'btn-outline-primary');
+                        b.classList.remove('btn-primary');
+                        b.classList.add('btn-outline-primary');
                     });
                     // Select this button
-                    btn.classList.replace('btn-outline-primary', 'btn-primary');
+                    btn.classList.remove('btn-outline-primary');
+                    btn.classList.add('btn-primary');
                     // Store selected ID
                     if (hiddenEl) hiddenEl.value = String(c.id);
                     // Enable CREA button

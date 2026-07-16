@@ -61,6 +61,11 @@ $pageBodyAttributes = [
     'data-cloud-public-base-url' => cloudPublicBaseUrl(),
 ];
 
+$clientsDisabledJson = json_encode(array_values(array_map(
+    fn($c) => ['id' => (int)$c['id'], 'cognome' => $c['cognome'], 'nome' => $c['nome'], 'email' => $c['email'] ?? ''],
+    $clientsDisabled
+)));
+
 require_once __DIR__ . '/includes/header.php';
 ?>
 
@@ -253,10 +258,7 @@ require_once __DIR__ . '/includes/header.php';
                         <div id="create-cloud-clients-list"
                              class="border rounded p-2"
                              style="max-height:300px;overflow-y:auto;"
-                             data-clients-json="<?= htmlspecialchars(json_encode(array_values(array_map(
-                                 fn($c) => ['id' => (int)$c['id'], 'cognome' => $c['cognome'], 'nome' => $c['nome'], 'email' => $c['email'] ?? ''],
-                                 $clientsDisabled
-                             ))), ENT_QUOTES, 'UTF-8') ?>">
+                             data-clients-json="<?= htmlspecialchars($clientsDisabledJson, ENT_QUOTES, 'UTF-8') ?>">
                         </div>
                         <input type="hidden" id="create-cloud-selected-id" value="">
                     </div>
