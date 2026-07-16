@@ -49,10 +49,25 @@ $pageTitle = $pageTitles[$currentPage] ?? 'EasyBooking';
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;450;500;600;700&display=swap" rel="stylesheet">
 
     <!-- Main CSS -->
-    <link rel="stylesheet" href="assets/css/style.css">
+    <?php
+    // Cache-busting: version = file modification time so browsers always
+    // fetch the latest CSS after a deployment, not a stale cached copy.
+    // $rel accepts only the two fixed subdirectory names used below; the
+    // closure is a local helper and $rel is never user-supplied.
+    $getAssetVersion = function(string $rel): string {
+        $base = realpath(__DIR__ . '/../assets/css');
+        $abs  = realpath(__DIR__ . '/../' . $rel);
+        // Reject any path that escapes the assets/css directory.
+        if ($abs === false || $base === false || strpos($abs, $base) !== 0) {
+            return '1';
+        }
+        return (string)filemtime($abs);
+    };
+    ?>
+    <link rel="stylesheet" href="assets/css/style.css?v=<?= $getAssetVersion('assets/css/style.css') ?>">
     <!-- Theme CSS (loaded after style.css so theme variables override defaults) -->
-    <link id="theme-dark-css"  rel="stylesheet" href="assets/css/dark-theme.css"  <?= $theme !== 'dark'  ? 'disabled' : '' ?>>
-    <link id="theme-light-css" rel="stylesheet" href="assets/css/light-theme.css" <?= $theme !== 'light' ? 'disabled' : '' ?>>
+    <link id="theme-dark-css"  rel="stylesheet" href="assets/css/dark-theme.css?v=<?= $getAssetVersion('assets/css/dark-theme.css') ?>"  <?= $theme !== 'dark'  ? 'disabled' : '' ?>>
+    <link id="theme-light-css" rel="stylesheet" href="assets/css/light-theme.css?v=<?= $getAssetVersion('assets/css/light-theme.css') ?>" <?= $theme !== 'light' ? 'disabled' : '' ?>>
 </head>
 <body data-theme="<?= $theme ?>">
 <div class="app-wrapper">

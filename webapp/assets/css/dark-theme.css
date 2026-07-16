@@ -333,3 +333,10 @@ body[data-theme="dark"] .fc .fc-timegrid-col.fc-day-today { background-color: rg
 body[data-theme="dark"] .fc .fc-list-sticky .fc-list-day > * { background-color: var(--bg-sidebar); }
 body[data-theme="dark"] .fc .fc-list-event:hover td { background-color: var(--bg-table-hover); }
 body[data-theme="dark"] .fc-scrollgrid { background-color: var(--bg-card); }
+
+/* Calendar date-range indicator – must be explicitly white in dark theme because
+   Bootstrap's card/body default can resolve to a dark colour against the card
+   background, making this element nearly unreadable. */
+body[data-theme="dark"] #cal-title {
+    color: var(--text-primary) !important;
+}
