@@ -202,7 +202,7 @@ $pageError = '';
 try {
     $stmt = $pdo->prepare(
         'SELECT i.id, i.nome, i.cognome, i.email, i.telefono, i.tariffa_oraria,
-                COALESCE(GROUP_CONCAT(DISTINCT s.nome ORDER BY s.nome SEPARATOR ", "), "") AS strumenti,
+                COALESCE(GROUP_CONCAT(DISTINCT s.nome ORDER BY s.nome SEPARATOR ","), "") AS strumenti,
                 COALESCE(GROUP_CONCAT(DISTINCT ins.strumento_id ORDER BY ins.strumento_id SEPARATOR ","), "") AS strumenti_ids
          FROM insegnanti i
          LEFT JOIN insegnanti_strumenti ins ON ins.insegnante_id = i.id
@@ -291,7 +291,7 @@ require_once __DIR__ . '/includes/header.php';
                                     <input type="hidden" name="action" value="delete">
                                     <input type="hidden" name="id" value="<?= htmlspecialchars((string)$teacher['id']) ?>">
                                     <button type="button" class="btn btn-sm btn-outline-danger"
-                                            onclick="confirmDelete(this.form, '<?= htmlspecialchars(addslashes(trim((string)$teacher['nome'] . ' ' . (string)$teacher['cognome'])), ENT_QUOTES) ?>')">
+                                            onclick="confirmDelete(this.form, '<?= htmlspecialchars(trim((string)$teacher['nome'] . ' ' . (string)$teacher['cognome']), ENT_QUOTES) ?>')">
                                         <i class="fas fa-trash"></i>
                                     </button>
                                 </form>

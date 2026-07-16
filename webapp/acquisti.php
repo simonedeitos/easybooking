@@ -327,7 +327,7 @@ require_once __DIR__ . '/includes/header.php';
                                     <input type="hidden" name="action" value="delete">
                                     <input type="hidden" name="id" value="<?= htmlspecialchars((string)$purchase['id']) ?>">
                                     <button type="button" class="btn btn-sm btn-outline-danger"
-                                            onclick="confirmDelete(this.form, '<?= htmlspecialchars(addslashes(trim((string)$purchase['cliente_nome'] . ' ' . (string)$purchase['cliente_cognome'])), ENT_QUOTES) ?>')">
+                                            onclick="confirmDelete(this.form, '<?= htmlspecialchars(trim((string)$purchase['cliente_nome'] . ' ' . (string)$purchase['cliente_cognome']), ENT_QUOTES) ?>')">
                                         <i class="fas fa-trash"></i>
                                     </button>
                                 </form>

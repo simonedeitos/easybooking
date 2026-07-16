@@ -287,7 +287,7 @@ require_once __DIR__ . '/includes/header.php';
                                     <input type="hidden" name="action" value="delete">
                                     <input type="hidden" name="id" value="<?= h((string)$instrument['id']) ?>">
                                     <button type="button" class="btn btn-sm btn-outline-danger"
-                                            onclick="confirmDelete(this.form, '<?= htmlspecialchars(addslashes((string)$instrument['nome']), ENT_QUOTES) ?>')">
+                                            onclick="confirmDelete(this.form, '<?= htmlspecialchars((string)$instrument['nome'], ENT_QUOTES) ?>')">
                                         <i class="fas fa-trash"></i>
                                     </button>
                                 </form>

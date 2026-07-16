@@ -196,7 +196,7 @@ require_once __DIR__ . '/includes/header.php';
                                     <input type="hidden" name="action" value="delete">
                                     <input type="hidden" name="id" value="<?= htmlspecialchars((string)$client['id']) ?>">
                                     <button type="button" class="btn btn-sm btn-outline-danger"
-                                            onclick="confirmDelete(this.form, '<?= htmlspecialchars(addslashes(trim((string)$client['nome'] . ' ' . (string)$client['cognome'])), ENT_QUOTES) ?>')">
+                                            onclick="confirmDelete(this.form, '<?= htmlspecialchars(trim((string)$client['nome'] . ' ' . (string)$client['cognome']), ENT_QUOTES) ?>')">
                                         <i class="fas fa-trash"></i>
                                     </button>
                                 </form>
