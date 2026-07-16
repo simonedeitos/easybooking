@@ -177,8 +177,11 @@
      */
     function buildShareUrl(hash) {
         const configuredBaseUrl = document.body ? document.body.getAttribute('data-cloud-public-base-url') : null;
-        if (configuredBaseUrl !== null && configuredBaseUrl.trim() !== '') {
-            return configuredBaseUrl.trim().replace(/\/+$/, '') + '/share/' + encodeURIComponent(hash);
+        if (configuredBaseUrl !== null) {
+            const normalizedBaseUrl = configuredBaseUrl.trim();
+            if (/^https?:\/\//i.test(normalizedBaseUrl)) {
+                return normalizedBaseUrl.replace(/\/+$/, '') + '/share/' + encodeURIComponent(hash);
+            }
         }
         const basePath = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/'));
         return window.location.origin + basePath + '/share/' + encodeURIComponent(hash);
