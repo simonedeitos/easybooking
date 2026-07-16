@@ -246,7 +246,7 @@ require_once __DIR__ . '/includes/header.php';
                     <div class="mb-3">
                         <label for="create-cloud-select" class="form-label">Seleziona cliente</label>
                         <select id="create-cloud-select" class="form-select" size="8">
-                            <option value="" selected disabled>Seleziona un cliente…</option>
+                            <option value="" selected>Seleziona un cliente…</option>
                             <?php foreach ($clientsDisabled as $c): ?>
                             <option value="<?= (int)$c['id'] ?>">
                                 <?= h($c['cognome'] . ' ' . $c['nome']) ?><?= $c['email'] ? ' — ' . h($c['email']) : '' ?>

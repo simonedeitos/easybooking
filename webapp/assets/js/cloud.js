@@ -20,7 +20,7 @@
         const icon = type === 'success' ? 'fa-check-circle' : type === 'danger' ? 'fa-times-circle' : 'fa-info-circle';
         const html = `<div id="${id}" class="toast align-items-center text-bg-${type} border-0" role="alert">
             <div class="d-flex">
-                <div class="toast-body"><i class="fas ${icon} me-2"></i>${message}</div>
+                <div class="toast-body"><i class="fas ${icon} me-2"></i>${htmlEsc(message)}</div>
                 <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
             </div>
         </div>`;
