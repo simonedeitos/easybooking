@@ -99,7 +99,9 @@ function initCalendar(options = {}) {
                 info.el.style.backgroundColor    = color;
                 info.el.style.borderColor        = color;
                 info.el.style.color              = textColor;
-                // Apply colour to all child text elements so theme CSS cannot override inheritance
+                // Apply colour to all child text elements so theme CSS cannot override inheritance.
+                // The querySelectorAll is already scoped to info.el (.fc-event), so 'a' matches
+                // only anchor elements that are descendants of this specific event element.
                 info.el.querySelectorAll('.fc-event-main, .fc-event-main-frame, .fc-event-title-container, .fc-event-title, .fc-event-time, a').forEach(function(child) {
                     child.style.color = textColor;
                 });
@@ -170,14 +172,16 @@ function bindCalendarToolbar() {
     });
 }
 
+// View-type to toolbar button ID mapping (used by updateViewButtons)
+const VIEW_BUTTON_MAP = {
+    'timeGridWeek': 'cal-view-week',
+    'dayGridMonth': 'cal-view-month',
+    'timeGridDay':  'cal-view-day',
+};
+
 // ── Update view button active state ───────────────────────────
 function updateViewButtons(viewType) {
-    const viewMap = {
-        'timeGridWeek': 'cal-view-week',
-        'dayGridMonth': 'cal-view-month',
-        'timeGridDay':  'cal-view-day',
-    };
-    const activeId = viewMap[viewType] || 'cal-view-week';
+    const activeId = VIEW_BUTTON_MAP[viewType] || 'cal-view-week';
     document.querySelectorAll('.cal-view-btn').forEach(function(btn) {
         const isActive = btn.id === activeId;
         btn.classList.toggle('btn-primary', isActive);

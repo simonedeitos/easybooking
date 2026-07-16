@@ -67,7 +67,10 @@ $pageTitle = $pageTitles[$currentPage] ?? 'EasyBooking';
         <div>
             <?php $appNameParts = explode(' - ', $appName, 2); ?>
             <?php if (count($appNameParts) === 2): ?>
-            <div class="logo-text"><div><?= htmlspecialchars($appNameParts[0]) ?></div><div><?= htmlspecialchars($appNameParts[1]) ?></div></div>
+            <div class="logo-text">
+                <div><?= htmlspecialchars($appNameParts[0]) ?></div>
+                <div><?= htmlspecialchars($appNameParts[1]) ?></div>
+            </div>
             <?php else: ?>
             <div class="logo-text"><?= htmlspecialchars($appName) ?></div>
             <?php endif; ?>
