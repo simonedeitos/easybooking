@@ -396,7 +396,29 @@
         if (!btn) return;
         btn.addEventListener('click', () => {
             if (!currentClienteId) return;
-            if (!confirm('Disabilitare il cloud per questo cliente? Tutti i file verranno eliminati definitivamente.')) return;
+            const modalEl = document.getElementById('deleteCloudModal');
+            if (!modalEl) return;
+            const input      = document.getElementById('delete-cloud-confirm-text');
+            const confirmBtn = document.getElementById('delete-cloud-confirm-btn');
+            if (input)      input.value = '';
+            if (confirmBtn) confirmBtn.disabled = true;
+            bootstrap.Modal.getOrCreateInstance(modalEl).show();
+        });
+    }
+
+    function bindDeleteCloudModal() {
+        const input      = document.getElementById('delete-cloud-confirm-text');
+        const confirmBtn = document.getElementById('delete-cloud-confirm-btn');
+        if (!input || !confirmBtn) return;
+
+        input.addEventListener('input', () => {
+            confirmBtn.disabled = input.value !== 'CANCELLA';
+        });
+
+        confirmBtn.addEventListener('click', () => {
+            if (input.value !== 'CANCELLA') return;
+            const modalEl = document.getElementById('deleteCloudModal');
+            if (modalEl) bootstrap.Modal.getInstance(modalEl).hide();
             cloudDisable(currentClienteId);
         });
     }
@@ -427,15 +449,45 @@
         if (openBtn) {
             openBtn.addEventListener('click', () => {
                 const modalEl = document.getElementById('createCloudModal');
-                if (modalEl) bootstrap.Modal.getOrCreateInstance(modalEl).show();
+                if (!modalEl) return;
+                // Reset search and selection on open
+                const search  = document.getElementById('create-cloud-search');
+                const hidden  = document.getElementById('create-cloud-selected');
+                if (search) search.value = '';
+                if (hidden) hidden.value = '';
+                filterCreateCloudList('');
+                document.querySelectorAll('.create-cloud-list-item').forEach(i => i.classList.remove('active'));
+                const confirmBtn = document.getElementById('create-cloud-confirm-btn');
+                if (confirmBtn) confirmBtn.disabled = true;
+                bootstrap.Modal.getOrCreateInstance(modalEl).show();
             });
         }
+
+        // Live search filter
+        const searchInput = document.getElementById('create-cloud-search');
+        if (searchInput) {
+            searchInput.addEventListener('input', () => {
+                filterCreateCloudList(searchInput.value.trim().toLowerCase());
+            });
+        }
+
+        // Item selection
+        document.querySelectorAll('.create-cloud-list-item').forEach(item => {
+            item.addEventListener('click', () => {
+                document.querySelectorAll('.create-cloud-list-item').forEach(i => i.classList.remove('active'));
+                item.classList.add('active');
+                const hidden = document.getElementById('create-cloud-selected');
+                if (hidden) hidden.value = item.dataset.clientId;
+                const confirmBtn = document.getElementById('create-cloud-confirm-btn');
+                if (confirmBtn) confirmBtn.disabled = false;
+            });
+        });
 
         const confirmBtn = document.getElementById('create-cloud-confirm-btn');
         if (!confirmBtn) return;
         confirmBtn.addEventListener('click', () => {
-            const select    = document.getElementById('create-cloud-select');
-            const clienteId = select ? select.value : '';
+            const hidden    = document.getElementById('create-cloud-selected');
+            const clienteId = hidden ? hidden.value : '';
             if (!clienteId) {
                 showToast('Seleziona un cliente.', 'warning');
                 return;
@@ -465,6 +517,21 @@
                     showToast('Errore di rete.', 'danger');
                 });
         });
+    }
+
+    function filterCreateCloudList(query) {
+        const items     = document.querySelectorAll('.create-cloud-list-item');
+        const noResults = document.getElementById('create-cloud-no-results');
+        let   visible   = 0;
+
+        items.forEach(item => {
+            const name = item.dataset.clientName || '';
+            const show = !query || name.includes(query);
+            item.style.display = show ? '' : 'none';
+            if (show) visible++;
+        });
+
+        if (noResults) noResults.classList.toggle('d-none', visible > 0);
     }
 
     // ── Drag & Drop Upload ────────────────────────────────────────────────
@@ -564,6 +631,7 @@
         bindAudioModalClose();
         bindCopyLinkBtn();
         bindSettingsBtn();
+        bindDeleteCloudModal();
         bindCreateCloudModal();
     });
 

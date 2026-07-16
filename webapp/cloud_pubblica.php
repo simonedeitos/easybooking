@@ -190,7 +190,7 @@ ob_end_clean();
                         </div>
                     </div>
                     <div class="mt-3 d-flex gap-2 flex-wrap">
-                        <a href="?hash=<?= urlencode($hash) ?>&action=download&file_id=<?= (int)$f['id'] ?>"
+                        <a href="/share/<?= urlencode($hash) ?>/download/<?= (int)$f['id'] ?>"
                            class="btn btn-sm btn-outline-secondary">
                             <i class="fas fa-download me-1"></i>Download
                         </a>
@@ -237,7 +237,7 @@ ob_end_clean();
 function playAudio(fileId, fileName) {
     document.getElementById('audio-modal-title').textContent = fileName;
     const player = document.getElementById('audio-player');
-    player.src = '<?= h(rtrim(dirname($_SERVER['PHP_SELF']), '/')) ?>/cloud_pubblica.php?hash=<?= urlencode($hash) ?>&action=stream&file_id=' + fileId;
+    player.src = '/share/<?= urlencode($hash) ?>/stream/' + fileId;
     player.load();
     new bootstrap.Modal(document.getElementById('audioModal')).show();
 }

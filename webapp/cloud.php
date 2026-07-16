@@ -179,8 +179,8 @@ require_once __DIR__ . '/includes/header.php';
                             <button type="button" class="btn btn-sm btn-outline-secondary" id="cloud-copy-link-btn">
                                 <i class="fas fa-link me-1"></i>Copia Link
                             </button>
-                            <button type="button" class="btn btn-sm btn-outline-danger" id="cloud-settings-btn">
-                                <i class="fas fa-cog me-1"></i>Impostazioni
+                            <button type="button" class="btn btn-sm btn-danger" id="cloud-settings-btn">
+                                <i class="fas fa-trash me-1"></i>CANCELLA CLOUD
                             </button>
                         </div>
                     </div>
@@ -240,23 +240,64 @@ require_once __DIR__ . '/includes/header.php';
                     <p class="text-muted mb-0">Tutti i clienti hanno già il cloud abilitato.</p>
                 <?php else: ?>
                     <div class="mb-3">
-                        <label for="create-cloud-select" class="form-label">Seleziona cliente</label>
-                        <select id="create-cloud-select" class="form-select">
-                            <option value="">— Scegli un cliente —</option>
+                        <label for="create-cloud-search" class="form-label">Cerca cliente</label>
+                        <input type="text" id="create-cloud-search" class="form-control mb-2"
+                               placeholder="Nome o cognome…" autocomplete="off">
+                        <div id="create-cloud-list" class="list-group overflow-auto border rounded"
+                             style="max-height:260px;">
                             <?php foreach ($clientsDisabled as $c): ?>
-                            <option value="<?= (int)$c['id'] ?>"><?= h($c['cognome'] . ' ' . $c['nome']) ?></option>
+                            <button type="button"
+                                    class="list-group-item list-group-item-action d-flex justify-content-between align-items-center create-cloud-list-item"
+                                    data-client-id="<?= (int)$c['id'] ?>"
+                                    data-client-name="<?= h(strtolower($c['cognome'] . ' ' . $c['nome'])) ?>">
+                                <span class="create-cloud-item-label"><?= h($c['cognome'] . ' ' . $c['nome']) ?></span>
+                                <?php if ($c['email']): ?>
+                                <small class="text-muted ms-2 text-nowrap"><?= h($c['email']) ?></small>
+                                <?php endif; ?>
+                            </button>
                             <?php endforeach; ?>
-                        </select>
+                        </div>
+                        <input type="hidden" id="create-cloud-selected" value="">
+                        <div id="create-cloud-no-results" class="text-muted small mt-2 d-none">Nessun cliente trovato.</div>
                     </div>
                 <?php endif; ?>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
                 <?php if (!empty($clientsDisabled)): ?>
-                <button type="button" class="btn btn-success" id="create-cloud-confirm-btn">
+                <button type="button" class="btn btn-success" id="create-cloud-confirm-btn" disabled>
                     <i class="fas fa-check me-1"></i>Crea
                 </button>
                 <?php endif; ?>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     Modal: Cancella Cloud
+═════════════════════════════════════════════════════════════════ -->
+<div class="modal fade" id="deleteCloudModal" tabindex="-1" aria-labelledby="deleteCloudModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="deleteCloudModalLabel"><i class="fas fa-trash me-2"></i>Cancella Cloud Cliente</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Attenzione!</strong> Questa operazione è irreversibile. Tutti i file del cliente verranno eliminati definitivamente.
+                </div>
+                <p>Per confermare, scrivi <strong>CANCELLA</strong> nel campo sottostante:</p>
+                <input type="text" id="delete-cloud-confirm-text" class="form-control"
+                       placeholder="Scrivi CANCELLA per confermare" autocomplete="off">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
+                <button type="button" class="btn btn-danger" id="delete-cloud-confirm-btn" disabled>
+                    <i class="fas fa-trash me-1"></i>Cancella Cloud
+                </button>
             </div>
         </div>
     </div>
