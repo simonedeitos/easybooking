@@ -97,6 +97,7 @@ img { max-width: 100%; }
     font-weight: 700;
     color: var(--text-primary);
     letter-spacing: -0.3px;
+    line-height: 1.2;
 }
 .sidebar-logo .logo-sub {
     font-size: 0.72rem;
@@ -637,4 +638,5 @@ canvas { max-width: 100%; }
 .fc-event .fc-event-main-frame,
 .fc-event .fc-event-title-container,
 .fc-event .fc-event-title,
-.fc-event .fc-event-time { color: inherit !important; }
+.fc-event .fc-event-time,
+.fc-event a { color: inherit !important; }

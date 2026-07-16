@@ -100,7 +100,7 @@ function initCalendar(options = {}) {
                 info.el.style.borderColor        = color;
                 info.el.style.color              = textColor;
                 // Apply colour to all child text elements so theme CSS cannot override inheritance
-                info.el.querySelectorAll('.fc-event-main, .fc-event-main-frame, .fc-event-title-container, .fc-event-title, .fc-event-time').forEach(function(child) {
+                info.el.querySelectorAll('.fc-event-main, .fc-event-main-frame, .fc-event-title-container, .fc-event-title, .fc-event-time, a').forEach(function(child) {
                     child.style.color = textColor;
                 });
                 info.el.style.borderRadius       = '5px';
@@ -140,6 +140,7 @@ function initCalendar(options = {}) {
             }
         });
         bindCalendarToolbar();
+        updateViewButtons(options.initialView || 'timeGridWeek');
     } catch (error) {
         console.error('Calendar initialization failed:', error);
         calEl.innerHTML = '<div class="alert alert-danger mb-0">Errore inizializzazione calendario. Controlla la console.</div>';
@@ -157,18 +158,31 @@ function bindCalendarToolbar() {
     document.getElementById('cal-today')?.addEventListener('click', () => calendarInstance?.today());
     document.getElementById('cal-view-week')?.addEventListener('click', () => {
         calendarInstance?.changeView('timeGridWeek');
-        document.querySelectorAll('.cal-view-btn').forEach(b => b.classList.remove('active'));
-        document.getElementById('cal-view-week')?.classList.add('active');
+        updateViewButtons('timeGridWeek');
     });
     document.getElementById('cal-view-month')?.addEventListener('click', () => {
         calendarInstance?.changeView('dayGridMonth');
-        document.querySelectorAll('.cal-view-btn').forEach(b => b.classList.remove('active'));
-        document.getElementById('cal-view-month')?.classList.add('active');
+        updateViewButtons('dayGridMonth');
     });
     document.getElementById('cal-view-day')?.addEventListener('click', () => {
         calendarInstance?.changeView('timeGridDay');
-        document.querySelectorAll('.cal-view-btn').forEach(b => b.classList.remove('active'));
-        document.getElementById('cal-view-day')?.classList.add('active');
+        updateViewButtons('timeGridDay');
+    });
+}
+
+// ── Update view button active state ───────────────────────────
+function updateViewButtons(viewType) {
+    const viewMap = {
+        'timeGridWeek': 'cal-view-week',
+        'dayGridMonth': 'cal-view-month',
+        'timeGridDay':  'cal-view-day',
+    };
+    const activeId = viewMap[viewType] || 'cal-view-week';
+    document.querySelectorAll('.cal-view-btn').forEach(function(btn) {
+        const isActive = btn.id === activeId;
+        btn.classList.toggle('btn-primary', isActive);
+        btn.classList.toggle('btn-outline-light', !isActive);
+        btn.classList.toggle('active', isActive);
     });
 }
 

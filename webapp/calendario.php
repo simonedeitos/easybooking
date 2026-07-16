@@ -535,11 +535,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderCalendar() {
+        const savedView = calendarInstance?.view?.type || 'timeGridWeek';
         if (calendarInstance) {
             calendarInstance.destroy();
             document.getElementById('calendar').innerHTML = '';
         }
-        initCalendar({ slotMin: '08:00:00', slotMax: '21:00:00', colorMode: currentColorMode });
+        initCalendar({ slotMin: '08:00:00', slotMax: '21:00:00', colorMode: currentColorMode, initialView: savedView });
         document.getElementById('cal-title').textContent = calendarInstance?.view?.title || 'Calendario';
         updateColorButtons();
     }

@@ -255,6 +255,10 @@ small, .small   { color: inherit; }
 /* ── body[data-theme="dark"] scoped overrides ────────────────
    These selectors have higher specificity than Bootstrap defaults
    and ensure any inline or utility styles become readable. */
+body[data-theme="dark"] {
+    color-scheme: dark;
+}
+
 body[data-theme="dark"] .text-dark,
 body[data-theme="dark"] .text-black {
     color: var(--text-primary) !important;
