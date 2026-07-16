@@ -167,12 +167,17 @@ $monthLabels = ['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', '
 
 require_once __DIR__ . '/includes/header.php';
 ?>
+<?php
+// Render appName with " - " converted to a line break (XSS-safe: escape each part first)
+$_appNameParts = array_map('htmlspecialchars', explode(' - ', $appName));
+$_appNameHtml  = implode('<br>', $_appNameParts);
+?>
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
     <div>
         <h2 class="mb-1">Panoramica</h2>
         <p class="text-secondary mb-0">Stato generale di lezioni, clienti e ricavi.</p>
     </div>
-    <span class="badge bg-primary-subtle text-primary-emphasis px-3 py-2">Aggiornato in tempo reale</span>
+    <span class="badge bg-primary-subtle text-primary-emphasis px-3 py-2 text-center lh-base"><?= $_appNameHtml ?></span>
 </div>
 
 <?php if ($dashboardErrors !== []): ?>

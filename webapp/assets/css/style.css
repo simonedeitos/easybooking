@@ -627,3 +627,14 @@ canvas { max-width: 100%; }
     .stat-value  { font-size: 1.5rem; }
     .login-card  { padding: 28px 20px; }
 }
+
+/* ── FullCalendar event text contrast ───────────────────────
+   Event background and text colour are set via JS (calendar.js)
+   using a luminance calculation. Force all child text elements
+   to inherit the parent colour so that broad theme CSS rules
+   (e.g. .card-body *) cannot accidentally override them.      */
+.fc-event .fc-event-main,
+.fc-event .fc-event-main-frame,
+.fc-event .fc-event-title-container,
+.fc-event .fc-event-title,
+.fc-event .fc-event-time { color: inherit !important; }

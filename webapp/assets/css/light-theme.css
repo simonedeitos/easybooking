@@ -393,3 +393,28 @@ body[data-theme="light"] .fc .fc-timegrid-col.fc-day-today { background-color: r
 body[data-theme="light"] .fc .fc-list-day-text,
 body[data-theme="light"] .fc .fc-list-day-side-text,
 body[data-theme="light"] .fc .fc-list-event-title a { color: var(--text-primary); }
+
+/* ── Calendar toolbar buttons (light theme) ──────────────────
+   The toolbar uses Bootstrap's btn-outline-light which is designed
+   for dark backgrounds. In the light theme we restyle it to use
+   a purple-accent outline so buttons are visually distinctive
+   (not plain white) and consistent with the app's design language.
+   Scoped to #cal-toolbar-card so modal "Annulla" buttons are unaffected. */
+body[data-theme="light"] #cal-toolbar-card .btn-outline-light {
+    color: #7c6af7 !important;
+    border-color: #7c6af7 !important;
+    background-color: rgba(124,106,247,0.08) !important;
+}
+body[data-theme="light"] #cal-toolbar-card .btn-outline-light:hover,
+body[data-theme="light"] #cal-toolbar-card .btn-outline-light:focus {
+    color: #7c6af7 !important;
+    background-color: rgba(124,106,247,0.18) !important;
+    border-color: #7c6af7 !important;
+    box-shadow: none !important;
+}
+body[data-theme="light"] #cal-toolbar-card .btn-outline-light.active,
+body[data-theme="light"] #cal-toolbar-card .btn-outline-light[aria-pressed="true"] {
+    background-color: #7c6af7 !important;
+    border-color: #7c6af7 !important;
+    color: #ffffff !important;
+}
