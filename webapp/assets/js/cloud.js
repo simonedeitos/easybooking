@@ -176,9 +176,9 @@
      * matches PHP-generated links. Falls back to the current install path.
      */
     function buildShareUrl(hash) {
-        const configuredBaseUrl = (document.body?.dataset.cloudPublicBaseUrl || '').trim().replace(/\/+$/, '');
-        if (configuredBaseUrl) {
-            return configuredBaseUrl + '/share/' + encodeURIComponent(hash);
+        const configuredBaseUrl = document.body ? document.body.getAttribute('data-cloud-public-base-url') : null;
+        if (configuredBaseUrl !== null && configuredBaseUrl.trim() !== '') {
+            return configuredBaseUrl.trim().replace(/\/+$/, '') + '/share/' + encodeURIComponent(hash);
         }
         const basePath = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/'));
         return window.location.origin + basePath + '/share/' + encodeURIComponent(hash);
@@ -503,7 +503,7 @@
                 showToast('Selezione cliente non disponibile.', 'danger');
                 return;
             }
-            const clienteId = hidden ? hidden.value : '';
+            const clienteId = hidden.value;
             if (!clienteId) {
                 showToast('Seleziona un cliente.', 'warning');
                 return;

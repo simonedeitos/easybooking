@@ -279,27 +279,30 @@ function cloudFileIcon(?string $mime): string
 // ── Public share URL ──────────────────────────────────────────────────────
 
 /**
+ * Builds the public base URL used by share links.
+ */
+function cloudPublicBaseUrl(): string
+{
+    if (defined('CLOUD_PUBLIC_BASE_URL')) {
+        return rtrim(CLOUD_PUBLIC_BASE_URL, '/');
+    }
+    $proto = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+    $host  = $_SERVER['HTTP_HOST'] ?? 'localhost';
+    $base = rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? ''), '/');
+    if (!preg_match('#^(/[a-zA-Z0-9_/.-]*)?$#', $base)) {
+        $base = '';
+    }
+    return $proto . '://' . $host . $base;
+}
+
+/**
  * Builds the public share URL for a client cloud hash.
  * Uses the CLOUD_PUBLIC_BASE_URL constant if defined, otherwise falls back
  * to the current host.
  */
 function cloudShareUrl(string $hash): string
 {
-    if (defined('CLOUD_PUBLIC_BASE_URL')) {
-        return rtrim(CLOUD_PUBLIC_BASE_URL, '/') . '/share/' . urlencode($hash);
-    }
-    $proto = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-    $host  = $_SERVER['HTTP_HOST'] ?? 'localhost';
-    // Use the webapp's install directory as the URL base so the link works
-    // regardless of whether the app is installed at the root or a subdirectory.
-    // e.g. /easybooking → https://vocefutura.it/easybooking/share/[HASH]
-    $base = rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? ''), '/');
-    // Sanitize: allow only safe path characters to guard against unusual
-    // proxy or server configurations that might inject unexpected values.
-    if (!preg_match('#^(/[a-zA-Z0-9_/.-]*)?$#', $base)) {
-        $base = '';
-    }
-    return $proto . '://' . $host . $base . '/share/' . urlencode($hash);
+    return cloudPublicBaseUrl() . '/share/' . urlencode($hash);
 }
 
 // ── Filesystem helpers ────────────────────────────────────────────────────

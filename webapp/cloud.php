@@ -57,14 +57,8 @@ $spazioMax   = CLOUD_MAX_BYTES;
 $pctUsato    = $spazioMax > 0 ? round($spazioUsato / $spazioMax * 100, 1) : 0;
 $quotaClass  = $pctUsato >= 90 ? 'danger' : ($pctUsato >= 70 ? 'warning' : 'success');
 
-$cloudShareUrlPlaceholder = '__CLOUD_SHARE_HASH__';
-$cloudPublicBaseUrl = str_replace(
-    '/share/' . urlencode($cloudShareUrlPlaceholder),
-    '',
-    cloudShareUrl($cloudShareUrlPlaceholder)
-);
 $pageBodyAttributes = [
-    'data-cloud-public-base-url' => $cloudPublicBaseUrl,
+    'data-cloud-public-base-url' => cloudPublicBaseUrl(),
 ];
 
 require_once __DIR__ . '/includes/header.php';
