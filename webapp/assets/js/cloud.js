@@ -527,7 +527,13 @@
         items.forEach(item => {
             const name = item.dataset.clientName || '';
             const show = !query || name.includes(query);
-            item.style.display = show ? '' : 'none';
+            // Use setProperty with 'important' priority so the inline style
+            // overrides Bootstrap's d-flex { display: flex !important } rule.
+            if (show) {
+                item.style.removeProperty('display');
+            } else {
+                item.style.setProperty('display', 'none', 'important');
+            }
             if (show) visible++;
         });
 
