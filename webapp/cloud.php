@@ -61,6 +61,11 @@ $pageBodyAttributes = [
     'data-cloud-public-base-url' => cloudPublicBaseUrl(),
 ];
 
+$clientsDisabledJson = json_encode(array_values(array_map(
+    fn($c) => ['id' => (int)$c['id'], 'cognome' => $c['cognome'], 'nome' => $c['nome'], 'email' => $c['email'] ?? ''],
+    $clientsDisabled
+)));
+
 require_once __DIR__ . '/includes/header.php';
 ?>
 
@@ -244,21 +249,18 @@ require_once __DIR__ . '/includes/header.php';
                     <p class="text-muted mb-0">Tutti i clienti hanno già il cloud abilitato.</p>
                 <?php else: ?>
                     <div class="mb-3">
-                        <label for="create-cloud-select" id="create-cloud-select-label" class="form-label">Seleziona cliente</label>
+                        <label for="create-cloud-search" class="form-label">Cerca cliente</label>
                         <input type="text"
                                id="create-cloud-search"
-                               class="form-control mb-2"
-                               placeholder="Cerca cliente…"
+                               class="form-control mb-3"
+                               placeholder="Digita nome o email…"
                                autocomplete="off">
-                        <select id="create-cloud-select" class="form-select" size="8" aria-labelledby="create-cloud-select-label">
-                            <option value="" selected>Seleziona un cliente…</option>
-                            <?php foreach ($clientsDisabled as $c): ?>
-                            <option value="<?= (int)$c['id'] ?>">
-                                <?= h($c['cognome'] . ' ' . $c['nome']) ?><?= $c['email'] ? ' — ' . h($c['email']) : '' ?>
-                            </option>
-                            <?php endforeach; ?>
-                        </select>
-                        <input type="hidden" id="create-cloud-selected" value="">
+                        <div id="create-cloud-clients-list"
+                             class="border rounded p-2"
+                             style="max-height:300px;overflow-y:auto;"
+                             data-clients-json="<?= htmlspecialchars($clientsDisabledJson, ENT_QUOTES, 'UTF-8') ?>">
+                        </div>
+                        <input type="hidden" id="create-cloud-selected-id" value="">
                     </div>
                 <?php endif; ?>
             </div>
