@@ -228,7 +228,7 @@ function openNewEventModal(startStr, endStr) {
     m.show();
 }
 
-// ── Save drag-move ────────────────────────────────────────────
+// ── Dialog for move confirmation and status change ────────────
 function askMoveConfirmation(event) {
     const fallbackStatus = Object.hasOwn(CalendarColors.byStatus, 'Riprogrammata')
         ? 'Riprogrammata'
@@ -251,7 +251,7 @@ function askMoveConfirmation(event) {
     return new Promise((resolve) => {
         const modalWrapper = document.createElement('div');
         const statusOptions = Object.keys(CalendarColors.byStatus)
-            .map((status) => `<option value="${escapeHtml(status)}">${escapeHtml(status)}</option>`)
+            .map((status) => `<option value="${escapeHtml(status)}" ${status === fallbackStatus ? 'selected' : ''}>${escapeHtml(status)}</option>`)
             .join('');
         const dateLabel = event.start
             ? event.start.toLocaleDateString('it-IT', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' })
@@ -285,7 +285,6 @@ function askMoveConfirmation(event) {
         document.body.appendChild(modalEl);
         const modal = new bootstrap.Modal(modalEl, { backdrop: 'static' });
         const statusSelect = modalEl.querySelector('#move-event-status');
-        statusSelect.value = fallbackStatus;
 
         let modalResolved = false;
         const finish = (result) => {
@@ -312,6 +311,7 @@ function askMoveConfirmation(event) {
     });
 }
 
+// ── Save drag-move ────────────────────────────────────────────
 async function saveEventMove(event, revertFn) {
     const data = {
         id: event.id,
@@ -341,7 +341,21 @@ async function saveEventMove(event, revertFn) {
         });
         const result = await resp.json();
         if (!result.success) { showToast(result.message || 'Errore salvataggio', 'danger'); revertFn(); }
-        else showToast('Lezione spostata', 'success');
+        else {
+            showToast('Lezione spostata', 'success');
+            // Refresh the calendar to see the new status color
+            setTimeout(() => {
+                const teacherFilter = document.getElementById('calendarTeacherFilter');
+                const currentColorMode = document.body.getAttribute('data-color-mode') || 'status';
+                const savedView = calendarInstance?.view?.type || 'timeGridWeek';
+                if (calendarInstance) {
+                    calendarInstance.destroy();
+                    document.getElementById('calendar').innerHTML = '';
+                }
+                const teacherFilterValue = teacherFilter?.value || '';
+                initCalendar({ slotMin: '08:00:00', slotMax: '21:00:00', colorMode: currentColorMode, initialView: savedView, teacherFilterValue });
+            }, 500);
+        }
     } catch (e) {
         showToast('Errore di rete', 'danger'); revertFn();
     }

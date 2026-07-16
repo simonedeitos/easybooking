@@ -222,23 +222,24 @@ if ($requestAction !== '') {
             $oraInizio = calendarNormalizeTime(post('ora_inizio'));
             $oraFine = calendarNormalizeTime(post('ora_fine'));
             $stato = trim(post('stato'));
-            if ($stato === '') {
-                $stato = 'Riprogrammata';
-            }
-            $hasValidId = $id > 0;
-            $hasValidDate = calendarValidDate($data);
-            $hasValidStartTime = calendarValidTime($oraInizio);
-            $hasValidEndTime = calendarValidTime($oraFine);
-            $hasValidRange = calendarTimeRangeValid($oraInizio, $oraFine);
-            if (!$hasValidId || !$hasValidDate || !$hasValidStartTime || !$hasValidEndTime || !$hasValidRange) {
+            
+            if ($id <= 0 || !calendarValidDate($data) || !calendarValidTime($oraInizio) || !calendarValidTime($oraFine) || !calendarTimeRangeValid($oraInizio, $oraFine)) {
                 jsonResponse(['success' => false, 'message' => 'Dati di spostamento non validi.'], 422);
             }
-            if (!in_array($stato, calendarStatuses(), true)) {
+            
+            // Se è stato fornito uno stato, validalo
+            if ($stato && !in_array($stato, calendarStatuses(), true)) {
                 jsonResponse(['success' => false, 'message' => 'Stato non valido.'], 422);
             }
 
-            $stmt = $pdo->prepare('UPDATE prenotazioni SET data = ?, ora_inizio = ?, ora_fine = ?, stato = ? WHERE id = ?');
-            $stmt->execute([$data, $oraInizio, $oraFine, $stato, $id]);
+            // Se stato è fornito, aggiorna anche lo stato; altrimenti solo la data/ora
+            if ($stato) {
+                $stmt = $pdo->prepare('UPDATE prenotazioni SET data = ?, ora_inizio = ?, ora_fine = ?, stato = ? WHERE id = ?');
+                $stmt->execute([$data, $oraInizio, $oraFine, $stato, $id]);
+            } else {
+                $stmt = $pdo->prepare('UPDATE prenotazioni SET data = ?, ora_inizio = ?, ora_fine = ? WHERE id = ?');
+                $stmt->execute([$data, $oraInizio, $oraFine, $id]);
+            }
             jsonResponse(['success' => true, 'message' => 'Evento spostato con successo.']);
         }
 
