@@ -48,6 +48,20 @@
             .toLowerCase();
     }
 
+    function cloudDebugEnabled() {
+        const app = document.getElementById('cloud-app');
+        return app?.dataset.cloudDebug === '1';
+    }
+
+    function cloudDebugLog(message, details) {
+        if (!cloudDebugEnabled()) return;
+        if (typeof details === 'undefined') {
+            console.debug(message);
+            return;
+        }
+        console.debug(message, details);
+    }
+
     // ── Cloud Stats (compact badge) ───────────────────────────────────────
 
     function refreshStats() {
@@ -472,7 +486,7 @@
         const listEl = document.getElementById('create-cloud-list');
         const searchInput = document.getElementById('create-cloud-search');
 
-        console.debug('[cloud] bindCreateCloudModal()', {
+        cloudDebugLog('[cloud] bindCreateCloudModal()', {
             modalFound: !!modalEl,
             listFound: !!listEl,
             searchFound: !!searchInput
@@ -490,7 +504,7 @@
                 filterCreateCloudList('');
                 document.querySelectorAll('.create-cloud-list-item').forEach(i => i.classList.remove('active'));
                 if (confirmBtn) { confirmBtn.disabled = true; }
-                console.debug('[cloud] create cloud modal opened and reset');
+                cloudDebugLog('[cloud] create cloud modal opened and reset');
             });
             modalEl.addEventListener('shown.bs.modal', () => {
                 const search = document.getElementById('create-cloud-search');
@@ -509,7 +523,7 @@
         if (searchInput) {
             const handleSearch = () => {
                 const query = normalizeSearchText(searchInput.value);
-                console.debug('[cloud] filtering create cloud clients', { query });
+                cloudDebugLog('[cloud] filtering create cloud clients', { query });
                 filterCreateCloudList(query);
             };
             searchInput.addEventListener('input', handleSearch);
@@ -527,7 +541,7 @@
                 if (hidden) hidden.value = item.dataset.clientId;
                 const confirmBtn = document.getElementById('create-cloud-confirm-btn');
                 if (confirmBtn) confirmBtn.disabled = false;
-                console.debug('[cloud] create cloud client selected', {
+                cloudDebugLog('[cloud] create cloud client selected', {
                     clientId: item.dataset.clientId
                 });
             });
@@ -600,7 +614,7 @@
             if (confirmBtn) confirmBtn.disabled = true;
         }
         if (noResults) noResults.classList.toggle('d-none', visible > 0);
-        console.debug('[cloud] create cloud filter result', {
+        cloudDebugLog('[cloud] create cloud filter result', {
             query: normalizedQuery,
             visible
         });

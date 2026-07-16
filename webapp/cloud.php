@@ -57,6 +57,7 @@ $spazioMax   = CLOUD_MAX_BYTES;
 $pctUsato    = $spazioMax > 0 ? round($spazioUsato / $spazioMax * 100, 1) : 0;
 $quotaClass  = $pctUsato >= 90 ? 'danger' : ($pctUsato >= 70 ? 'warning' : 'success');
 $cloudPublicBaseUrl = cloudPublicBaseUrl();
+$cloudDebugEnabled  = isset($_GET['cloud_debug']) && $_GET['cloud_debug'] === '1';
 
 require_once __DIR__ . '/includes/header.php';
 ?>
@@ -91,7 +92,10 @@ require_once __DIR__ . '/includes/header.php';
 <!-- ── Two-column cloud layout ───────────────────────────────────── -->
 <!-- Share links use this configured public base URL; set CLOUD_PUBLIC_BASE_URL in webapp/.env
      when the public share page must use a different domain than the admin panel. -->
-<div class="cloud-layout" id="cloud-app" data-cloud-base-url="<?= h($cloudPublicBaseUrl) ?>">
+<div class="cloud-layout"
+     id="cloud-app"
+     data-cloud-base-url="<?= h($cloudPublicBaseUrl) ?>"
+     data-cloud-debug="<?= $cloudDebugEnabled ? '1' : '0' ?>">
 
     <!-- ── Left sidebar: client list ─────────────────────────────── -->
     <aside class="cloud-clients-sidebar">

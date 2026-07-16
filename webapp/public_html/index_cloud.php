@@ -31,7 +31,16 @@ function readEnvConfigValue(string $key, array $envFiles): ?string
             if ($lineKey !== $key) {
                 continue;
             }
-            return trim($lineValue, " \t\n\r\0\x0B\"'");
+            $quote = $lineValue[0] ?? '';
+            if (($quote === '"' || $quote === "'") && str_ends_with($lineValue, $quote)) {
+                $lineValue = substr($lineValue, 1, -1);
+                if ($quote === '"') {
+                    $lineValue = stripcslashes($lineValue);
+                } else {
+                    $lineValue = str_replace(["\\'", "\\\\"], ["'", "\\"], $lineValue);
+                }
+            }
+            return trim($lineValue);
         }
     }
 
