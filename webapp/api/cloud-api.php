@@ -136,7 +136,7 @@ switch ($action) {
             ];
         }
 
-        $cartella = $cliente['cloud_cartella_locale'];
+        $cartella = $cliente['cloud_cartella'];
         $dir      = cloudClientDir($cartella);
         $uploaded = [];
         $errors   = [];
@@ -167,7 +167,7 @@ switch ($action) {
 
             $size = (int)filesize($dest);
             $stmt = $pdo->prepare(
-                'INSERT INTO cloud_file (cliente_id, nome_originale, nome_file, dimensione_bytes, mime_type, created_at, updated_at)
+                'INSERT INTO cloud_files (cliente_id, nome_originale, nome_file, dimensione_bytes, mime_type, created_at, updated_at)
                  VALUES (?, ?, ?, ?, ?, NOW(), NOW())'
             );
             $stmt->execute([$clienteId, basename($originalName), $safeName, $size, $mime]);
@@ -193,7 +193,7 @@ switch ($action) {
 
         $stmt = $pdo->prepare(
             'SELECT id, nome_originale, nome_file, dimensione_bytes, mime_type, nota, created_at
-             FROM cloud_file WHERE cliente_id = ? ORDER BY created_at DESC'
+             FROM cloud_files WHERE cliente_id = ? ORDER BY created_at DESC'
         );
         $stmt->execute([$clienteId]);
         $files = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -214,8 +214,8 @@ switch ($action) {
             apiError('ID file non valido.');
         }
         $stmt = $pdo->prepare(
-            'SELECT cf.*, c.cloud_cartella_locale, c.cloud_enabled
-             FROM cloud_file cf
+            'SELECT cf.*, c.cloud_cartella, c.cloud_enabled
+             FROM cloud_files cf
              JOIN clienti c ON c.id = cf.cliente_id
              WHERE cf.id = ? LIMIT 1'
         );
@@ -225,7 +225,7 @@ switch ($action) {
             apiError('File non trovato.', 404);
         }
 
-        $path = cloudFilePath($row['cloud_cartella_locale'], $row['nome_file']);
+        $path = cloudFilePath($row['cloud_cartella'], $row['nome_file']);
         if (!is_file($path)) {
             apiError('File non presente sul disco.', 404);
         }
@@ -246,8 +246,8 @@ switch ($action) {
             apiError('ID file non valido.');
         }
         $stmt = $pdo->prepare(
-            'SELECT cf.*, c.cloud_cartella_locale, c.cloud_enabled
-             FROM cloud_file cf
+            'SELECT cf.*, c.cloud_cartella, c.cloud_enabled
+             FROM cloud_files cf
              JOIN clienti c ON c.id = cf.cliente_id
              WHERE cf.id = ? LIMIT 1'
         );
@@ -257,7 +257,7 @@ switch ($action) {
             apiError('File non trovato.', 404);
         }
 
-        $path = cloudFilePath($row['cloud_cartella_locale'], $row['nome_file']);
+        $path = cloudFilePath($row['cloud_cartella'], $row['nome_file']);
         if (!is_file($path)) {
             apiError('File non presente sul disco.', 404);
         }
@@ -304,8 +304,8 @@ switch ($action) {
             apiError('ID file non valido.');
         }
         $stmt = $pdo->prepare(
-            'SELECT cf.*, c.cloud_cartella_locale, c.cloud_enabled
-             FROM cloud_file cf
+            'SELECT cf.*, c.cloud_cartella, c.cloud_enabled
+             FROM cloud_files cf
              JOIN clienti c ON c.id = cf.cliente_id
              WHERE cf.id = ? LIMIT 1'
         );
@@ -315,12 +315,12 @@ switch ($action) {
             apiError('File non trovato.', 404);
         }
 
-        $path = cloudFilePath($row['cloud_cartella_locale'], $row['nome_file']);
+        $path = cloudFilePath($row['cloud_cartella'], $row['nome_file']);
         if (is_file($path)) {
             @unlink($path);
         }
 
-        $pdo->prepare('DELETE FROM cloud_file WHERE id = ?')->execute([$fileId]);
+        $pdo->prepare('DELETE FROM cloud_files WHERE id = ?')->execute([$fileId]);
         cloudUpdateStats($pdo);
 
         apiResponse(['success' => true, 'message' => 'File eliminato.']);
@@ -336,12 +336,12 @@ switch ($action) {
         if ($fileId <= 0) {
             apiError('ID file non valido.');
         }
-        $stmt = $pdo->prepare('SELECT id FROM cloud_file WHERE id = ? LIMIT 1');
+        $stmt = $pdo->prepare('SELECT id FROM cloud_files WHERE id = ? LIMIT 1');
         $stmt->execute([$fileId]);
         if (!$stmt->fetchColumn()) {
             apiError('File non trovato.', 404);
         }
-        $pdo->prepare('UPDATE cloud_file SET nota = ?, updated_at = NOW() WHERE id = ?')
+        $pdo->prepare('UPDATE cloud_files SET nota = ?, updated_at = NOW() WHERE id = ?')
             ->execute([$nota !== '' ? $nota : null, $fileId]);
 
         apiResponse(['success' => true, 'message' => 'Nota aggiornata.']);
