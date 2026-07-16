@@ -83,9 +83,16 @@
         currentClienteId   = id;
         currentClienteHash = hash;
 
-        // Highlight active button
+        // Highlight active item
+        document.querySelectorAll('.cloud-client-item').forEach(item => {
+            const btn = item.querySelector('.cloud-client-btn');
+            item.classList.toggle('active', btn?.dataset.clientId === String(id));
+        });
+        // Fallback for plain buttons (no wrapper)
         document.querySelectorAll('.cloud-client-btn').forEach(btn => {
-            btn.classList.toggle('active', btn.dataset.clientId === String(id));
+            if (!btn.closest('.cloud-client-item')) {
+                btn.classList.toggle('active', btn.dataset.clientId === String(id));
+            }
         });
 
         // Show detail panel
@@ -109,6 +116,17 @@
                     btn.dataset.clientNome || 'Cliente',
                     btn.dataset.clientHash || ''
                 );
+            });
+        });
+
+        // Sidebar copy-link buttons
+        document.querySelectorAll('.cloud-sidebar-copy-link').forEach(btn => {
+            btn.addEventListener('click', e => {
+                e.stopPropagation();
+                const hash = btn.dataset.hash;
+                if (!hash) return;
+                const url = window.location.origin + '/share/' + encodeURIComponent(hash);
+                cloudCopyLink(url);
             });
         });
     }

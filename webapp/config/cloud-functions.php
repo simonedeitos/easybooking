@@ -76,7 +76,7 @@ function cloudEnableForClient(PDO $pdo, int $clienteId): array
     // Generate unique hash
     do {
         $hash = bin2hex(random_bytes(16));
-        $stmt = $pdo->prepare('SELECT id FROM clienti WHERE cloud_hash = ? LIMIT 1');
+        $stmt = $pdo->prepare('SELECT id FROM clienti WHERE cloud_hash_accesso = ? LIMIT 1');
         $stmt->execute([$hash]);
     } while ($stmt->fetchColumn() !== false);
 
@@ -89,7 +89,7 @@ function cloudEnableForClient(PDO $pdo, int $clienteId): array
     }
 
     $stmt = $pdo->prepare(
-        'UPDATE clienti SET cloud_enabled = 1, cloud_hash = ?, cloud_cartella = ?, updated_at = NOW()
+        'UPDATE clienti SET cloud_enabled = 1, cloud_hash_accesso = ?, cloud_cartella_locale = ?, updated_at = NOW()
          WHERE id = ?'
     );
     $stmt->execute([$hash, $cartella, $clienteId]);
@@ -107,18 +107,18 @@ function cloudEnableForClient(PDO $pdo, int $clienteId): array
  */
 function cloudDisableForClient(PDO $pdo, int $clienteId): array
 {
-    $stmt = $pdo->prepare('SELECT cloud_cartella FROM clienti WHERE id = ? LIMIT 1');
+    $stmt = $pdo->prepare('SELECT cloud_cartella_locale FROM clienti WHERE id = ? LIMIT 1');
     $stmt->execute([$clienteId]);
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    if ($row && !empty($row['cloud_cartella'])) {
-        $dir = cloudClientDir($row['cloud_cartella']);
+    if ($row && !empty($row['cloud_cartella_locale'])) {
+        $dir = cloudClientDir($row['cloud_cartella_locale']);
         cloudDeleteDir($dir);
     }
 
-    $pdo->prepare('DELETE FROM cloud_files WHERE cliente_id = ?')->execute([$clienteId]);
+    $pdo->prepare('DELETE FROM cloud_file WHERE cliente_id = ?')->execute([$clienteId]);
     $pdo->prepare(
-        'UPDATE clienti SET cloud_enabled = 0, cloud_hash = NULL, cloud_cartella = NULL, updated_at = NOW()
+        'UPDATE clienti SET cloud_enabled = 0, cloud_hash_accesso = NULL, cloud_cartella_locale = NULL, updated_at = NOW()
          WHERE id = ?'
     )->execute([$clienteId]);
 
@@ -180,7 +180,7 @@ function cloudSafeFilename(string $originalName): string
  */
 function cloudCalcolaSpazioTotale(PDO $pdo): int
 {
-    $stmt = $pdo->query('SELECT COALESCE(SUM(dimensione_bytes), 0) FROM cloud_files');
+    $stmt = $pdo->query('SELECT COALESCE(SUM(dimensione_bytes), 0) FROM cloud_file');
     return (int)$stmt->fetchColumn();
 }
 
@@ -189,7 +189,7 @@ function cloudCalcolaSpazioTotale(PDO $pdo): int
  */
 function cloudSpazioCliente(PDO $pdo, int $clienteId): int
 {
-    $stmt = $pdo->prepare('SELECT COALESCE(SUM(dimensione_bytes), 0) FROM cloud_files WHERE cliente_id = ?');
+    $stmt = $pdo->prepare('SELECT COALESCE(SUM(dimensione_bytes), 0) FROM cloud_file WHERE cliente_id = ?');
     $stmt->execute([$clienteId]);
     return (int)$stmt->fetchColumn();
 }
@@ -202,8 +202,8 @@ function cloudUpdateStats(PDO $pdo): void
     $pdo->exec(
         'INSERT INTO cloud_stats (id, spazio_totale_bytes, numero_file, numero_clienti, aggiornato_at)
          SELECT 1,
-                COALESCE((SELECT SUM(dimensione_bytes) FROM cloud_files), 0),
-                COALESCE((SELECT COUNT(*) FROM cloud_files), 0),
+                COALESCE((SELECT SUM(dimensione_bytes) FROM cloud_file), 0),
+                COALESCE((SELECT COUNT(*) FROM cloud_file), 0),
                 COALESCE((SELECT COUNT(*) FROM clienti WHERE cloud_enabled = 1), 0),
                 NOW()
          ON DUPLICATE KEY UPDATE
