@@ -229,8 +229,11 @@ try {
 }
 
 $themePreference = $_SESSION['user_theme'] ?? ($user['theme'] ?? 'dark');
-$validTabs = ['generale', 'app', 'profilo', 'tema'];
+$validTabs = ['generale', 'notifiche', 'backup', 'importa-xml', 'app', 'profilo', 'tema'];
 if (!$isAdmin && $activeTab === 'app') {
+    $activeTab = 'profilo';
+}
+if (!$isAdmin && in_array($activeTab, ['backup', 'importa-xml'], true)) {
     $activeTab = 'profilo';
 }
 if (!in_array($activeTab, $validTabs, true)) {
@@ -242,7 +245,7 @@ require_once __DIR__ . '/includes/header.php';
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
     <div>
         <h2 class="mb-1">Impostazioni</h2>
-        <p class="text-secondary mb-0">Configura operatività, dati applicativi, profilo utente e tema grafico.</p>
+        <p class="text-secondary mb-0">Configura operatività, notifiche, backup, importazioni, dati applicativi, profilo utente e tema grafico.</p>
     </div>
 </div>
 
@@ -254,6 +257,9 @@ require_once __DIR__ . '/includes/header.php';
 
 <ul class="nav nav-tabs mb-4" role="tablist">
     <li class="nav-item"><a class="nav-link <?= $activeTab === 'generale' ? 'active' : '' ?>" href="impostazioni.php?tab=generale">Generale</a></li>
+    <li class="nav-item"><a class="nav-link <?= $activeTab === 'notifiche' ? 'active' : '' ?>" href="impostazioni.php?tab=notifiche">Notifiche</a></li>
+    <?php if ($isAdmin): ?><li class="nav-item"><a class="nav-link <?= $activeTab === 'backup' ? 'active' : '' ?>" href="impostazioni.php?tab=backup">Backup</a></li><?php endif; ?>
+    <?php if ($isAdmin): ?><li class="nav-item"><a class="nav-link <?= $activeTab === 'importa-xml' ? 'active' : '' ?>" href="impostazioni.php?tab=importa-xml">Importa XML</a></li><?php endif; ?>
     <?php if ($isAdmin): ?><li class="nav-item"><a class="nav-link <?= $activeTab === 'app' ? 'active' : '' ?>" href="impostazioni.php?tab=app">Applicazione</a></li><?php endif; ?>
     <li class="nav-item"><a class="nav-link <?= $activeTab === 'profilo' ? 'active' : '' ?>" href="impostazioni.php?tab=profilo">Profilo</a></li>
     <li class="nav-item"><a class="nav-link <?= $activeTab === 'tema' ? 'active' : '' ?>" href="impostazioni.php?tab=tema">Tema</a></li>
@@ -304,6 +310,48 @@ require_once __DIR__ . '/includes/header.php';
                 <button type="submit" class="btn btn-primary" <?= !$isAdmin ? 'disabled' : '' ?>><i class="fas fa-save me-2"></i>Salva impostazioni</button>
             </div>
         </form>
+    </div>
+</div>
+<?php endif; ?>
+
+<?php if ($activeTab === 'notifiche'): ?>
+<div class="card">
+    <div class="card-header"><i class="fas fa-bell me-2"></i>Notifiche</div>
+    <div class="card-body p-0">
+        <iframe
+            src="notifiche.php?embedded=1"
+            title="Configurazione notifiche"
+            style="width:100%; min-height:1380px; border:0; display:block;"
+            loading="lazy"
+        ></iframe>
+    </div>
+</div>
+<?php endif; ?>
+
+<?php if ($activeTab === 'backup' && $isAdmin): ?>
+<div class="card">
+    <div class="card-header"><i class="fas fa-database me-2"></i>Backup</div>
+    <div class="card-body p-0">
+        <iframe
+            src="backup.php?embedded=1"
+            title="Backup e ripristino"
+            style="width:100%; min-height:1180px; border:0; display:block;"
+            loading="lazy"
+        ></iframe>
+    </div>
+</div>
+<?php endif; ?>
+
+<?php if ($activeTab === 'importa-xml' && $isAdmin): ?>
+<div class="card">
+    <div class="card-header"><i class="fas fa-file-import me-2"></i>Importa XML</div>
+    <div class="card-body p-0">
+        <iframe
+            src="import-xml.php?embedded=1"
+            title="Importazione XML"
+            style="width:100%; min-height:1080px; border:0; display:block;"
+            loading="lazy"
+        ></iframe>
     </div>
 </div>
 <?php endif; ?>

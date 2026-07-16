@@ -7,6 +7,7 @@ require_once __DIR__ . '/includes/auth.php';
 requireAuth();
 requireAdmin();
 $pdo = Database::getInstance();
+$embedded = get('embedded') === '1';
 
 function h(mixed $value): string
 {
@@ -217,33 +218,48 @@ try {
 }
 
 require_once __DIR__ . '/includes/header.php';
+$selfUrl = 'backup.php' . ($embedded ? '?embedded=1' : '');
 ?>
+<?php if ($embedded): ?>
+<style>
+.sidebar,
+.top-navbar { display: none !important; }
+.app-wrapper { display: block; }
+.main-content {
+    margin: 0 !important;
+    min-height: auto;
+    padding: 1rem;
+}
+</style>
+<?php endif; ?>
+<?php if (!$embedded): ?>
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
     <div>
         <h2 class="mb-1">Backup e ripristino</h2>
         <p class="text-secondary mb-0">Esporta un dump SQL completo oppure ripristina un backup esistente.</p>
     </div>
 </div>
+<?php endif; ?>
 
 <?php if ($pageError !== ''): ?>
-<div class="alert alert-warning">
+<div class="alert alert-warning<?= $embedded ? ' m-3 mb-0' : '' ?>">
     <i class="fas fa-exclamation-triangle me-2"></i><?= h($pageError) ?>
 </div>
 <?php endif; ?>
 
 <?php if (is_string($importSuccess) && $importSuccess !== ''): ?>
-<div class="alert alert-success"><i class="fas fa-check-circle me-2"></i><?= h($importSuccess) ?></div>
+<div class="alert alert-success<?= $embedded ? ' m-3 mb-0' : '' ?>"><i class="fas fa-check-circle me-2"></i><?= h($importSuccess) ?></div>
 <?php elseif ($importSuccess === false): ?>
-<div class="alert alert-danger"><i class="fas fa-times-circle me-2"></i>Il ripristino non è andato a buon fine.</div>
+<div class="alert alert-danger<?= $embedded ? ' m-3 mb-0' : '' ?>"><i class="fas fa-times-circle me-2"></i>Il ripristino non è andato a buon fine.</div>
 <?php endif; ?>
 
-<div class="row g-4 mb-4">
+<div class="row g-4 mb-4<?= $embedded ? ' p-3' : '' ?>">
     <div class="col-lg-6">
         <div class="card h-100">
             <div class="card-header"><i class="fas fa-download me-2"></i>Esporta backup</div>
             <div class="card-body d-flex flex-column">
                 <p class="text-secondary">Genera un file SQL completo con struttura e dati di tutte le tabelle del sistema.</p>
-                <form method="post" action="backup.php" class="mt-auto">
+                <form method="post" action="<?= h($selfUrl) ?>" class="mt-auto">
                     <?= csrfField() ?>
                     <input type="hidden" name="action" value="export">
                     <button type="submit" class="btn btn-primary"><i class="fas fa-file-download me-2"></i>Scarica Backup SQL</button>
@@ -256,7 +272,7 @@ require_once __DIR__ . '/includes/header.php';
             <div class="card-header"><i class="fas fa-upload me-2"></i>Import / Restore</div>
             <div class="card-body d-flex flex-column">
                 <p class="text-secondary">Carica un file <code>.sql</code> precedentemente esportato per ripristinare il database.</p>
-                <form method="post" action="backup.php" enctype="multipart/form-data" class="mt-auto">
+                <form method="post" action="<?= h($selfUrl) ?>" enctype="multipart/form-data" class="mt-auto">
                     <?= csrfField() ?>
                     <input type="hidden" name="action" value="import">
                     <div class="mb-3">
@@ -272,12 +288,12 @@ require_once __DIR__ . '/includes/header.php';
     </div>
 </div>
 
-<div class="alert alert-danger">
+<div class="alert alert-danger<?= $embedded ? ' mx-3' : '' ?>">
     <i class="fas fa-shield-alt me-2"></i>
     <strong>Attenzione:</strong> il ripristino esegue direttamente il contenuto del file SQL caricato. Usa solo backup affidabili e verifica di avere una copia recente prima di procedere.
 </div>
 
-<div class="row g-4">
+<div class="row g-4<?= $embedded ? ' px-3 pb-3' : '' ?>">
     <div class="col-lg-5">
         <div class="card h-100">
             <div class="card-header"><i class="fas fa-history me-2"></i>Ultima attività backup</div>
