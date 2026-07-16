@@ -29,12 +29,11 @@ function packagePreview(?string $value, int $length = 70): string
     return strlen($value) > $length ? substr($value, 0, $length - 3) . '...' : $value;
 }
 
-$requestAction = $_SERVER['REQUEST_METHOD'] === 'POST' ? post('action') : get('action');
-
-if ($requestAction !== '') {
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $requestAction = post('action');
     try {
-        if ($requestAction === 'save' && $_SERVER['REQUEST_METHOD'] === 'POST') {
-            verifyCsrf();
+        if ($requestAction === 'save') {
+            verifyCsrfOrRedirect('pacchetti.php');
 
             $id = sanitizeInt(post('id'));
             $nome = trim(post('nome'));
@@ -46,13 +45,16 @@ if ($requestAction !== '') {
             $strumento = packageNullableString(post('strumento'));
 
             if ($nome === '') {
-                jsonResponse(['success' => false, 'message' => 'Il nome del pacchetto è obbligatorio.'], 422);
+                setFlash('warning', 'Il nome del pacchetto è obbligatorio.');
+                redirect('pacchetti.php');
             }
             if ($numeroLezioni <= 0) {
-                jsonResponse(['success' => false, 'message' => 'Il numero di lezioni deve essere maggiore di zero.'], 422);
+                setFlash('warning', 'Il numero di lezioni deve essere maggiore di zero.');
+                redirect('pacchetti.php');
             }
             if ($prezzo < 0) {
-                jsonResponse(['success' => false, 'message' => 'Il prezzo non può essere negativo.'], 422);
+                setFlash('warning', 'Il prezzo non può essere negativo.');
+                redirect('pacchetti.php');
             }
 
             if ($id > 0) {
@@ -62,7 +64,8 @@ if ($requestAction !== '') {
                      WHERE id = ?'
                 );
                 $stmt->execute([$nome, $descrizione, $numeroLezioni, $durataMinuti, $frequenza, $prezzo, $strumento, $id]);
-                jsonResponse(['success' => true, 'message' => 'Pacchetto aggiornato con successo.']);
+                setFlash('success', 'Pacchetto aggiornato con successo.');
+                redirect('pacchetti.php');
             }
 
             $stmt = $pdo->prepare(
@@ -70,50 +73,40 @@ if ($requestAction !== '') {
                  VALUES (?, ?, ?, ?, ?, ?, ?)'
             );
             $stmt->execute([$nome, $descrizione, $numeroLezioni, $durataMinuti, $frequenza, $prezzo, $strumento]);
-            jsonResponse(['success' => true, 'message' => 'Pacchetto creato con successo.', 'id' => (int)$pdo->lastInsertId()]);
-        } elseif ($requestAction === 'delete' && $_SERVER['REQUEST_METHOD'] === 'POST') {
-            verifyCsrf();
+            setFlash('success', 'Pacchetto creato con successo.');
+            redirect('pacchetti.php');
+        } elseif ($requestAction === 'delete') {
+            verifyCsrfOrRedirect('pacchetti.php');
             $id = sanitizeInt(post('id'));
             if ($id <= 0) {
-                jsonResponse(['success' => false, 'message' => 'Pacchetto non valido.'], 422);
+                setFlash('warning', 'Pacchetto non valido.');
+                redirect('pacchetti.php');
             }
 
             $stmt = $pdo->prepare('SELECT COUNT(*) FROM acquisti WHERE pacchetto_id = ?');
             $stmt->execute([$id]);
             if ((int)$stmt->fetchColumn() > 0) {
-                jsonResponse(['success' => false, 'message' => 'Impossibile eliminare il pacchetto: esistono acquisti collegati.'], 409);
+                setFlash('warning', 'Impossibile eliminare il pacchetto: esistono acquisti collegati.');
+                redirect('pacchetti.php');
             }
 
             $stmt = $pdo->prepare('DELETE FROM pacchetti WHERE id = ?');
             $stmt->execute([$id]);
             if ($stmt->rowCount() === 0) {
-                jsonResponse(['success' => false, 'message' => 'Pacchetto non trovato.'], 404);
+                setFlash('warning', 'Pacchetto non trovato.');
+                redirect('pacchetti.php');
             }
 
-            jsonResponse(['success' => true, 'message' => 'Pacchetto eliminato con successo.']);
-        } elseif ($requestAction === 'get') {
-            $id = sanitizeInt($_GET['id'] ?? $_POST['id'] ?? 0);
-            if ($id <= 0) {
-                jsonResponse(['success' => false, 'message' => 'Pacchetto non valido.'], 422);
-            }
-
-            $stmt = $pdo->prepare('SELECT * FROM pacchetti WHERE id = ? LIMIT 1');
-            $stmt->execute([$id]);
-            $package = $stmt->fetch();
-            if (!$package) {
-                jsonResponse(['success' => false, 'message' => 'Pacchetto non trovato.'], 404);
-            }
-
-            jsonResponse(['success' => true, 'package' => $package]);
-        } else {
-            jsonResponse(['success' => false, 'message' => 'Azione non riconosciuta.'], 400);
+            setFlash('success', 'Pacchetto eliminato con successo.');
+            redirect('pacchetti.php');
         }
     } catch (Throwable $e) {
         error_log('[pacchetti.php] ' . get_class($e) . ': ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
         if ($pdo->inTransaction()) {
             $pdo->rollBack();
         }
-        respondOperationResult(false, 'Errore durante l\'operazione richiesta.', 'pacchetti.php', 500);
+        setFlash('danger', 'Errore durante l\'operazione richiesta.');
+        redirect('pacchetti.php');
     }
 }
 
@@ -185,12 +178,19 @@ require_once __DIR__ . '/includes/header.php';
                         <td><?= htmlspecialchars((string)($package['strumento'] ?: '—')) ?></td>
                         <td>
                             <div class="d-flex flex-wrap gap-2">
-                                <button type="button" class="btn btn-sm btn-outline-primary btn-edit-package" data-id="<?= htmlspecialchars((string)$package['id']) ?>">
+                                <button type="button" class="btn btn-sm btn-outline-primary btn-edit-package"
+                                        data-edit="<?= htmlspecialchars(json_encode($package), ENT_QUOTES) ?>">
                                     <i class="fas fa-pen"></i>
                                 </button>
-                                <button type="button" class="btn btn-sm btn-outline-danger btn-delete-package" data-id="<?= htmlspecialchars((string)$package['id']) ?>" data-name="<?= htmlspecialchars((string)$package['nome']) ?>">
-                                    <i class="fas fa-trash"></i>
-                                </button>
+                                <form method="post" action="pacchetti.php" class="d-inline">
+                                    <?= csrfField() ?>
+                                    <input type="hidden" name="action" value="delete">
+                                    <input type="hidden" name="id" value="<?= htmlspecialchars((string)$package['id']) ?>">
+                                    <button type="button" class="btn btn-sm btn-outline-danger"
+                                            onclick="confirmDelete(this.form, '<?= htmlspecialchars((string)$package['nome'], ENT_QUOTES) ?>')">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
                             </div>
                         </td>
                     </tr>
@@ -278,24 +278,15 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('package_prezzo').value = '0.00';
     }
 
-    async function fetchPackage(id) {
-        const response = await fetch(`pacchetti.php?action=get&id=${encodeURIComponent(id)}`);
-        const data = await response.json();
-        if (!data.success) {
-            throw new Error(data.message || 'Errore nel caricamento del pacchetto.');
-        }
-        return data.package;
-    }
-
     document.getElementById('newPackageBtn')?.addEventListener('click', () => {
         resetPackageForm();
         packageModal.show();
     });
 
     document.querySelectorAll('.btn-edit-package').forEach((button) => {
-        button.addEventListener('click', async () => {
+        button.addEventListener('click', () => {
             try {
-                const pkg = await fetchPackage(button.dataset.id);
+                const pkg = JSON.parse(button.dataset.edit);
                 resetPackageForm();
                 document.getElementById('packageModalTitle').textContent = 'Modifica Pacchetto';
                 document.getElementById('package_id').value = pkg.id || '';
@@ -307,41 +298,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.getElementById('package_prezzo').value = Number(pkg.prezzo || 0).toFixed(2);
                 document.getElementById('package_strumento').value = pkg.strumento || '';
                 packageModal.show();
-            } catch (error) {
-                showToast(error.message, 'danger');
+            } catch (e) {
+                showToast('Errore nel caricamento del pacchetto.', 'danger');
             }
         });
-    });
-
-    document.querySelectorAll('.btn-delete-package').forEach((button) => {
-        button.addEventListener('click', async () => {
-            const name = button.dataset.name || 'questo pacchetto';
-            if (!confirm(`Eliminare ${name}?`)) {
-                return;
-            }
-            try {
-                const formData = new FormData();
-                formData.append('action', 'delete');
-                formData.append('id', button.dataset.id);
-                formData.append('csrf_token', getCsrfToken());
-                const response = await fetch('pacchetti.php', { method: 'POST', body: formData });
-                const data = await response.json();
-                if (!data.success) {
-                    throw new Error(data.message || 'Errore durante l\'eliminazione.');
-                }
-                showToast(data.message, 'success');
-                window.location.reload();
-            } catch (error) {
-                showToast(error.message, 'danger');
-            }
-        });
-    });
-
-    ajaxForm(packageForm, (data) => {
-        showToast(data.message || 'Pacchetto salvato.', 'success');
-        window.location.reload();
-    }, (message) => {
-        showToast(message, 'danger');
     });
 
     packageModalEl.addEventListener('hidden.bs.modal', resetPackageForm);

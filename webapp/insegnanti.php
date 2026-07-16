@@ -23,12 +23,11 @@ function teacherMoney(string $value): float
     return is_numeric($normalized) ? max(0, (float)$normalized) : 0.0;
 }
 
-$requestAction = $_SERVER['REQUEST_METHOD'] === 'POST' ? post('action') : get('action');
-
-if ($requestAction !== '') {
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $requestAction = post('action');
     try {
-        if ($requestAction === 'save' && $_SERVER['REQUEST_METHOD'] === 'POST') {
-            verifyCsrf();
+        if ($requestAction === 'save') {
+            verifyCsrfOrRedirect('insegnanti.php');
 
             $id = sanitizeInt(post('id'));
             $nome = trim(post('nome'));
@@ -40,13 +39,15 @@ if ($requestAction !== '') {
             $strumentiIds = [];
 
             if ($nome === '' || $cognome === '') {
-                jsonResponse(['success' => false, 'message' => 'Nome e cognome sono obbligatori.'], 422);
+                setFlash('warning', 'Nome e cognome sono obbligatori.');
+                redirect('insegnanti.php');
             }
 
             $email = null;
             if ($emailRaw !== null) {
                 if (!filter_var($emailRaw, FILTER_VALIDATE_EMAIL)) {
-                    jsonResponse(['success' => false, 'message' => 'Inserisci un indirizzo email valido.'], 422);
+                    setFlash('warning', 'Inserisci un indirizzo email valido.');
+                    redirect('insegnanti.php');
                 }
                 $email = $emailRaw;
             }
@@ -88,37 +89,43 @@ if ($requestAction !== '') {
             }
 
             $pdo->commit();
-            jsonResponse(['success' => true, 'message' => 'Insegnante salvato con successo.', 'id' => $id]);
-        } elseif ($requestAction === 'delete' && $_SERVER['REQUEST_METHOD'] === 'POST') {
-            verifyCsrf();
+            setFlash('success', 'Insegnante salvato con successo.');
+            redirect('insegnanti.php');
+        } elseif ($requestAction === 'delete') {
+            verifyCsrfOrRedirect('insegnanti.php');
 
             $id = sanitizeInt(post('id'));
             if ($id <= 0) {
-                jsonResponse(['success' => false, 'message' => 'Insegnante non valido.'], 422);
+                setFlash('warning', 'Insegnante non valido.');
+                redirect('insegnanti.php');
             }
 
             $stmt = $pdo->prepare('SELECT COUNT(*) FROM prenotazioni WHERE insegnante_id = ?');
             $stmt->execute([$id]);
             if ((int)$stmt->fetchColumn() > 0) {
-                jsonResponse(['success' => false, 'message' => 'Impossibile eliminare l\'insegnante: sono presenti prenotazioni collegate.'], 409);
+                setFlash('warning', 'Impossibile eliminare l\'insegnante: sono presenti prenotazioni collegate.');
+                redirect('insegnanti.php');
             }
 
             $stmt = $pdo->prepare('DELETE FROM insegnanti WHERE id = ?');
             $stmt->execute([$id]);
 
             if ($stmt->rowCount() === 0) {
-                jsonResponse(['success' => false, 'message' => 'Insegnante non trovato.'], 404);
+                setFlash('warning', 'Insegnante non trovato.');
+                redirect('insegnanti.php');
             }
 
-            jsonResponse(['success' => true, 'message' => 'Insegnante eliminato con successo.']);
-        } elseif ($requestAction === 'save_tariffa_coppia' && $_SERVER['REQUEST_METHOD'] === 'POST') {
-            verifyCsrf();
+            setFlash('success', 'Insegnante eliminato con successo.');
+            redirect('insegnanti.php');
+        } elseif ($requestAction === 'save_tariffa_coppia') {
+            verifyCsrfOrRedirect('insegnanti.php');
 
             $teacherId = sanitizeInt(post('insegnante_id'));
             $tariffa = teacherMoney(post('tariffa'));
 
             if ($teacherId <= 0) {
-                jsonResponse(['success' => false, 'message' => 'Insegnante non valido.'], 422);
+                setFlash('warning', 'Insegnante non valido.');
+                redirect('insegnanti.php');
             }
 
             $stmt = $pdo->prepare(
@@ -128,57 +135,63 @@ if ($requestAction !== '') {
             );
             $stmt->execute([$teacherId, $tariffa]);
 
-            jsonResponse(['success' => true, 'message' => 'Tariffa di coppia aggiornata.', 'tariffa' => $tariffa]);
-        } elseif ($requestAction === 'get') {
-            $id = sanitizeInt($_GET['id'] ?? $_POST['id'] ?? 0);
-            if ($id <= 0) {
-                jsonResponse(['success' => false, 'message' => 'Insegnante non valido.'], 422);
-            }
-
-            $stmt = $pdo->prepare('SELECT * FROM insegnanti WHERE id = ? LIMIT 1');
-            $stmt->execute([$id]);
-            $teacher = $stmt->fetch();
-            if (!$teacher) {
-                jsonResponse(['success' => false, 'message' => 'Insegnante non trovato.'], 404);
-            }
-
-            $stmt = $pdo->prepare(
-                'SELECT s.id, s.nome
-                 FROM insegnanti_strumenti ins
-                 INNER JOIN strumenti s ON s.id = ins.strumento_id
-                 WHERE ins.insegnante_id = ?
-                 ORDER BY s.nome ASC'
-            );
-            $stmt->execute([$id]);
-            $strumentiRows = $stmt->fetchAll();
-            $teacher['strumenti'] = array_map(static fn(array $row): int => (int)$row['id'], $strumentiRows);
-            $teacher['strumenti_nomi'] = array_map(static fn(array $row): string => (string)$row['nome'], $strumentiRows);
-
-            $stmt = $pdo->prepare('SELECT tariffa FROM tariffe_coppia WHERE insegnante_id = ? LIMIT 1');
-            $stmt->execute([$id]);
-            $teacher['tariffa_coppia'] = $stmt->fetchColumn();
-
-            $stmt = $pdo->prepare(
-                "SELECT p.data, p.ora_inizio, p.ora_fine, p.stato, p.strumento, c.nome, c.cognome
-                 FROM prenotazioni p
-                 INNER JOIN clienti c ON c.id = p.cliente_id
-                 WHERE p.insegnante_id = ? AND p.data >= CURDATE()
-                 ORDER BY p.data ASC, p.ora_inizio ASC
-                 LIMIT 5"
-            );
-            $stmt->execute([$id]);
-            $teacher['upcoming_lessons'] = $stmt->fetchAll();
-
-            jsonResponse(['success' => true, 'teacher' => $teacher]);
-        } else {
-            jsonResponse(['success' => false, 'message' => 'Azione non riconosciuta.'], 400);
+            setFlash('success', 'Tariffa di coppia aggiornata.');
+            redirect('insegnanti.php');
         }
     } catch (Throwable $e) {
         error_log('[insegnanti.php] ' . get_class($e) . ': ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
         if ($pdo->inTransaction()) {
             $pdo->rollBack();
         }
-        respondOperationResult(false, 'Errore durante l\'operazione richiesta.', 'insegnanti.php', 500);
+        setFlash('danger', 'Errore durante l\'operazione richiesta.');
+        redirect('insegnanti.php');
+    }
+}
+
+// Handle read-only AJAX get request for teacher detail modal
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && get('action') === 'get') {
+    $id = sanitizeInt(get('id'));
+    if ($id <= 0) {
+        jsonResponse(['success' => false, 'message' => 'Insegnante non valido.'], 422);
+    }
+    try {
+        $stmt = $pdo->prepare('SELECT * FROM insegnanti WHERE id = ? LIMIT 1');
+        $stmt->execute([$id]);
+        $teacher = $stmt->fetch();
+        if (!$teacher) {
+            jsonResponse(['success' => false, 'message' => 'Insegnante non trovato.'], 404);
+        }
+
+        $stmt = $pdo->prepare(
+            'SELECT s.id, s.nome
+             FROM insegnanti_strumenti ins
+             INNER JOIN strumenti s ON s.id = ins.strumento_id
+             WHERE ins.insegnante_id = ?
+             ORDER BY s.nome ASC'
+        );
+        $stmt->execute([$id]);
+        $strumentiRows = $stmt->fetchAll();
+        $teacher['strumenti'] = array_map(static fn(array $row): int => (int)$row['id'], $strumentiRows);
+        $teacher['strumenti_nomi'] = array_map(static fn(array $row): string => (string)$row['nome'], $strumentiRows);
+
+        $stmt = $pdo->prepare('SELECT tariffa FROM tariffe_coppia WHERE insegnante_id = ? LIMIT 1');
+        $stmt->execute([$id]);
+        $teacher['tariffa_coppia'] = $stmt->fetchColumn();
+
+        $stmt = $pdo->prepare(
+            "SELECT p.data, p.ora_inizio, p.ora_fine, p.stato, p.strumento, c.nome, c.cognome
+             FROM prenotazioni p
+             INNER JOIN clienti c ON c.id = p.cliente_id
+             WHERE p.insegnante_id = ? AND p.data >= CURDATE()
+             ORDER BY p.data ASC, p.ora_inizio ASC
+             LIMIT 5"
+        );
+        $stmt->execute([$id]);
+        $teacher['upcoming_lessons'] = $stmt->fetchAll();
+
+        jsonResponse(['success' => true, 'teacher' => $teacher]);
+    } catch (PDOException $e) {
+        jsonResponse(['success' => false, 'message' => 'Errore durante il caricamento.'], 500);
     }
 }
 
@@ -189,7 +202,8 @@ $pageError = '';
 try {
     $stmt = $pdo->prepare(
         'SELECT i.id, i.nome, i.cognome, i.email, i.telefono, i.tariffa_oraria,
-                COALESCE(GROUP_CONCAT(DISTINCT s.nome ORDER BY s.nome SEPARATOR ", "), "") AS strumenti
+                COALESCE(GROUP_CONCAT(DISTINCT s.nome ORDER BY s.nome SEPARATOR ","), "") AS strumenti,
+                COALESCE(GROUP_CONCAT(DISTINCT ins.strumento_id ORDER BY ins.strumento_id SEPARATOR ","), "") AS strumenti_ids
          FROM insegnanti i
          LEFT JOIN insegnanti_strumenti ins ON ins.insegnante_id = i.id
          LEFT JOIN strumenti s ON s.id = ins.strumento_id
@@ -257,12 +271,30 @@ require_once __DIR__ . '/includes/header.php';
                                 <button type="button" class="btn btn-sm btn-outline-info btn-view-teacher" data-id="<?= htmlspecialchars((string)$teacher['id']) ?>">
                                     <i class="fas fa-eye"></i>
                                 </button>
-                                <button type="button" class="btn btn-sm btn-outline-primary btn-edit-teacher" data-id="<?= htmlspecialchars((string)$teacher['id']) ?>">
+                                <?php
+                                $teacherEditData = [
+                                    'id'             => $teacher['id'],
+                                    'nome'           => $teacher['nome'],
+                                    'cognome'        => $teacher['cognome'],
+                                    'telefono'       => $teacher['telefono'],
+                                    'email'          => $teacher['email'],
+                                    'tariffa_oraria' => $teacher['tariffa_oraria'],
+                                    'strumenti_ids'  => array_filter(array_map('intval', explode(',', (string)$teacher['strumenti_ids']))),
+                                ];
+                                ?>
+                                <button type="button" class="btn btn-sm btn-outline-primary btn-edit-teacher"
+                                        data-edit="<?= htmlspecialchars(json_encode($teacherEditData), ENT_QUOTES) ?>">
                                     <i class="fas fa-pen"></i>
                                 </button>
-                                <button type="button" class="btn btn-sm btn-outline-danger btn-delete-teacher" data-id="<?= htmlspecialchars((string)$teacher['id']) ?>" data-name="<?= htmlspecialchars(trim((string)$teacher['nome'] . ' ' . (string)$teacher['cognome'])) ?>">
-                                    <i class="fas fa-trash"></i>
-                                </button>
+                                <form method="post" action="insegnanti.php" class="d-inline">
+                                    <?= csrfField() ?>
+                                    <input type="hidden" name="action" value="delete">
+                                    <input type="hidden" name="id" value="<?= htmlspecialchars((string)$teacher['id']) ?>">
+                                    <button type="button" class="btn btn-sm btn-outline-danger"
+                                            onclick="confirmDelete(this.form, '<?= htmlspecialchars(trim((string)$teacher['nome'] . ' ' . (string)$teacher['cognome']), ENT_QUOTES) ?>')">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
                             </div>
                         </td>
                     </tr>
@@ -460,7 +492,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const teacherModal = new bootstrap.Modal(teacherModalEl);
     const teacherDetailModal = new bootstrap.Modal(teacherDetailModalEl);
     const teacherForm = document.getElementById('teacherForm');
-    const tariffaCoppiaForm = document.getElementById('tariffaCoppiaForm');
 
     function resetTeacherForm() {
         teacherForm.reset();
@@ -503,9 +534,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     document.querySelectorAll('.btn-edit-teacher').forEach((button) => {
-        button.addEventListener('click', async () => {
+        button.addEventListener('click', () => {
             try {
-                const teacher = await fetchTeacher(button.dataset.id);
+                const teacher = JSON.parse(button.dataset.edit);
                 resetTeacherForm();
                 document.getElementById('teacherModalTitle').textContent = 'Modifica Insegnante';
                 document.getElementById('teacher_id').value = teacher.id || '';
@@ -515,13 +546,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.getElementById('teacher_email').value = teacher.email || '';
                 document.getElementById('teacher_tariffa_oraria').value = Number(teacher.tariffa_oraria || 0).toFixed(2);
 
+                const strumentiIds = Array.isArray(teacher.strumenti_ids) ? teacher.strumenti_ids.map(Number) : [];
                 document.querySelectorAll('.instrument-checkbox').forEach((checkbox) => {
-                    checkbox.checked = Array.isArray(teacher.strumenti) && teacher.strumenti.includes(Number(checkbox.value));
+                    checkbox.checked = strumentiIds.includes(Number(checkbox.value));
                 });
 
                 teacherModal.show();
-            } catch (error) {
-                showToast(error.message, 'danger');
+            } catch (e) {
+                showToast('Errore nel caricamento dell\'insegnante.', 'danger');
             }
         });
     });
@@ -555,7 +587,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
                 }
 
-                // PDF export links
                 const pdfFuturiT = document.getElementById('teacher_pdf_futuri');
                 const pdfStoricoT = document.getElementById('teacher_pdf_storico');
                 if (teacher.id) {
@@ -573,46 +604,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 showToast(error.message, 'danger');
             }
         });
-    });
-
-    document.querySelectorAll('.btn-delete-teacher').forEach((button) => {
-        button.addEventListener('click', async () => {
-            const name = button.dataset.name || 'questo insegnante';
-            if (!confirm(`Eliminare ${name}?`)) {
-                return;
-            }
-
-            try {
-                const formData = new FormData();
-                formData.append('action', 'delete');
-                formData.append('id', button.dataset.id);
-                formData.append('csrf_token', getCsrfToken());
-
-                const response = await fetch('insegnanti.php', { method: 'POST', body: formData });
-                const data = await response.json();
-                if (!data.success) {
-                    throw new Error(data.message || 'Errore durante l\'eliminazione.');
-                }
-
-                showToast(data.message, 'success');
-                window.location.reload();
-            } catch (error) {
-                showToast(error.message, 'danger');
-            }
-        });
-    });
-
-    ajaxForm(teacherForm, (data) => {
-        showToast(data.message || 'Insegnante salvato.', 'success');
-        window.location.reload();
-    }, (message) => {
-        showToast(message, 'danger');
-    });
-
-    ajaxForm(tariffaCoppiaForm, (data) => {
-        showToast(data.message || 'Tariffa coppia aggiornata.', 'success');
-    }, (message) => {
-        showToast(message, 'danger');
     });
 
     teacherModalEl.addEventListener('hidden.bs.modal', resetTeacherForm);

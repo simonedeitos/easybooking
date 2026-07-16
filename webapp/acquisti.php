@@ -36,12 +36,11 @@ function purchasePaymentBadge(string $status): string
     return paymentBadge($status);
 }
 
-$requestAction = $_SERVER['REQUEST_METHOD'] === 'POST' ? post('action') : get('action');
-
-if ($requestAction !== '') {
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $requestAction = post('action');
     try {
-        if ($requestAction === 'save' && $_SERVER['REQUEST_METHOD'] === 'POST') {
-            verifyCsrf();
+        if ($requestAction === 'save') {
+            verifyCsrfOrRedirect('acquisti.php');
 
             $id = sanitizeInt(post('id'));
             $dataAcquisto = trim(post('data_acquisto'));
@@ -56,22 +55,27 @@ if ($requestAction !== '') {
             $numeroLezioni = max(0, sanitizeInt(post('numero_lezioni')));
 
             if (!purchaseValidDate($dataAcquisto)) {
-                jsonResponse(['success' => false, 'message' => 'Data acquisto non valida.'], 422);
+                setFlash('warning', 'Data acquisto non valida.');
+                redirect('acquisti.php');
             }
             if ($clienteId <= 0) {
-                jsonResponse(['success' => false, 'message' => 'Il cliente è obbligatorio.'], 422);
+                setFlash('warning', 'Il cliente è obbligatorio.');
+                redirect('acquisti.php');
             }
             if (!in_array($statoPagamento, purchaseStatuses(), true)) {
-                jsonResponse(['success' => false, 'message' => 'Stato pagamento non valido.'], 422);
+                setFlash('warning', 'Stato pagamento non valido.');
+                redirect('acquisti.php');
             }
             if ($importoPagato < 0) {
-                jsonResponse(['success' => false, 'message' => 'L\'importo pagato non può essere negativo.'], 422);
+                setFlash('warning', 'L\'importo pagato non può essere negativo.');
+                redirect('acquisti.php');
             }
 
             $stmt = $pdo->prepare('SELECT COUNT(*) FROM clienti WHERE id = ?');
             $stmt->execute([$clienteId]);
             if ((int)$stmt->fetchColumn() === 0) {
-                jsonResponse(['success' => false, 'message' => 'Cliente non trovato.'], 404);
+                setFlash('warning', 'Cliente non trovato.');
+                redirect('acquisti.php');
             }
 
             if ($pacchettoId !== null) {
@@ -79,7 +83,8 @@ if ($requestAction !== '') {
                 $stmt->execute([$pacchettoId]);
                 $packageLessons = $stmt->fetchColumn();
                 if ($packageLessons === false) {
-                    jsonResponse(['success' => false, 'message' => 'Pacchetto non trovato.'], 404);
+                    setFlash('warning', 'Pacchetto non trovato.');
+                    redirect('acquisti.php');
                 }
                 if ($numeroLezioni <= 0) {
                     $numeroLezioni = (int)$packageLessons;
@@ -87,7 +92,8 @@ if ($requestAction !== '') {
             }
 
             if ($numeroLezioni <= 0) {
-                jsonResponse(['success' => false, 'message' => 'Il numero di lezioni deve essere maggiore di zero.'], 422);
+                setFlash('warning', 'Il numero di lezioni deve essere maggiore di zero.');
+                redirect('acquisti.php');
             }
 
             if ($id > 0) {
@@ -97,7 +103,8 @@ if ($requestAction !== '') {
                      WHERE id = ?'
                 );
                 $stmt->execute([$dataAcquisto, $clienteId, $pacchettoId, $importoPagato, $statoPagamento, $pianificato, $numeroFattura, $note, $numeroLezioni, $id]);
-                jsonResponse(['success' => true, 'message' => 'Acquisto aggiornato con successo.']);
+                setFlash('success', 'Acquisto aggiornato con successo.');
+                redirect('acquisti.php');
             }
 
             $stmt = $pdo->prepare(
@@ -105,61 +112,53 @@ if ($requestAction !== '') {
                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
             );
             $stmt->execute([$dataAcquisto, $clienteId, $pacchettoId, $importoPagato, $statoPagamento, $pianificato, $numeroFattura, $note, $numeroLezioni]);
-            jsonResponse(['success' => true, 'message' => 'Acquisto creato con successo.', 'id' => (int)$pdo->lastInsertId()]);
-        } elseif ($requestAction === 'delete' && $_SERVER['REQUEST_METHOD'] === 'POST') {
-            verifyCsrf();
+            setFlash('success', 'Acquisto creato con successo.');
+            redirect('acquisti.php');
+        } elseif ($requestAction === 'delete') {
+            verifyCsrfOrRedirect('acquisti.php');
             $id = sanitizeInt(post('id'));
             if ($id <= 0) {
-                jsonResponse(['success' => false, 'message' => 'Acquisto non valido.'], 422);
+                setFlash('warning', 'Acquisto non valido.');
+                redirect('acquisti.php');
             }
 
             $stmt = $pdo->prepare('SELECT COUNT(*) FROM prenotazioni WHERE acquisto_id = ?');
             $stmt->execute([$id]);
             if ((int)$stmt->fetchColumn() > 0) {
-                jsonResponse(['success' => false, 'message' => 'Impossibile eliminare l\'acquisto: sono presenti prenotazioni collegate.'], 409);
+                setFlash('warning', 'Impossibile eliminare l\'acquisto: sono presenti prenotazioni collegate.');
+                redirect('acquisti.php');
             }
 
             $stmt = $pdo->prepare('DELETE FROM acquisti WHERE id = ?');
             $stmt->execute([$id]);
             if ($stmt->rowCount() === 0) {
-                jsonResponse(['success' => false, 'message' => 'Acquisto non trovato.'], 404);
+                setFlash('warning', 'Acquisto non trovato.');
+                redirect('acquisti.php');
             }
 
-            jsonResponse(['success' => true, 'message' => 'Acquisto eliminato con successo.']);
-        } elseif ($requestAction === 'get') {
-            $id = sanitizeInt($_GET['id'] ?? $_POST['id'] ?? 0);
-            if ($id <= 0) {
-                jsonResponse(['success' => false, 'message' => 'Acquisto non valido.'], 422);
-            }
-
-            $stmt = $pdo->prepare('SELECT * FROM acquisti WHERE id = ? LIMIT 1');
-            $stmt->execute([$id]);
-            $purchase = $stmt->fetch();
-            if (!$purchase) {
-                jsonResponse(['success' => false, 'message' => 'Acquisto non trovato.'], 404);
-            }
-
-            jsonResponse(['success' => true, 'purchase' => $purchase]);
-        } elseif ($requestAction === 'update_payment' && $_SERVER['REQUEST_METHOD'] === 'POST') {
-            verifyCsrf();
+            setFlash('success', 'Acquisto eliminato con successo.');
+            redirect('acquisti.php');
+        } elseif ($requestAction === 'update_payment') {
+            verifyCsrfOrRedirect('acquisti.php');
             $id = sanitizeInt(post('id'));
             $status = trim(post('stato_pagamento'));
             if ($id <= 0 || !in_array($status, purchaseStatuses(), true)) {
-                jsonResponse(['success' => false, 'message' => 'Dati non validi per aggiornare il pagamento.'], 422);
+                setFlash('warning', 'Dati non validi per aggiornare il pagamento.');
+                redirect('acquisti.php');
             }
 
             $stmt = $pdo->prepare('UPDATE acquisti SET stato_pagamento = ? WHERE id = ?');
             $stmt->execute([$status, $id]);
-            jsonResponse(['success' => true, 'message' => 'Stato pagamento aggiornato con successo.']);
-        } else {
-            jsonResponse(['success' => false, 'message' => 'Azione non riconosciuta.'], 400);
+            setFlash('success', 'Stato pagamento aggiornato.');
+            redirect('acquisti.php');
         }
     } catch (Throwable $e) {
         error_log('[acquisti.php] ' . get_class($e) . ': ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
         if ($pdo->inTransaction()) {
             $pdo->rollBack();
         }
-        respondOperationResult(false, 'Errore durante l\'operazione richiesta.', 'acquisti.php', 500);
+        setFlash('danger', 'Errore durante l\'operazione richiesta.');
+        redirect('acquisti.php');
     }
 }
 
@@ -305,21 +304,33 @@ require_once __DIR__ . '/includes/header.php';
                         <td>€ <?= htmlspecialchars(number_format((float)$purchase['importo_pagato'], 2, ',', '.')) ?></td>
                         <td>
                             <div class="mb-2"><?= purchasePaymentBadge((string)$purchase['stato_pagamento']) ?></div>
-                            <select class="form-select form-select-sm payment-status-select" data-id="<?= htmlspecialchars((string)$purchase['id']) ?>">
-                                <?php foreach ($statusOptions as $statusOption): ?>
-                                <option value="<?= htmlspecialchars($statusOption) ?>" <?= (string)$purchase['stato_pagamento'] === $statusOption ? 'selected' : '' ?>><?= htmlspecialchars($statusOption) ?></option>
-                                <?php endforeach; ?>
-                            </select>
+                            <form method="post" action="acquisti.php">
+                                <?= csrfField() ?>
+                                <input type="hidden" name="action" value="update_payment">
+                                <input type="hidden" name="id" value="<?= htmlspecialchars((string)$purchase['id']) ?>">
+                                <select class="form-select form-select-sm" name="stato_pagamento" onchange="this.form.submit()">
+                                    <?php foreach ($statusOptions as $statusOption): ?>
+                                    <option value="<?= htmlspecialchars($statusOption) ?>" <?= (string)$purchase['stato_pagamento'] === $statusOption ? 'selected' : '' ?>><?= htmlspecialchars($statusOption) ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </form>
                         </td>
                         <td><?= htmlspecialchars((string)($purchase['numero_fattura'] ?: '—')) ?></td>
                         <td>
                             <div class="d-flex flex-wrap gap-2">
-                                <button type="button" class="btn btn-sm btn-outline-primary btn-edit-purchase" data-id="<?= htmlspecialchars((string)$purchase['id']) ?>">
+                                <button type="button" class="btn btn-sm btn-outline-primary btn-edit-purchase"
+                                        data-edit="<?= htmlspecialchars(json_encode($purchase), ENT_QUOTES) ?>">
                                     <i class="fas fa-pen"></i>
                                 </button>
-                                <button type="button" class="btn btn-sm btn-outline-danger btn-delete-purchase" data-id="<?= htmlspecialchars((string)$purchase['id']) ?>" data-name="<?= htmlspecialchars(trim((string)$purchase['cliente_nome'] . ' ' . (string)$purchase['cliente_cognome'])) ?>">
-                                    <i class="fas fa-trash"></i>
-                                </button>
+                                <form method="post" action="acquisti.php" class="d-inline">
+                                    <?= csrfField() ?>
+                                    <input type="hidden" name="action" value="delete">
+                                    <input type="hidden" name="id" value="<?= htmlspecialchars((string)$purchase['id']) ?>">
+                                    <button type="button" class="btn btn-sm btn-outline-danger"
+                                            onclick="confirmDelete(this.form, '<?= htmlspecialchars(trim((string)$purchase['cliente_nome'] . ' ' . (string)$purchase['cliente_cognome']), ENT_QUOTES) ?>')">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
                             </div>
                         </td>
                     </tr>
@@ -488,15 +499,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    async function fetchPurchase(id) {
-        const response = await fetch(`acquisti.php?action=get&id=${encodeURIComponent(id)}`);
-        const data = await response.json();
-        if (!data.success) {
-            throw new Error(data.message || 'Errore nel caricamento dell\'acquisto.');
-        }
-        return data.purchase;
-    }
-
     document.getElementById('newPurchaseBtn')?.addEventListener('click', () => {
         resetPurchaseForm();
         purchaseModal.show();
@@ -505,9 +507,9 @@ document.addEventListener('DOMContentLoaded', () => {
     packageSelect.addEventListener('change', () => applyPackageDefaults(true));
 
     document.querySelectorAll('.btn-edit-purchase').forEach((button) => {
-        button.addEventListener('click', async () => {
+        button.addEventListener('click', () => {
             try {
-                const purchase = await fetchPurchase(button.dataset.id);
+                const purchase = JSON.parse(button.dataset.edit);
                 resetPurchaseForm();
                 document.getElementById('purchaseModalTitle').textContent = 'Modifica Acquisto';
                 document.getElementById('purchase_id').value = purchase.id || '';
@@ -521,62 +523,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.getElementById('purchase_note').value = purchase.note || '';
                 document.getElementById('purchase_numero_lezioni').value = purchase.numero_lezioni || '';
                 purchaseModal.show();
-            } catch (error) {
-                showToast(error.message, 'danger');
+            } catch (e) {
+                showToast('Errore nel caricamento dell\'acquisto.', 'danger');
             }
         });
-    });
-
-    document.querySelectorAll('.btn-delete-purchase').forEach((button) => {
-        button.addEventListener('click', async () => {
-            const name = button.dataset.name || 'questo acquisto';
-            if (!confirm(`Eliminare l'acquisto di ${name}?`)) {
-                return;
-            }
-            try {
-                const formData = new FormData();
-                formData.append('action', 'delete');
-                formData.append('id', button.dataset.id);
-                formData.append('csrf_token', getCsrfToken());
-                const response = await fetch('acquisti.php', { method: 'POST', body: formData });
-                const data = await response.json();
-                if (!data.success) {
-                    throw new Error(data.message || 'Errore durante l\'eliminazione.');
-                }
-                showToast(data.message, 'success');
-                window.location.reload();
-            } catch (error) {
-                showToast(error.message, 'danger');
-            }
-        });
-    });
-
-    document.querySelectorAll('.payment-status-select').forEach((select) => {
-        select.addEventListener('change', async () => {
-            try {
-                const formData = new FormData();
-                formData.append('action', 'update_payment');
-                formData.append('id', select.dataset.id);
-                formData.append('stato_pagamento', select.value);
-                formData.append('csrf_token', getCsrfToken());
-                const response = await fetch('acquisti.php', { method: 'POST', body: formData });
-                const data = await response.json();
-                if (!data.success) {
-                    throw new Error(data.message || 'Errore aggiornando il pagamento.');
-                }
-                showToast(data.message, 'success');
-                window.location.reload();
-            } catch (error) {
-                showToast(error.message, 'danger');
-            }
-        });
-    });
-
-    ajaxForm(purchaseForm, (data) => {
-        showToast(data.message || 'Acquisto salvato.', 'success');
-        window.location.reload();
-    }, (message) => {
-        showToast(message, 'danger');
     });
 
     purchaseModalEl.addEventListener('hidden.bs.modal', resetPurchaseForm);

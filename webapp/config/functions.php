@@ -18,6 +18,14 @@ function verifyCsrf(): void {
     }
 }
 
+function verifyCsrfOrRedirect(string $redirectUrl): void {
+    $token = $_POST['csrf_token'] ?? '';
+    if (!hash_equals(csrfToken(), $token)) {
+        setFlash('danger', 'Token di sicurezza non valido. Riprova.');
+        redirect($redirectUrl);
+    }
+}
+
 // ─── FLASH MESSAGES ────────────────────────────────────────────────────────
 function setFlash(string $type, string $message): void {
     $_SESSION['flash'][] = ['type' => $type, 'message' => $message];

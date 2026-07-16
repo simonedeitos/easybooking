@@ -72,17 +72,17 @@ function instrumentDayBadges(array $instrument): string
     return $html;
 }
 
-$requestAction = $_SERVER['REQUEST_METHOD'] === 'POST' ? post('action') : get('action');
-
-if ($requestAction !== '') {
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $requestAction = post('action');
     try {
-        if ($requestAction === 'save' && $_SERVER['REQUEST_METHOD'] === 'POST') {
-            verifyCsrf();
+        if ($requestAction === 'save') {
+            verifyCsrfOrRedirect('strumenti.php');
 
             $id = sanitizeInt(post('id'));
             $nome = trim(post('nome'));
             if ($nome === '') {
-                jsonResponse(['success' => false, 'message' => 'Il nome dello strumento è obbligatorio.'], 422);
+                setFlash('warning', 'Il nome dello strumento è obbligatorio.');
+                redirect('strumenti.php');
             }
 
             $dayValues = [];
@@ -96,23 +96,28 @@ if ($requestAction !== '') {
             $pomFine = instrumentNormalizeTime(post('pom_fine'));
 
             if ((post('matt_inizio') !== '' || post('matt_fine') !== '') && (!$mattInizio || !$mattFine)) {
-                jsonResponse(['success' => false, 'message' => 'Compila correttamente l\'orario della mattina.'], 422);
+                setFlash('warning', 'Compila correttamente l\'orario della mattina.');
+                redirect('strumenti.php');
             }
             if ((post('pom_inizio') !== '' || post('pom_fine') !== '') && (!$pomInizio || !$pomFine)) {
-                jsonResponse(['success' => false, 'message' => 'Compila correttamente l\'orario del pomeriggio.'], 422);
+                setFlash('warning', 'Compila correttamente l\'orario del pomeriggio.');
+                redirect('strumenti.php');
             }
             if ($mattInizio && $mattFine && strtotime('1970-01-01 ' . $mattFine) <= strtotime('1970-01-01 ' . $mattInizio)) {
-                jsonResponse(['success' => false, 'message' => 'L\'orario di fine mattina deve essere successivo all\'inizio.'], 422);
+                setFlash('warning', 'L\'orario di fine mattina deve essere successivo all\'inizio.');
+                redirect('strumenti.php');
             }
             if ($pomInizio && $pomFine && strtotime('1970-01-01 ' . $pomFine) <= strtotime('1970-01-01 ' . $pomInizio)) {
-                jsonResponse(['success' => false, 'message' => 'L\'orario di fine pomeriggio deve essere successivo all\'inizio.'], 422);
+                setFlash('warning', 'L\'orario di fine pomeriggio deve essere successivo all\'inizio.');
+                redirect('strumenti.php');
             }
 
             $checkSql = 'SELECT id FROM strumenti WHERE nome = ?' . ($id > 0 ? ' AND id <> ?' : '') . ' LIMIT 1';
             $checkStmt = $pdo->prepare($checkSql);
             $checkStmt->execute($id > 0 ? [$nome, $id] : [$nome]);
             if ($checkStmt->fetch()) {
-                jsonResponse(['success' => false, 'message' => 'Esiste già uno strumento con questo nome.'], 409);
+                setFlash('warning', 'Esiste già uno strumento con questo nome.');
+                redirect('strumenti.php');
             }
 
             if ($id > 0) {
@@ -137,7 +142,8 @@ if ($requestAction !== '') {
                     $pomFine,
                     $id,
                 ]);
-                jsonResponse(['success' => true, 'message' => 'Strumento aggiornato con successo.']);
+                setFlash('success', 'Strumento aggiornato con successo.');
+                redirect('strumenti.php');
             }
 
             $stmt = $pdo->prepare(
@@ -160,19 +166,22 @@ if ($requestAction !== '') {
                 $pomFine,
             ]);
 
-            jsonResponse(['success' => true, 'message' => 'Strumento creato con successo.', 'id' => (int)$pdo->lastInsertId()]);
-        } elseif ($requestAction === 'delete' && $_SERVER['REQUEST_METHOD'] === 'POST') {
-            verifyCsrf();
+            setFlash('success', 'Strumento creato con successo.');
+            redirect('strumenti.php');
+        } elseif ($requestAction === 'delete') {
+            verifyCsrfOrRedirect('strumenti.php');
             $id = sanitizeInt(post('id'));
             if ($id <= 0) {
-                jsonResponse(['success' => false, 'message' => 'Strumento non valido.'], 422);
+                setFlash('warning', 'Strumento non valido.');
+                redirect('strumenti.php');
             }
 
             $stmt = $pdo->prepare('SELECT id, nome FROM strumenti WHERE id = ? LIMIT 1');
             $stmt->execute([$id]);
             $instrument = $stmt->fetch();
             if (!$instrument) {
-                jsonResponse(['success' => false, 'message' => 'Strumento non trovato.'], 404);
+                setFlash('warning', 'Strumento non trovato.');
+                redirect('strumenti.php');
             }
 
             $stmt = $pdo->prepare('SELECT COUNT(*) FROM insegnanti_strumenti WHERE strumento_id = ?');
@@ -184,38 +193,22 @@ if ($requestAction !== '') {
             $bookings = (int)$stmt->fetchColumn();
 
             if ($teacherLinks > 0 || $bookings > 0) {
-                jsonResponse([
-                    'success' => false,
-                    'message' => 'Impossibile eliminare lo strumento: esistono associazioni con insegnanti o prenotazioni.'
-                ], 409);
+                setFlash('warning', 'Impossibile eliminare lo strumento: esistono associazioni con insegnanti o prenotazioni.');
+                redirect('strumenti.php');
             }
 
             $stmt = $pdo->prepare('DELETE FROM strumenti WHERE id = ?');
             $stmt->execute([$id]);
-            jsonResponse(['success' => true, 'message' => 'Strumento eliminato con successo.']);
-        } elseif ($requestAction === 'get') {
-            $id = sanitizeInt($_GET['id'] ?? $_POST['id'] ?? 0);
-            if ($id <= 0) {
-                jsonResponse(['success' => false, 'message' => 'Strumento non valido.'], 422);
-            }
-
-            $stmt = $pdo->prepare('SELECT * FROM strumenti WHERE id = ? LIMIT 1');
-            $stmt->execute([$id]);
-            $instrument = $stmt->fetch();
-            if (!$instrument) {
-                jsonResponse(['success' => false, 'message' => 'Strumento non trovato.'], 404);
-            }
-
-            jsonResponse(['success' => true, 'strumento' => $instrument]);
-        } else {
-            jsonResponse(['success' => false, 'message' => 'Azione non riconosciuta.'], 400);
+            setFlash('success', 'Strumento eliminato con successo.');
+            redirect('strumenti.php');
         }
     } catch (Throwable $e) {
         error_log('[strumenti.php] ' . get_class($e) . ': ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
         if ($pdo->inTransaction()) {
             $pdo->rollBack();
         }
-        respondOperationResult(false, 'Errore durante la gestione degli strumenti.', 'strumenti.php', 500);
+        setFlash('danger', 'Errore durante la gestione degli strumenti.');
+        redirect('strumenti.php');
     }
 }
 
@@ -285,12 +278,19 @@ require_once __DIR__ . '/includes/header.php';
                         <td><?= h(instrumentScheduleLabel($instrument['pom_inizio'] ?? null, $instrument['pom_fine'] ?? null)) ?></td>
                         <td>
                             <div class="d-flex flex-wrap gap-2">
-                                <button type="button" class="btn btn-sm btn-outline-primary btn-edit-instrument" data-id="<?= h((string)$instrument['id']) ?>">
+                                <button type="button" class="btn btn-sm btn-outline-primary btn-edit-instrument"
+                                        data-edit="<?= htmlspecialchars(json_encode($instrument), ENT_QUOTES) ?>">
                                     <i class="fas fa-pen"></i>
                                 </button>
-                                <button type="button" class="btn btn-sm btn-outline-danger btn-delete-instrument" data-id="<?= h((string)$instrument['id']) ?>" data-name="<?= h((string)$instrument['nome']) ?>">
-                                    <i class="fas fa-trash"></i>
-                                </button>
+                                <form method="post" action="strumenti.php" class="d-inline">
+                                    <?= csrfField() ?>
+                                    <input type="hidden" name="action" value="delete">
+                                    <input type="hidden" name="id" value="<?= h((string)$instrument['id']) ?>">
+                                    <button type="button" class="btn btn-sm btn-outline-danger"
+                                            onclick="confirmDelete(this.form, '<?= htmlspecialchars((string)$instrument['nome'], ENT_QUOTES) ?>')">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
                             </div>
                         </td>
                     </tr>
@@ -384,25 +384,11 @@ document.addEventListener('DOMContentLoaded', () => {
         modal.show();
     });
 
-    ajaxForm(form, () => {
-        showToast('Strumento salvato con successo.', 'success');
-        modal.hide();
-        window.location.reload();
-    }, (message) => {
-        showToast(message, 'danger');
-    });
-
     document.querySelectorAll('.btn-edit-instrument').forEach((button) => {
-        button.addEventListener('click', async () => {
-            const id = button.dataset.id;
+        button.addEventListener('click', () => {
             try {
-                const response = await fetch('strumenti.php?action=get&id=' + encodeURIComponent(id));
-                const data = await response.json();
-                if (!data.success) {
-                    throw new Error(data.message || 'Errore nel caricamento dello strumento.');
-                }
+                const item = JSON.parse(button.dataset.edit);
                 resetForm();
-                const item = data.strumento;
                 document.getElementById('strumento_id').value = item.id || '';
                 document.getElementById('nome').value = item.nome || '';
                 document.getElementById('matt_inizio').value = (item.matt_inizio || '').substring(0, 5);
@@ -417,36 +403,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
                 titleEl.textContent = 'Modifica Strumento';
                 modal.show();
-            } catch (error) {
-                showToast(error.message || 'Errore nel caricamento dello strumento.', 'danger');
+            } catch (e) {
+                showToast('Errore nel caricamento dello strumento.', 'danger');
             }
         });
     });
 
-    document.querySelectorAll('.btn-delete-instrument').forEach((button) => {
-        button.addEventListener('click', async () => {
-            const name = button.dataset.name || 'questo strumento';
-            if (!confirm('Eliminare "' + name + '"?')) {
-                return;
-            }
-            const formData = new FormData();
-            formData.append('action', 'delete');
-            formData.append('id', button.dataset.id || '');
-            formData.append('csrf_token', getCsrfToken());
-            try {
-                const response = await fetch('strumenti.php', { method: 'POST', body: formData });
-                const data = await response.json();
-                if (!data.success) {
-                    throw new Error(data.message || 'Errore durante l\'eliminazione.');
-                }
-                showToast(data.message || 'Strumento eliminato.', 'success');
-                window.location.reload();
-            } catch (error) {
-                showToast(error.message || 'Errore durante l\'eliminazione.', 'danger');
-            }
-        });
-    });
-
+    modalEl.addEventListener('hidden.bs.modal', resetForm);
     resetForm();
 });
 </script>
