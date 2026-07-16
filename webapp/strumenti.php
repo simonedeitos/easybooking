@@ -137,7 +137,7 @@ if ($requestAction !== '') {
                     $pomFine,
                     $id,
                 ]);
-                respondOperationResult(true, 'Strumento aggiornato con successo.', 'strumenti.php');
+                jsonResponse(['success' => true, 'message' => 'Strumento aggiornato con successo.']);
             }
 
             $stmt = $pdo->prepare(
@@ -160,7 +160,7 @@ if ($requestAction !== '') {
                 $pomFine,
             ]);
 
-            respondOperationResult(true, 'Strumento creato con successo.', 'strumenti.php', 200, ['id' => (int)$pdo->lastInsertId()]);
+            jsonResponse(['success' => true, 'message' => 'Strumento creato con successo.', 'id' => (int)$pdo->lastInsertId()]);
         } elseif ($requestAction === 'delete' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             verifyCsrf();
             $id = sanitizeInt(post('id'));
@@ -192,7 +192,7 @@ if ($requestAction !== '') {
 
             $stmt = $pdo->prepare('DELETE FROM strumenti WHERE id = ?');
             $stmt->execute([$id]);
-            respondOperationResult(true, 'Strumento eliminato con successo.', 'strumenti.php');
+            jsonResponse(['success' => true, 'message' => 'Strumento eliminato con successo.']);
         } elseif ($requestAction === 'get') {
             $id = sanitizeInt($_GET['id'] ?? $_POST['id'] ?? 0);
             if ($id <= 0) {

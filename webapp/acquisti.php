@@ -97,7 +97,7 @@ if ($requestAction !== '') {
                      WHERE id = ?'
                 );
                 $stmt->execute([$dataAcquisto, $clienteId, $pacchettoId, $importoPagato, $statoPagamento, $pianificato, $numeroFattura, $note, $numeroLezioni, $id]);
-                respondOperationResult(true, 'Acquisto aggiornato con successo.', 'acquisti.php');
+                jsonResponse(['success' => true, 'message' => 'Acquisto aggiornato con successo.']);
             }
 
             $stmt = $pdo->prepare(
@@ -105,7 +105,7 @@ if ($requestAction !== '') {
                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
             );
             $stmt->execute([$dataAcquisto, $clienteId, $pacchettoId, $importoPagato, $statoPagamento, $pianificato, $numeroFattura, $note, $numeroLezioni]);
-            respondOperationResult(true, 'Acquisto creato con successo.', 'acquisti.php', 200, ['id' => (int)$pdo->lastInsertId()]);
+            jsonResponse(['success' => true, 'message' => 'Acquisto creato con successo.', 'id' => (int)$pdo->lastInsertId()]);
         } elseif ($requestAction === 'delete' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             verifyCsrf();
             $id = sanitizeInt(post('id'));
@@ -125,7 +125,7 @@ if ($requestAction !== '') {
                 jsonResponse(['success' => false, 'message' => 'Acquisto non trovato.'], 404);
             }
 
-            respondOperationResult(true, 'Acquisto eliminato con successo.', 'acquisti.php');
+            jsonResponse(['success' => true, 'message' => 'Acquisto eliminato con successo.']);
         } elseif ($requestAction === 'get') {
             $id = sanitizeInt($_GET['id'] ?? $_POST['id'] ?? 0);
             if ($id <= 0) {

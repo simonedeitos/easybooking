@@ -66,7 +66,7 @@ if ($requestAction !== '') {
                      WHERE id = ?'
                 );
                 $stmt->execute([$nome, $cognome, $telefono, $email, $indirizzo, $codiceFiscale, $note, $megaPubblica, $megaLocale, $id]);
-                respondOperationResult(true, 'Cliente aggiornato con successo.', 'clienti.php');
+                jsonResponse(['success' => true, 'message' => 'Cliente aggiornato con successo.']);
             }
 
             $stmt = $pdo->prepare(
@@ -74,7 +74,7 @@ if ($requestAction !== '') {
                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
             );
             $stmt->execute([$nome, $cognome, $telefono, $email, $indirizzo, $codiceFiscale, $note, $megaPubblica, $megaLocale]);
-            respondOperationResult(true, 'Cliente creato con successo.', 'clienti.php', 200, ['id' => (int)$pdo->lastInsertId()]);
+            jsonResponse(['success' => true, 'message' => 'Cliente creato con successo.', 'id' => (int)$pdo->lastInsertId()]);
         } elseif ($requestAction === 'delete' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             verifyCsrf();
 
@@ -102,7 +102,7 @@ if ($requestAction !== '') {
                 jsonResponse(['success' => false, 'message' => 'Cliente non trovato.'], 404);
             }
 
-            respondOperationResult(true, 'Cliente eliminato con successo.', 'clienti.php');
+            jsonResponse(['success' => true, 'message' => 'Cliente eliminato con successo.']);
         } elseif ($requestAction === 'get') {
             $id = sanitizeInt($_GET['id'] ?? $_POST['id'] ?? 0);
             if ($id <= 0) {

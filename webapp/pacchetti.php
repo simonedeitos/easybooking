@@ -62,7 +62,7 @@ if ($requestAction !== '') {
                      WHERE id = ?'
                 );
                 $stmt->execute([$nome, $descrizione, $numeroLezioni, $durataMinuti, $frequenza, $prezzo, $strumento, $id]);
-                respondOperationResult(true, 'Pacchetto aggiornato con successo.', 'pacchetti.php');
+                jsonResponse(['success' => true, 'message' => 'Pacchetto aggiornato con successo.']);
             }
 
             $stmt = $pdo->prepare(
@@ -70,7 +70,7 @@ if ($requestAction !== '') {
                  VALUES (?, ?, ?, ?, ?, ?, ?)'
             );
             $stmt->execute([$nome, $descrizione, $numeroLezioni, $durataMinuti, $frequenza, $prezzo, $strumento]);
-            respondOperationResult(true, 'Pacchetto creato con successo.', 'pacchetti.php', 200, ['id' => (int)$pdo->lastInsertId()]);
+            jsonResponse(['success' => true, 'message' => 'Pacchetto creato con successo.', 'id' => (int)$pdo->lastInsertId()]);
         } elseif ($requestAction === 'delete' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             verifyCsrf();
             $id = sanitizeInt(post('id'));
@@ -90,7 +90,7 @@ if ($requestAction !== '') {
                 jsonResponse(['success' => false, 'message' => 'Pacchetto non trovato.'], 404);
             }
 
-            respondOperationResult(true, 'Pacchetto eliminato con successo.', 'pacchetti.php');
+            jsonResponse(['success' => true, 'message' => 'Pacchetto eliminato con successo.']);
         } elseif ($requestAction === 'get') {
             $id = sanitizeInt($_GET['id'] ?? $_POST['id'] ?? 0);
             if ($id <= 0) {
