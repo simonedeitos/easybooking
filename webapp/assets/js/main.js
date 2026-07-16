@@ -198,14 +198,12 @@ function ajaxForm(formEl, onSuccess, onError) {
             const fd = new FormData(formEl);
             const resp = await fetch(formEl.action || window.location.href, {
                 method: 'POST',
-                headers: { 'X-CSRF-Token': getCsrfToken() },
+                headers: {
+                    'X-CSRF-Token': getCsrfToken(),
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
                 body: fd
             });
-            const ct = resp.headers.get('Content-Type') || '';
-            if (!ct.includes('application/json')) {
-                onError('Il server ha restituito una risposta non valida.');
-                return;
-            }
             const data = await resp.json();
             if (data.success) {
                 onSuccess(data);
@@ -213,7 +211,7 @@ function ajaxForm(formEl, onSuccess, onError) {
                 onError(data.message || 'Errore sconosciuto');
             }
         } catch (err) {
-            onError('Errore di rete: ' + err.message);
+            onError(err.message || 'Errore di rete.');
         } finally {
             if (btn) { btn.disabled = false; btn.innerHTML = original; }
         }

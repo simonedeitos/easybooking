@@ -88,7 +88,7 @@ if ($requestAction !== '') {
             }
 
             $pdo->commit();
-            respondOperationResult(true, 'Insegnante salvato con successo.', 'insegnanti.php', 200, ['id' => $id]);
+            jsonResponse(['success' => true, 'message' => 'Insegnante salvato con successo.', 'id' => $id]);
         } elseif ($requestAction === 'delete' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             verifyCsrf();
 
@@ -110,7 +110,7 @@ if ($requestAction !== '') {
                 jsonResponse(['success' => false, 'message' => 'Insegnante non trovato.'], 404);
             }
 
-            respondOperationResult(true, 'Insegnante eliminato con successo.', 'insegnanti.php');
+            jsonResponse(['success' => true, 'message' => 'Insegnante eliminato con successo.']);
         } elseif ($requestAction === 'save_tariffa_coppia' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             verifyCsrf();
 
