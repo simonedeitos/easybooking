@@ -240,31 +240,25 @@ require_once __DIR__ . '/includes/header.php';
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <?php if (empty($clientsDisabled)): ?>
-                    <p class="text-muted mb-0">Tutti i clienti hanno già il cloud abilitato.</p>
-                <?php else: ?>
-                    <div class="mb-3">
-                        <label for="create-cloud-search" class="form-label">Cerca cliente</label>
-                        <input type="text"
-                               id="create-cloud-search"
-                               class="form-control mb-3"
-                               placeholder="Digita nome o email…"
-                               autocomplete="off">
-                        <div id="create-cloud-clients-list"
-                             class="border rounded p-2"
-                             style="max-height:300px;overflow-y:auto;">
-                        </div>
-                        <input type="hidden" id="create-cloud-selected-id" value="">
+                <div class="mb-3">
+                    <label for="create-cloud-search" class="form-label">Cerca cliente</label>
+                    <input type="text"
+                           id="create-cloud-search"
+                           class="form-control mb-3"
+                           placeholder="Digita nome o email…"
+                           autocomplete="off">
+                    <div id="create-cloud-clients-list"
+                         class="border rounded p-2"
+                         style="max-height:300px;overflow-y:auto;">
                     </div>
-                <?php endif; ?>
+                    <input type="hidden" id="create-cloud-selected-id" value="">
+                </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
-                <?php if (!empty($clientsDisabled)): ?>
                 <button type="button" class="btn btn-success" id="create-cloud-confirm-btn" disabled>
                     <i class="fas fa-check me-1"></i>Crea
                 </button>
-                <?php endif; ?>
             </div>
         </div>
     </div>

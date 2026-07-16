@@ -504,7 +504,11 @@
             if (matches.length === 0) {
                 const msg = document.createElement('p');
                 msg.className = 'text-muted text-center small my-2';
-                msg.textContent = 'Nessun cliente trovato';
+                // q is the active search query; empty q means no filter is applied,
+                // so zero results indicates there are simply no clients without cloud yet.
+                msg.textContent = q
+                    ? 'Nessun cliente trovato.'
+                    : 'Tutti i clienti hanno già il cloud abilitato.';
                 listEl.appendChild(msg);
                 return;
             }
@@ -560,7 +564,9 @@
                     }
                     renderClientsList('');
                 })
-                .catch(() => renderClientsList(''));
+                .catch(() => {
+                    listEl.innerHTML = '<p class="text-danger text-center small my-2">Errore nel caricamento dei clienti.</p>';
+                });
             if (searchInput) setTimeout(() => searchInput.focus(), 150);
         }
 
