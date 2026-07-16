@@ -26,6 +26,14 @@ define('DB_USER',         getenv('DB_USER')     ?: 'u362062795_easybooking');
 define('DB_PASS',         getenv('DB_PASS')     ?: '');
 define('DB_CHARSET',      'utf8mb4');
 
+if (!defined('CLOUD_PUBLIC_BASE_URL')) {
+    $_cloudPublicBaseUrl = trim((string)(getenv('CLOUD_PUBLIC_BASE_URL') ?: ''), " \t\n\r\0\x0B\"'");
+    if ($_cloudPublicBaseUrl !== '') {
+        define('CLOUD_PUBLIC_BASE_URL', rtrim($_cloudPublicBaseUrl, '/'));
+    }
+    unset($_cloudPublicBaseUrl);
+}
+
 class Database {
     private static ?PDO $instance = null;
 

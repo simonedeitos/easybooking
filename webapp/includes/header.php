@@ -26,6 +26,13 @@ $pageTitles = [
     'import-xml'         => 'Importa XML',
 ];
 $pageTitle = $pageTitles[$currentPage] ?? 'EasyBooking';
+$bodyAttributeString = '';
+if (isset($pageBodyAttributes) && is_array($pageBodyAttributes)) {
+    foreach ($pageBodyAttributes as $attributeName => $attributeValue) {
+        $bodyAttributeString .= ' ' . htmlspecialchars((string)$attributeName, ENT_QUOTES, 'UTF-8')
+            . '="' . htmlspecialchars((string)$attributeValue, ENT_QUOTES, 'UTF-8') . '"';
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="it" data-theme="<?= $theme ?>">
@@ -70,7 +77,7 @@ $pageTitle = $pageTitles[$currentPage] ?? 'EasyBooking';
     <link id="theme-dark-css"  rel="stylesheet" href="assets/css/dark-theme.css?v=<?= $getAssetVersion('assets/css/dark-theme.css') ?>"  <?= $theme !== 'dark'  ? 'disabled' : '' ?>>
     <link id="theme-light-css" rel="stylesheet" href="assets/css/light-theme.css?v=<?= $getAssetVersion('assets/css/light-theme.css') ?>" <?= $theme !== 'light' ? 'disabled' : '' ?>>
 </head>
-<body data-theme="<?= $theme ?>">
+<body data-theme="<?= $theme ?>"<?= $bodyAttributeString ?>>
 <div class="app-wrapper">
 
 <!-- ── Sidebar Overlay (mobile) ────────────────────────────── -->

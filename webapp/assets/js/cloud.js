@@ -172,11 +172,14 @@
 
     /**
      * Builds the public share URL for a client cloud hash.
-     * Mirrors the PHP cloudShareUrl() fallback: strips the current filename
-     * from window.location.pathname so the URL is correct even when the app
-     * is installed in a subdirectory (e.g. /easybooking/).
+     * Uses the PHP-injected public base URL when available so JS copy-link
+     * matches PHP-generated links. Falls back to the current install path.
      */
     function buildShareUrl(hash) {
+        const configuredBaseUrl = (document.body?.dataset.cloudPublicBaseUrl || '').trim().replace(/\/+$/, '');
+        if (configuredBaseUrl) {
+            return configuredBaseUrl + '/share/' + encodeURIComponent(hash);
+        }
         const basePath = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/'));
         return window.location.origin + basePath + '/share/' + encodeURIComponent(hash);
     }
@@ -457,19 +460,21 @@
 
     function bindCreateCloudModal() {
         const modalEl = document.getElementById('createCloudModal');
+        const select = document.getElementById('create-cloud-select');
+        const hidden = document.getElementById('create-cloud-selected');
+        const confirmBtn = document.getElementById('create-cloud-confirm-btn');
 
-        // Reset search, selection and confirm button every time the modal opens,
-        // regardless of how it is triggered (button click, Bootstrap API, etc.)
         if (modalEl) {
             modalEl.addEventListener('show.bs.modal', () => {
-                const search     = document.getElementById('create-cloud-search');
-                const hidden     = document.getElementById('create-cloud-selected');
-                const confirmBtn = document.getElementById('create-cloud-confirm-btn');
-                if (search)     { search.value = ''; }
-                if (hidden)     { hidden.value = ''; }
-                filterCreateCloudList('');
-                document.querySelectorAll('.create-cloud-list-item').forEach(i => i.classList.remove('active'));
-                if (confirmBtn) { confirmBtn.disabled = true; }
+                if (select) {
+                    select.selectedIndex = 0;
+                }
+                if (hidden) {
+                    hidden.value = '';
+                }
+                if (confirmBtn) {
+                    confirmBtn.disabled = true;
+                }
             });
         }
 
@@ -481,30 +486,19 @@
             });
         }
 
-        // Live search filter
-        const searchInput = document.getElementById('create-cloud-search');
-        if (searchInput) {
-            searchInput.addEventListener('input', () => {
-                filterCreateCloudList(searchInput.value.trim().toLowerCase());
+        if (select) {
+            select.addEventListener('change', () => {
+                if (hidden) {
+                    hidden.value = select.value;
+                }
+                if (confirmBtn) {
+                    confirmBtn.disabled = !select.value;
+                }
             });
         }
 
-        // Item selection
-        document.querySelectorAll('.create-cloud-list-item').forEach(item => {
-            item.addEventListener('click', () => {
-                document.querySelectorAll('.create-cloud-list-item').forEach(i => i.classList.remove('active'));
-                item.classList.add('active');
-                const hidden = document.getElementById('create-cloud-selected');
-                if (hidden) hidden.value = item.dataset.clientId;
-                const confirmBtn = document.getElementById('create-cloud-confirm-btn');
-                if (confirmBtn) confirmBtn.disabled = false;
-            });
-        });
-
-        const confirmBtn = document.getElementById('create-cloud-confirm-btn');
         if (!confirmBtn) return;
         confirmBtn.addEventListener('click', () => {
-            const hidden    = document.getElementById('create-cloud-selected');
             const clienteId = hidden ? hidden.value : '';
             if (!clienteId) {
                 showToast('Seleziona un cliente.', 'warning');
@@ -535,27 +529,6 @@
                     showToast('Errore di rete.', 'danger');
                 });
         });
-    }
-
-    function filterCreateCloudList(query) {
-        const items     = document.querySelectorAll('.create-cloud-list-item');
-        const noResults = document.getElementById('create-cloud-no-results');
-        let   visible   = 0;
-
-        items.forEach(item => {
-            const name = item.dataset.clientName || '';
-            const show = !query || name.includes(query);
-            // Use setProperty with 'important' priority so the inline style
-            // overrides Bootstrap's d-flex { display: flex !important } rule.
-            if (show) {
-                item.style.removeProperty('display');
-            } else {
-                item.style.setProperty('display', 'none', 'important');
-            }
-            if (show) visible++;
-        });
-
-        if (noResults) noResults.classList.toggle('d-none', visible > 0);
     }
 
     // ── Drag & Drop Upload ────────────────────────────────────────────────

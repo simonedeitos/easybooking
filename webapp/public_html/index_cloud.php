@@ -24,6 +24,8 @@ $grandparent_dir = dirname($parent_dir);
 // Prova vari percorsi possibili
 $possible_configs = [
     $current_dir . '/../../config/database.php',           // Se in public_html/
+    $current_dir . '/../webapp/config/database.php',       // Hostinger: public_html -> ../webapp/
+    $current_dir . '/easybooking/webapp/config/database.php', // Hostinger: public_html/easybooking/webapp/
     $parent_dir . '/config/database.php',                  // Se in webapp/public_html/
     $grandparent_dir . '/webapp/config/database.php',      // Se in webapp/
     dirname(dirname(dirname(__FILE__))) . '/webapp/config/database.php',
