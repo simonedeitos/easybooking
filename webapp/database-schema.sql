@@ -203,6 +203,8 @@ CREATE TABLE IF NOT EXISTS `notifiche_config` (
     `avviso_non_confermata_giorni`     INT             NOT NULL DEFAULT 2,
     PRIMARY KEY (`id`),
     KEY `idx_user_id` (`user_id`),
+    CHECK (`reminder_lezioni_giorni_futuri` >= 1),
+    CHECK (`report_mensile_giorno_mese` BETWEEN 1 AND 31),
     FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

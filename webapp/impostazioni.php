@@ -230,10 +230,7 @@ try {
 
 $themePreference = $_SESSION['user_theme'] ?? ($user['theme'] ?? 'dark');
 $validTabs = ['generale', 'notifiche', 'backup', 'importa-xml', 'app', 'profilo', 'tema'];
-if (!$isAdmin && $activeTab === 'app') {
-    $activeTab = 'profilo';
-}
-if (!$isAdmin && in_array($activeTab, ['backup', 'importa-xml'], true)) {
+if (!$isAdmin && in_array($activeTab, ['app', 'backup', 'importa-xml'], true)) {
     $activeTab = 'profilo';
 }
 if (!in_array($activeTab, $validTabs, true)) {
@@ -391,7 +388,7 @@ document.addEventListener('DOMContentLoaded', () => {
         resizeFrame(frame);
     });
 
-    window.setInterval(() => frames.forEach((frame) => resizeFrame(frame)), 1000);
+    window.setInterval(() => frames.forEach((frame) => resizeFrame(frame)), 2500);
 });
 </script>
 <?php endif; ?>

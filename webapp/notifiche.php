@@ -100,11 +100,7 @@ if ($requestAction === 'save' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             $reportMensileTipo = 'lezioni';
         }
 
-        $reminderFutureDays = sanitizeInt(post('reminder_lezioni_giorni_futuri'));
-        if ($reminderFutureDays < 1) {
-            setFlash('danger', 'I giorni futuri da controllare per i promemoria devono essere almeno 1.');
-            redirect(notificationRedirectTarget($embedded));
-        }
+        $reminderFutureDays = max(1, sanitizeInt(post('reminder_lezioni_giorni_futuri')));
 
         $reportMensileGiornoMese = sanitizeInt(post('report_mensile_giorno_mese'));
         if ($reportMensileGiornoMese < 1 || $reportMensileGiornoMese > 31) {
@@ -169,7 +165,7 @@ if ($requestAction === 'save' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         setFlash('success', 'Preferenze notifiche salvate con successo.');
         redirect(notificationRedirectTarget($embedded));
     } catch (PDOException $e) {
-        setFlash('danger', 'Errore durante il salvataggio delle notifiche. Verifica che lo schema di notifiche_config sia aggiornato.');
+        setFlash('danger', 'Errore durante il salvataggio delle notifiche. Contatta il supporto se il problema persiste.');
         redirect(notificationRedirectTarget($embedded));
     }
 }
