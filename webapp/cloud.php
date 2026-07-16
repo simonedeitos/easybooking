@@ -245,6 +245,11 @@ require_once __DIR__ . '/includes/header.php';
                 <?php else: ?>
                     <div class="mb-3">
                         <label for="create-cloud-select" id="create-cloud-select-label" class="form-label">Seleziona cliente</label>
+                        <input type="text"
+                               id="create-cloud-search"
+                               class="form-control mb-2"
+                               placeholder="Cerca cliente…"
+                               autocomplete="off">
                         <select id="create-cloud-select" class="form-select" size="8" aria-labelledby="create-cloud-select-label">
                             <option value="" selected>Seleziona un cliente…</option>
                             <?php foreach ($clientsDisabled as $c): ?>

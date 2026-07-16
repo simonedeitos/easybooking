@@ -471,20 +471,72 @@
 
     function bindCreateCloudModal() {
         const modalEl = document.getElementById('createCloudModal');
+        const searchInput = document.getElementById('create-cloud-search');
         const select = document.getElementById('create-cloud-select');
         const hidden = document.getElementById('create-cloud-selected');
         const confirmBtn = document.getElementById('create-cloud-confirm-btn');
+        const defaultOption = select?.querySelector('option[value=""]') || null;
+        const clientOptions = select
+            ? Array.from(select.querySelectorAll('option')).filter(option => option.value !== '').map(option => ({
+                value: option.value,
+                label: option.textContent.replace(/\s+/g, ' ').trim(),
+            }))
+            : [];
+
+        function syncCreateCloudSelection() {
+            const selectedValue = select?.value || '';
+            if (hidden) {
+                hidden.value = selectedValue;
+            }
+            if (confirmBtn) {
+                confirmBtn.disabled = !selectedValue;
+            }
+        }
+
+        function filterSelectOptions() {
+            if (!select) return;
+
+            const selectedValue = hidden?.value || select.value || '';
+            const query = (searchInput?.value || '').toLowerCase().trim();
+            const filteredOptions = query
+                ? clientOptions.filter(option => option.label.toLowerCase().includes(query))
+                : clientOptions;
+
+            select.innerHTML = '';
+            if (defaultOption) {
+                defaultOption.selected = !selectedValue;
+                select.appendChild(defaultOption);
+            }
+
+            filteredOptions.forEach(optionData => {
+                const option = document.createElement('option');
+                option.value = optionData.value;
+                option.textContent = optionData.label;
+                option.selected = optionData.value === selectedValue;
+                select.appendChild(option);
+            });
+
+            if (selectedValue && !filteredOptions.some(option => option.value === selectedValue)) {
+                select.value = '';
+            }
+
+            syncCreateCloudSelection();
+        }
 
         if (modalEl) {
             modalEl.addEventListener('show.bs.modal', () => {
+                if (searchInput) {
+                    searchInput.value = '';
+                }
                 if (select) {
-                    select.selectedIndex = 0;
+                    select.value = '';
                 }
                 if (hidden) {
                     hidden.value = '';
                 }
-                if (confirmBtn) {
-                    confirmBtn.disabled = true;
+                filterSelectOptions();
+                if (searchInput) {
+                    setTimeout(() => searchInput.focus(), 150);
                 }
             });
         }
@@ -497,16 +549,16 @@
             });
         }
 
-        if (select) {
-            select.addEventListener('change', () => {
-                if (hidden) {
-                    hidden.value = select.value;
-                }
-                if (confirmBtn) {
-                    confirmBtn.disabled = !select.value;
-                }
-            });
+        if (searchInput) {
+            searchInput.addEventListener('input', filterSelectOptions);
         }
+
+        if (select) {
+            select.addEventListener('change', syncCreateCloudSelection);
+            select.addEventListener('input', syncCreateCloudSelection);
+        }
+
+        filterSelectOptions();
 
         if (!confirmBtn) return;
         confirmBtn.addEventListener('click', () => {
