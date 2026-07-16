@@ -28,8 +28,8 @@ if (!preg_match('/^[a-f0-9]{32}$/', $hash)) {
 
     // Look up client by hash
     $stmt = $pdo->prepare(
-        'SELECT id, nome, cognome, cloud_cartella_locale, cloud_enabled
-         FROM clienti WHERE cloud_hash_accesso = ? AND cloud_enabled = 1 LIMIT 1'
+        'SELECT id, nome, cognome, cloud_cartella, cloud_enabled
+         FROM clienti WHERE cloud_hash = ? AND cloud_enabled = 1 LIMIT 1'
     );
     $stmt->execute([$hash]);
     $cliente = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -43,7 +43,7 @@ if (!preg_match('/^[a-f0-9]{32}$/', $hash)) {
         // List files for this client
         $stmt = $pdo->prepare(
             'SELECT id, nome_originale, dimensione_bytes, mime_type, nota, created_at
-             FROM cloud_file WHERE cliente_id = ? ORDER BY created_at DESC'
+             FROM cloud_files WHERE cliente_id = ? ORDER BY created_at DESC'
         );
         $stmt->execute([$cliente['id']]);
         $files = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -61,13 +61,13 @@ if (!preg_match('/^[a-f0-9]{32}$/', $hash)) {
             $fileId = sanitizeInt(get('file_id'));
             foreach ($files as $f) {
                 if ((int)$f['id'] === $fileId) {
-                    $path = cloudFilePath($cliente['cloud_cartella_locale'], '');
+                    $path = cloudFilePath($cliente['cloud_cartella'], '');
                     // Re-fetch nome_file for this specific file
-                    $sf = $pdo->prepare('SELECT nome_file, mime_type, nome_originale FROM cloud_file WHERE id = ? AND cliente_id = ? LIMIT 1');
+                    $sf = $pdo->prepare('SELECT nome_file, mime_type, nome_originale FROM cloud_files WHERE id = ? AND cliente_id = ? LIMIT 1');
                     $sf->execute([$fileId, $cliente['id']]);
                     $fileRow = $sf->fetch(PDO::FETCH_ASSOC);
                     if ($fileRow) {
-                        $filePath = cloudFilePath($cliente['cloud_cartella_locale'], $fileRow['nome_file']);
+                        $filePath = cloudFilePath($cliente['cloud_cartella'], $fileRow['nome_file']);
                         if (is_file($filePath)) {
                             ob_end_clean();
                             $safeName = preg_replace('/[\r\n"\\\\]/', '_', $fileRow['nome_originale']);
@@ -88,11 +88,11 @@ if (!preg_match('/^[a-f0-9]{32}$/', $hash)) {
         // Handle audio stream request
         if ($action === 'stream') {
             $fileId = sanitizeInt(get('file_id'));
-            $sf = $pdo->prepare('SELECT nome_file, mime_type FROM cloud_file WHERE id = ? AND cliente_id = ? LIMIT 1');
+            $sf = $pdo->prepare('SELECT nome_file, mime_type FROM cloud_files WHERE id = ? AND cliente_id = ? LIMIT 1');
             $sf->execute([$fileId, $cliente['id']]);
             $fileRow = $sf->fetch(PDO::FETCH_ASSOC);
             if ($fileRow) {
-                $filePath = cloudFilePath($cliente['cloud_cartella_locale'], $fileRow['nome_file']);
+                $filePath = cloudFilePath($cliente['cloud_cartella'], $fileRow['nome_file']);
                 if (is_file($filePath)) {
                     $size = filesize($filePath);
                     $mime = $fileRow['mime_type'] ?? 'application/octet-stream';
