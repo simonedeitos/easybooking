@@ -504,6 +504,8 @@
             if (matches.length === 0) {
                 const msg = document.createElement('p');
                 msg.className = 'text-muted text-center small my-2';
+                // q is the active search query; empty q means no filter is applied,
+                // so zero results indicates there are simply no clients without cloud yet.
                 msg.textContent = q
                     ? 'Nessun cliente trovato.'
                     : 'Tutti i clienti hanno già il cloud abilitato.';
