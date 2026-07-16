@@ -383,12 +383,44 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    const watchFrame = (frame) => {
+        const doc = frame.contentDocument;
+        if (!doc) return;
+        if ('ResizeObserver' in window && doc.body) {
+            try {
+                const observer = new ResizeObserver(() => resizeFrame(frame));
+                observer.observe(doc.body);
+                if (doc.documentElement) {
+                    observer.observe(doc.documentElement);
+                }
+                return;
+            } catch (error) {
+                // Fall back to bounded polling below if observation is not allowed.
+            }
+        }
+
+        let attempts = 0;
+        let stableCount = 0;
+        let lastHeight = 0;
+        const intervalId = window.setInterval(() => {
+            attempts++;
+            resizeFrame(frame);
+            const currentHeight = frame.offsetHeight;
+            stableCount = currentHeight === lastHeight ? stableCount + 1 : 0;
+            lastHeight = currentHeight;
+            if (stableCount >= 3 || attempts >= 12) {
+                window.clearInterval(intervalId);
+            }
+        }, 2500);
+    };
+
     frames.forEach((frame) => {
-        frame.addEventListener('load', () => resizeFrame(frame));
+        frame.addEventListener('load', () => {
+            resizeFrame(frame);
+            watchFrame(frame);
+        });
         resizeFrame(frame);
     });
-
-    window.setInterval(() => frames.forEach((frame) => resizeFrame(frame)), 2500);
 });
 </script>
 <?php endif; ?>

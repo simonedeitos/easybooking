@@ -188,13 +188,13 @@ CREATE TABLE IF NOT EXISTS `notifiche_config` (
     `reminder_lezioni_giorni_prima`    INT             NOT NULL DEFAULT 1,
     `reminder_lezioni_giorno_settimana` ENUM('lun','mar','mer','gio','ven','sab','dom') NOT NULL DEFAULT 'lun',
     `reminder_lezioni_ora`             TIME            NOT NULL DEFAULT '09:00:00',
-    `reminder_lezioni_giorni_futuri`   INT             NOT NULL DEFAULT 7,
+    `reminder_lezioni_giorni_futuri`   INT             NOT NULL DEFAULT 7 CHECK (`reminder_lezioni_giorni_futuri` >= 1),
     `report_settimanale_enabled`       TINYINT(1)      NOT NULL DEFAULT 0,
     `report_settimanale_giorno`        ENUM('lun','mar','mer','gio','ven','sab','dom') NOT NULL DEFAULT 'lun',
     `report_settimanale_ora`           TIME            NOT NULL DEFAULT '18:00:00',
     `report_settimanale_tipo`          ENUM('lezioni','clienti','incassi') NOT NULL DEFAULT 'lezioni',
     `report_mensile_enabled`           TINYINT(1)      NOT NULL DEFAULT 0,
-    `report_mensile_giorno_mese`       INT             NOT NULL DEFAULT 1,
+    `report_mensile_giorno_mese`       INT             NOT NULL DEFAULT 1 CHECK (`report_mensile_giorno_mese` BETWEEN 1 AND 31),
     `report_mensile_ora`               TIME            NOT NULL DEFAULT '18:00:00',
     `report_mensile_tipo`              ENUM('lezioni','clienti','incassi') NOT NULL DEFAULT 'lezioni',
     `avviso_scadenza_enabled`          TINYINT(1)      NOT NULL DEFAULT 1,
@@ -203,8 +203,6 @@ CREATE TABLE IF NOT EXISTS `notifiche_config` (
     `avviso_non_confermata_giorni`     INT             NOT NULL DEFAULT 2,
     PRIMARY KEY (`id`),
     KEY `idx_user_id` (`user_id`),
-    CHECK (`reminder_lezioni_giorni_futuri` >= 1),
-    CHECK (`report_mensile_giorno_mese` BETWEEN 1 AND 31),
     FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

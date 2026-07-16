@@ -44,11 +44,8 @@ function notificationFlag(string $key): int
 function notificationTime(string $value, string $fallback): string
 {
     $value = trim($value);
-    if (preg_match('/^(?:[01]\d|2[0-3]):[0-5]\d$/', $value) === 1) {
-        return $value . ':00';
-    }
-    if (preg_match('/^(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d$/', $value) === 1) {
-        return $value;
+    if (preg_match('/^(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d)?$/', $value) === 1) {
+        return strlen($value) === 5 ? $value . ':00' : $value;
     }
     return $fallback;
 }
@@ -338,7 +335,7 @@ require_once __DIR__ . '/includes/header.php';
                                 <div class="col-md-4">
                                     <label for="report_mensile_giorno_mese" class="form-label">Giorno del mese</label>
                                     <input type="number" class="form-control" id="report_mensile_giorno_mese" name="report_mensile_giorno_mese" min="1" max="31" value="<?= h((string)$config['report_mensile_giorno_mese']) ?>">
-                                    <div class="form-text">Inserisci un valore tra 1 e 31.</div>
+                                    <div class="form-text">Inserisci un valore tra 1 e 31. Nei mesi più corti, l'automazione dovrà considerare l'ultimo giorno utile.</div>
                                 </div>
                                 <div class="col-md-4">
                                     <label for="report_mensile_ora" class="form-label">Ora invio</label>
