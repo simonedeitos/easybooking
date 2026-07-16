@@ -1,0 +1,467 @@
+/* Light Theme – overrides CSS variables for a clean white appearance */
+:root {
+    --bg-main:        #f0f2f5;
+    --bg-sidebar:     #ffffff;
+    --bg-card:        #ffffff;
+    --bg-input:       #f8f9fa;
+    --bg-table-row:   #ffffff;
+    --bg-table-hover: #f0f2ff;
+    --bg-navbar:      #ffffff;
+    --text-primary:   #1a1a2e;
+    --text-secondary: #495057;
+    --text-muted:     #9098a3;
+    --border-color:   #e2e8f0;
+    --shadow:         0 4px 24px rgba(0,0,0,0.08);
+    --shadow-sm:      0 2px 8px rgba(0,0,0,0.06);
+
+    /* Override Bootstrap 5 CSS variables for light mode */
+    --bs-body-color:       #1a1a2e;
+    --bs-body-bg:          #f0f2f5;
+    --bs-emphasis-color:   #1a1a2e;
+    --bs-secondary-color:  #495057;
+    --bs-tertiary-color:   #9098a3;
+    --bs-border-color:     #e2e8f0;
+    --bs-heading-color:    #1a1a2e;
+    --bs-link-color:       #7c6af7;
+    --bs-link-hover-color: #6a57e0;
+    --bs-card-bg:          #ffffff;
+    --bs-card-border-color:#e2e8f0;
+    --bs-modal-bg:         #ffffff;
+    --bs-modal-color:      #1a1a2e;
+    --bs-modal-border-color:#e2e8f0;
+    --bs-table-color:      #1a1a2e;
+    --bs-table-bg:         #ffffff;
+    --bs-table-border-color:#e2e8f0;
+    --bs-table-hover-bg:   #f0f2ff;
+    --bs-table-striped-bg: #f8f9fa;
+    --bs-dropdown-bg:      #ffffff;
+    --bs-dropdown-color:   #1a1a2e;
+    --bs-dropdown-border-color:#e2e8f0;
+    --bs-dropdown-link-color:#1a1a2e;
+    --bs-dropdown-link-hover-color:#1a1a2e;
+    --bs-dropdown-link-hover-bg:#f0f2ff;
+    --bs-form-control-bg:  #f8f9fa;
+    --bs-input-bg:         #f8f9fa;
+    --bs-input-border-color:#e2e8f0;
+    --bs-input-color:      #1a1a2e;
+    --bs-input-placeholder-color:#9098a3;
+    --bs-list-group-bg:    #ffffff;
+    --bs-list-group-color: #1a1a2e;
+    --bs-list-group-border-color:#e2e8f0;
+    --bs-pagination-color: #495057;
+    --bs-pagination-bg:    #ffffff;
+    --bs-pagination-border-color:#e2e8f0;
+    --bs-pagination-hover-bg:#f0f2ff;
+    --bs-pagination-hover-color:#1a1a2e;
+    --bs-pagination-active-bg:#7c6af7;
+    --bs-pagination-disabled-color:#9098a3;
+    --bs-pagination-disabled-bg:#f8f9fa;
+    --bs-tooltip-bg:       #1a1a2e;
+    --bs-tooltip-color:    #ffffff;
+    /* Bootstrap 5.3 tertiary bg (used by bg-body-tertiary) */
+    --bs-tertiary-bg:      #f8f9fa;
+    --bs-tertiary-bg-rgb:  248,249,250;
+    /* Semantic colors for light mode – more saturated for visibility on white */
+    --success:             #198754;
+    --danger:              #dc3545;
+    --warning:             #d97706;
+    --info:                #0891b2;
+}
+
+body { background-color: var(--bg-main); color: var(--text-primary); }
+
+/* Headings */
+h1, h2, h3, h4, h5, h6,
+.h1, .h2, .h3, .h4, .h5, .h6 {
+    color: var(--text-primary);
+}
+
+/* Text utility overrides */
+.text-body      { color: var(--text-primary) !important; }
+.text-dark      { color: var(--text-primary) !important; }
+.text-black     { color: var(--text-primary) !important; }
+.text-muted     { color: var(--text-muted)   !important; }
+.text-secondary { color: var(--text-secondary) !important; }
+small, .small   { color: inherit; }
+
+/* Light table */
+.table { --bs-table-color: var(--text-primary); --bs-table-bg: var(--bg-card); }
+.table > :not(caption) > * > * { color: var(--text-primary); background-color: var(--bg-card); }
+.table thead th { background: #f8f9fa; color: #6c757d; }
+.table tbody td { border-bottom-color: #e9ecef; }
+.table th, .table td { color: var(--text-primary) !important; }
+.table-striped > tbody > tr:nth-of-type(odd) > * { background-color: #f8f9fa; }
+
+/* Light inputs */
+.form-control, .form-select {
+    background: var(--bg-input);
+    border-color: var(--border-color);
+    color: var(--text-primary);
+}
+.form-control:focus, .form-select:focus {
+    background: #fff;
+    color: var(--text-primary);
+    border-color: #7c6af7;
+}
+.form-control:disabled, .form-control[readonly],
+.form-select:disabled {
+    background-color: #e9ecef;
+    color: #6c757d;
+}
+.form-control::placeholder { color: var(--text-muted); }
+.form-label { color: var(--text-secondary); }
+.form-text  { color: var(--text-muted); }
+.input-group-text {
+    background-color: #f8f9fa;
+    border-color: var(--border-color);
+    color: var(--text-secondary);
+}
+.form-check-label { color: var(--text-secondary); }
+
+/* Light sidebar links */
+.nav-link { color: #495057; }
+.nav-link:hover { background: rgba(124,106,247,0.08); color: var(--accent); }
+.nav-link.active { color: var(--accent); background: rgba(124,106,247,0.12); }
+
+/* Light modal */
+.modal-content { background: #fff; color: var(--text-primary); border-color: var(--border-color); }
+.modal-header, .modal-footer { border-color: var(--border-color); }
+.modal-title { color: var(--text-primary); }
+.btn-close { filter: none; }
+
+/* Light card */
+.card, .card-body, .stat-card { background-color: #fff; color: var(--text-primary); }
+.card-header, .card-footer { background-color: #f8f9fa; color: var(--text-primary); border-color: var(--border-color); }
+.card-title, .card-subtitle { color: var(--text-primary); }
+.card-text { color: var(--text-primary); }
+
+/* Light dropdown */
+.dropdown-menu {
+    background-color: #ffffff;
+    border-color: var(--border-color);
+    color: var(--text-primary);
+}
+.dropdown-item { color: var(--text-primary); }
+.dropdown-item:hover, .dropdown-item:focus { background-color: #f0f2ff; color: var(--text-primary); }
+.dropdown-divider { border-color: var(--border-color); }
+.dropdown-header { color: var(--text-muted); }
+
+/* Light list-group */
+.list-group-item {
+    background-color: #ffffff;
+    border-color: var(--border-color);
+    color: var(--text-primary);
+}
+.list-group-item-action:hover, .list-group-item-action:focus {
+    background-color: #f0f2ff;
+    color: var(--text-primary);
+}
+.list-group-item.active { background-color: #7c6af7; border-color: #7c6af7; color: #fff; }
+
+/* Light nav tabs/pills */
+.nav-tabs { border-color: var(--border-color); }
+.nav-tabs .nav-link { color: var(--text-secondary); }
+.nav-tabs .nav-link:hover { border-color: var(--border-color); color: var(--text-primary); }
+.nav-tabs .nav-link.active {
+    background-color: #ffffff;
+    border-color: var(--border-color) var(--border-color) #ffffff;
+    color: var(--text-primary);
+}
+.nav-pills .nav-link { color: var(--text-secondary); }
+.nav-pills .nav-link.active { background-color: #7c6af7; color: #fff; }
+
+/* Light pagination */
+.page-link {
+    background-color: #ffffff;
+    border-color: var(--border-color);
+    color: var(--text-secondary);
+}
+.page-link:hover { background-color: #f0f2ff; color: var(--text-primary); }
+.page-item.active .page-link { background-color: #7c6af7; border-color: #7c6af7; color: #fff; }
+.page-item.disabled .page-link { background-color: #f8f9fa; color: var(--text-muted); }
+
+/* Light alerts */
+.alert-info    { background-color: #e0f2fe; border-color: #bae6fd; color: #075985; }
+.alert-success { background-color: #d1fae5; border-color: #a7f3d0; color: #065f46; }
+.alert-warning { background-color: #fef3c7; border-color: #fde68a; color: #92400e; }
+.alert-danger  { background-color: #fee2e2; border-color: #fecaca; color: #991b1b; }
+
+/* Light badges */
+.badge.bg-success { background: #d1fae5 !important; color: #065f46 !important; }
+.badge.bg-danger  { background: #fee2e2 !important; color: #991b1b !important; }
+.badge.bg-warning { background: #fef3c7 !important; color: #92400e !important; }
+.badge.bg-info    { background: #e0f2fe !important; color: #075985 !important; }
+
+/* Light accordion */
+.accordion-item { background-color: #ffffff; border-color: var(--border-color); }
+.accordion-button {
+    background-color: #ffffff;
+    color: var(--text-primary);
+}
+.accordion-button:not(.collapsed) { background-color: rgba(124,106,247,0.08); color: var(--text-primary); box-shadow: none; }
+.accordion-button::after { filter: none; }
+
+/* Light tooltip / popover */
+.tooltip-inner { background-color: #1a1a2e; color: #ffffff; }
+.popover { background-color: #ffffff; border-color: var(--border-color); }
+.popover-header { background-color: #f8f9fa; color: var(--text-primary); border-color: var(--border-color); }
+.popover-body { color: var(--text-primary); }
+
+/* Light progress */
+.progress { background-color: #e9ecef; }
+
+/* Light DataTables */
+.dataTables_wrapper,
+.dataTables_wrapper .dataTables_length label,
+.dataTables_wrapper .dataTables_filter label,
+.dataTables_wrapper .dataTables_info,
+.dataTables_wrapper .dataTables_paginate .paginate_button {
+    color: var(--text-secondary) !important;
+}
+.dataTables_wrapper .dataTables_filter input,
+.dataTables_wrapper .dataTables_length select {
+    background: #fff;
+    border-color: #ced4da;
+    color: var(--text-primary);
+}
+.dataTables_wrapper .dataTables_paginate .paginate_button {
+    background: transparent;
+    border-color: transparent;
+    color: var(--text-secondary) !important;
+}
+.dataTables_wrapper .dataTables_paginate .paginate_button.current,
+.dataTables_wrapper .dataTables_paginate .paginate_button.current:hover {
+    background: rgba(124,106,247,0.15) !important;
+    border-color: #7c6af7 !important;
+    color: #7c6af7 !important;
+}
+.dataTables_wrapper .dataTables_paginate .paginate_button:hover {
+    background: rgba(124,106,247,0.08) !important;
+    border-color: var(--border-color) !important;
+    color: var(--text-primary) !important;
+}
+
+/* Toast */
+.toast { background: #fff; border-color: var(--border-color); color: var(--text-primary); }
+.toast-header { background: #f8f9fa; color: #6c757d; }
+
+/* Login */
+.login-card { background: #fff; border-color: var(--border-color); }
+
+/* Sidebar & Navbar */
+.sidebar { background-color: var(--bg-sidebar); border-right: 1px solid var(--border-color); }
+.sidebar .nav-section-label { color: var(--text-muted); }
+.sidebar .sidebar-logo .logo-text { color: var(--text-primary); }
+.sidebar .sidebar-logo .logo-sub { color: var(--text-muted); }
+.sidebar .sidebar-username { color: var(--text-primary); }
+.sidebar .sidebar-role { color: var(--text-muted); }
+.sidebar .sidebar-avatar { background: rgba(124,106,247,0.12); color: #7c6af7; }
+.top-navbar { background-color: var(--bg-navbar); border-bottom: 1px solid var(--border-color); }
+.navbar-title { color: var(--text-primary); }
+.navbar-btn { color: var(--text-secondary); background: transparent; }
+.navbar-btn:hover { color: var(--text-primary); background: rgba(124,106,247,0.08); }
+
+/* ── body[data-theme="light"] scoped overrides ───────────────
+   Force any lingering white/light utility text to dark for readability. */
+body[data-theme="light"] .text-light,
+body[data-theme="light"] .text-white {
+    color: var(--text-primary) !important;
+}
+
+body[data-theme="light"] {
+    color: var(--text-primary);
+    color-scheme: light;
+}
+
+body[data-theme="light"] .card-text,
+body[data-theme="light"] .card-body,
+body[data-theme="light"] .card-body * {
+    color: var(--text-primary);
+}
+
+body[data-theme="light"] .table td,
+body[data-theme="light"] .table th {
+    color: var(--text-primary) !important;
+}
+
+body[data-theme="light"] small,
+body[data-theme="light"] .small {
+    color: var(--text-secondary) !important;
+}
+
+/* Badge text inherits correctly */
+body[data-theme="light"] .badge {
+    color: inherit;
+}
+
+body[data-theme="light"] .btn-outline-light {
+    color: var(--text-primary) !important;
+    border-color: var(--border-color) !important;
+    background-color: #ffffff;
+}
+
+body[data-theme="light"] .btn-outline-light:hover,
+body[data-theme="light"] .btn-outline-light:focus {
+    color: var(--text-primary) !important;
+    background-color: #f8f9fa !important;
+    border-color: var(--border-color) !important;
+}
+
+body[data-theme="light"] .btn-outline-light.active,
+body[data-theme="light"] .btn-outline-light[aria-pressed="true"],
+body[data-theme="light"] .btn-outline-light.btn-primary {
+    background-color: #7c6af7 !important;
+    border-color: #7c6af7 !important;
+    color: #ffffff !important;
+}
+
+body[data-theme="light"] .btn-close-white {
+    filter: none;
+}
+
+/* Light secondary button – must be visible on white backgrounds */
+body[data-theme="light"] .btn-secondary {
+    background-color: #f8f9fa !important;
+    border-color: #ced4da !important;
+    color: #495057 !important;
+}
+body[data-theme="light"] .btn-secondary:hover {
+    background-color: #e9ecef !important;
+    border-color: #adb5bd !important;
+    color: #212529 !important;
+}
+
+/* Light danger / success / warning buttons – use standard saturated colors */
+body[data-theme="light"] .btn-danger {
+    background-color: var(--danger) !important;
+    border-color: var(--danger) !important;
+    color: #ffffff !important;
+}
+body[data-theme="light"] .btn-danger:hover {
+    background-color: #bb2d3b !important;
+    border-color: #b02a37 !important;
+    color: #ffffff !important;
+}
+body[data-theme="light"] .btn-success {
+    background-color: var(--success) !important;
+    border-color: var(--success) !important;
+    color: #ffffff !important;
+}
+body[data-theme="light"] .btn-success:hover {
+    background-color: #157347 !important;
+    border-color: #146c43 !important;
+    color: #ffffff !important;
+}
+body[data-theme="light"] .btn-warning {
+    background-color: var(--warning) !important;
+    border-color: var(--warning) !important;
+    color: #ffffff !important;
+}
+body[data-theme="light"] .btn-warning:hover {
+    background-color: #b45309 !important;
+    border-color: #a84e07 !important;
+    color: #ffffff !important;
+}
+
+/* Light stat-icon semantic colors */
+body[data-theme="light"] .stat-icon.green  { background: rgba(25,135,84,0.12); color: var(--success); }
+body[data-theme="light"] .stat-icon.red    { background: rgba(220,53,69,0.12); color: var(--danger); }
+body[data-theme="light"] .stat-icon.orange { background: rgba(217,119,6,0.12); color: var(--warning); }
+body[data-theme="light"] .stat-icon.blue   { background: rgba(8,145,178,0.12); color: var(--info); }
+
+body[data-theme="light"] .detail-box,
+body[data-theme="light"] .instrument-option,
+body[data-theme="light"] .package-alert-item {
+    background: #ffffff !important;
+    color: var(--text-primary) !important;
+}
+
+/* ── FullCalendar light theme ────────────────────────────────── */
+body[data-theme="light"] .fc,
+body[data-theme="light"] .fc-theme-standard td,
+body[data-theme="light"] .fc-theme-standard th,
+body[data-theme="light"] .fc .fc-col-header-cell-cushion,
+body[data-theme="light"] .fc .fc-timegrid-axis-cushion,
+body[data-theme="light"] .fc .fc-timegrid-slot-label-cushion,
+body[data-theme="light"] .fc .fc-toolbar-title,
+body[data-theme="light"] #cal-title { color: var(--text-primary) !important; }
+body[data-theme="light"] .fc-theme-standard .fc-scrollgrid { border-color: var(--border-color); }
+body[data-theme="light"] .fc .fc-daygrid-day,
+body[data-theme="light"] .fc .fc-timegrid-col { background-color: #ffffff; }
+body[data-theme="light"] .fc .fc-col-header { background-color: #f8f9fa; }
+body[data-theme="light"] .fc .fc-daygrid-day.fc-day-today,
+body[data-theme="light"] .fc .fc-timegrid-col.fc-day-today { background-color: rgba(124,106,247,0.06) !important; }
+body[data-theme="light"] .fc .fc-list-day-text,
+body[data-theme="light"] .fc .fc-list-day-side-text,
+body[data-theme="light"] .fc .fc-list-event-title a { color: var(--text-primary); }
+
+/* ── Calendar toolbar buttons (light theme) ──────────────────
+   Bootstrap 5.3 btn-outline-light is designed for dark backgrounds
+   (white text/border on transparent) — completely invisible on a
+   light background.  We override both the Bootstrap 5.3 CSS-variable
+   layer AND the rendered properties directly so the fix is airtight
+   regardless of CSS cascade order or browser caching of old files.
+   Scoped to #cal-toolbar-card so modal "Annulla" buttons are unaffected.
+
+   Default (inactive) state: light-purple tinted background + purple border/text.
+   Hover / focus: solid purple background + white text.
+   Active (btn-outline-light.active): solid purple — same as hover. */
+body[data-theme="light"] #cal-toolbar-card .btn-outline-light {
+    /* Override Bootstrap 5.3 CSS-variable layer – include ALL btn variables so
+       Bootstrap's internal machinery (including active/hover states) uses purple */
+    --bs-btn-color: #7c6af7;
+    --bs-btn-bg: #ede9ff;
+    --bs-btn-border-color: #7c6af7;
+    --bs-btn-hover-color: #ffffff;
+    --bs-btn-hover-bg: #7c6af7;
+    --bs-btn-hover-border-color: #7c6af7;
+    --bs-btn-focus-shadow-rgb: 124, 106, 247;
+    --bs-btn-active-color: #ffffff;
+    --bs-btn-active-bg: #6458d0;
+    --bs-btn-active-border-color: #6458d0;
+    --bs-btn-disabled-color: #7c6af7;
+    --bs-btn-disabled-border-color: #7c6af7;
+    /* Direct property overrides (beat any remaining Bootstrap rule) */
+    color: #7c6af7 !important;
+    border-color: #7c6af7 !important;
+    background-color: #ede9ff !important;
+}
+body[data-theme="light"] #cal-toolbar-card .btn-outline-light:hover,
+body[data-theme="light"] #cal-toolbar-card .btn-outline-light:focus {
+    color: #ffffff !important;
+    background-color: #7c6af7 !important;
+    border-color: #7c6af7 !important;
+    box-shadow: none !important;
+}
+body[data-theme="light"] #cal-toolbar-card .btn-outline-light.active,
+body[data-theme="light"] #cal-toolbar-card .btn-outline-light[aria-pressed="true"] {
+    background-color: #7c6af7 !important;
+    border-color: #7c6af7 !important;
+    color: #ffffff !important;
+}
+/* btn-primary in light theme (used for the currently-active view/color-mode button)
+   inherits from style.css (.btn-primary { background: var(--accent) }).
+   Reinforce here so it is never overridden by Bootstrap's blue. */
+body[data-theme="light"] #cal-toolbar-card .btn-primary {
+    --bs-btn-color: #fff;
+    --bs-btn-bg: #7c6af7;
+    --bs-btn-border-color: #7c6af7;
+    --bs-btn-hover-color: #fff;
+    --bs-btn-hover-bg: #6458d0;
+    --bs-btn-hover-border-color: #6458d0;
+    --bs-btn-active-color: #fff;
+    --bs-btn-active-bg: #6458d0;
+    --bs-btn-active-border-color: #6458d0;
+    --bs-btn-disabled-bg: #7c6af7;
+    --bs-btn-disabled-border-color: #7c6af7;
+    background-color: #7c6af7 !important;
+    border-color: #7c6af7 !important;
+    color: #ffffff !important;
+}
+body[data-theme="light"] #cal-toolbar-card .btn-primary:hover,
+body[data-theme="light"] #cal-toolbar-card .btn-primary:focus {
+    background-color: #6458d0 !important;
+    border-color: #6458d0 !important;
+    color: #ffffff !important;
+    box-shadow: none !important;
+}
