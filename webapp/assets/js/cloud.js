@@ -125,7 +125,7 @@
                 e.stopPropagation();
                 const hash = btn.dataset.hash;
                 if (!hash) return;
-                const url = window.location.origin + '/share/' + encodeURIComponent(hash);
+                const url = buildShareUrl(hash);
                 cloudCopyLink(url);
             });
         });
@@ -168,6 +168,17 @@
         if (bytes >= 1048576)    return (bytes / 1048576).toFixed(2) + ' MB';
         if (bytes >= 1024)       return (bytes / 1024).toFixed(2) + ' KB';
         return bytes + ' B';
+    }
+
+    /**
+     * Builds the public share URL for a client cloud hash.
+     * Mirrors the PHP cloudShareUrl() fallback: strips the current filename
+     * from window.location.pathname so the URL is correct even when the app
+     * is installed in a subdirectory (e.g. /easybooking/).
+     */
+    function buildShareUrl(hash) {
+        const basePath = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/'));
+        return window.location.origin + basePath + '/share/' + encodeURIComponent(hash);
     }
 
     function renderFileList(container, files) {
@@ -384,7 +395,7 @@
                 showToast('Nessun link disponibile per questo cliente.', 'warning');
                 return;
             }
-            const url = window.location.origin + '/share/' + encodeURIComponent(currentClienteHash);
+            const url = buildShareUrl(currentClienteHash);
             cloudCopyLink(url);
         });
     }
@@ -445,20 +456,27 @@
     // ── Create Cloud Modal ────────────────────────────────────────────────
 
     function bindCreateCloudModal() {
+        const modalEl = document.getElementById('createCloudModal');
+
+        // Reset search, selection and confirm button every time the modal opens,
+        // regardless of how it is triggered (button click, Bootstrap API, etc.)
+        if (modalEl) {
+            modalEl.addEventListener('show.bs.modal', () => {
+                const search     = document.getElementById('create-cloud-search');
+                const hidden     = document.getElementById('create-cloud-selected');
+                const confirmBtn = document.getElementById('create-cloud-confirm-btn');
+                if (search)     { search.value = ''; }
+                if (hidden)     { hidden.value = ''; }
+                filterCreateCloudList('');
+                document.querySelectorAll('.create-cloud-list-item').forEach(i => i.classList.remove('active'));
+                if (confirmBtn) { confirmBtn.disabled = true; }
+            });
+        }
+
         const openBtn = document.getElementById('create-cloud-btn');
         if (openBtn) {
             openBtn.addEventListener('click', () => {
-                const modalEl = document.getElementById('createCloudModal');
                 if (!modalEl) return;
-                // Reset search and selection on open
-                const search  = document.getElementById('create-cloud-search');
-                const hidden  = document.getElementById('create-cloud-selected');
-                if (search) search.value = '';
-                if (hidden) hidden.value = '';
-                filterCreateCloudList('');
-                document.querySelectorAll('.create-cloud-list-item').forEach(i => i.classList.remove('active'));
-                const confirmBtn = document.getElementById('create-cloud-confirm-btn');
-                if (confirmBtn) confirmBtn.disabled = true;
                 bootstrap.Modal.getOrCreateInstance(modalEl).show();
             });
         }

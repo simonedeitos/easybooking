@@ -115,7 +115,7 @@ try {
             die('File not found.');
         }
         
-        $file_path = $cartella . '/' . $file['nome_file'];
+        $file_path = cloudFilePath($cartella, $file['nome_file']);
         
         if (!file_exists($file_path) || !is_file($file_path)) {
             http_response_code(404);
@@ -149,7 +149,7 @@ try {
             die('File not found.');
         }
         
-        $file_path = $cartella . '/' . $file['nome_file'];
+        $file_path = cloudFilePath($cartella, $file['nome_file']);
         
         if (!file_exists($file_path) || !is_file($file_path)) {
             http_response_code(404);

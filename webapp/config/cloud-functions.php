@@ -9,6 +9,19 @@ if (!defined('CLOUD_STORAGE_PATH')) {
     define('CLOUD_STORAGE_PATH', $envPath !== false ? rtrim($envPath, '/') : dirname(__DIR__, 3) . '/cloud_storage');
 }
 
+// ── Public base URL ───────────────────────────────────────────────────────
+// Optionally override the auto-detected base URL used in cloudShareUrl().
+// Set CLOUD_PUBLIC_BASE_URL in .env when behind a reverse proxy or when the
+// auto-detection produces wrong results (e.g. https://yourdomain.com or
+// https://yourdomain.com/easybooking).
+if (!defined('CLOUD_PUBLIC_BASE_URL')) {
+    $envUrl = getenv('CLOUD_PUBLIC_BASE_URL');
+    if ($envUrl !== false && $envUrl !== '') {
+        define('CLOUD_PUBLIC_BASE_URL', rtrim($envUrl, '/'));
+    }
+    unset($envUrl);
+}
+
 // Max global storage: 150 GB in bytes
 define('CLOUD_MAX_BYTES', 150 * 1024 * 1024 * 1024);
 // Max single-file size: 500 MB in bytes
