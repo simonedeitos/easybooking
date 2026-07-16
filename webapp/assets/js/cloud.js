@@ -200,8 +200,9 @@
      */
     function buildShareUrl(hash) {
         const app = document.getElementById('cloud-app');
-        const configuredBaseUrl = app?.getAttribute('data-cloud-base-url')?.trim();
-        if (configuredBaseUrl) {
+        const configuredBaseUrlAttr = app ? app.getAttribute('data-cloud-base-url') : null;
+        const configuredBaseUrl = configuredBaseUrlAttr ? configuredBaseUrlAttr.trim() : '';
+        if (configuredBaseUrl !== '') {
             return configuredBaseUrl.replace(/\/+$/, '') + '/share/' + encodeURIComponent(hash);
         }
         const basePath = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/'));
@@ -627,7 +628,7 @@
 
     function getCreateCloudSearchText(item) {
         if (!item) return '';
-        const cached = item?.dataset.normalizedSearch;
+        const cached = item.dataset.normalizedSearch;
         if (cached) return cached;
         const normalized = normalizeSearchText(item.dataset.clientSearch || item.textContent || '');
         item.dataset.normalizedSearch = normalized;
