@@ -499,6 +499,10 @@
 
         if (!confirmBtn) return;
         confirmBtn.addEventListener('click', () => {
+            if (!hidden) {
+                showToast('Selezione cliente non disponibile.', 'danger');
+                return;
+            }
             const clienteId = hidden ? hidden.value : '';
             if (!clienteId) {
                 showToast('Seleziona un cliente.', 'warning');
