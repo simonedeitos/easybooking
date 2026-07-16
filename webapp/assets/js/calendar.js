@@ -256,7 +256,7 @@ function askMoveConfirmation(event) {
         const startTime = event.startStr.slice(11, 16);
         const endTime = event.endStr?.slice(11, 16) || '';
         modalWrapper.innerHTML = `
-            <div class="modal fade" tabindex="-1" aria-hidden="true" role="dialog" aria-labelledby="move-modal-title">
+            <div class="modal fade" tabindex="-1" role="dialog" aria-labelledby="move-modal-title">
                 <div class="modal-dialog">
                     <div class="modal-content">
                         <div class="modal-header">
@@ -292,10 +292,10 @@ function askMoveConfirmation(event) {
             modal.hide();
         };
 
-        modalEl.querySelector('[data-action="cancel"]')?.addEventListener('click', () => finish(null), { once: true });
+        modalEl.querySelector('[data-action="cancel"]')?.addEventListener('click', () => finish(null));
         modalEl.querySelector('[data-action="confirm"]')?.addEventListener('click', () => {
             finish({ stato: statusSelect?.value || fallbackStatus });
-        }, { once: true });
+        });
         modalEl.addEventListener('hidden.bs.modal', () => {
             if (!settled) {
                 settled = true;
@@ -303,7 +303,7 @@ function askMoveConfirmation(event) {
             }
             modal.dispose();
             modalEl.remove();
-        }, { once: true });
+        });
 
         modal.show();
     });
