@@ -1,23 +1,98 @@
-Options -Indexes
-
-# ── Rewrite engine ───────────────────────────────────────────────────────────
+# BEGIN LSCACHE
+## LITESPEED WP CACHE PLUGIN - Do not edit the contents of this block! ##
 <IfModule mod_rewrite.c>
-    RewriteEngine On
-    # App is deployed at the domain root (e.g. easybooking.vocefutura.it/).
-    # Change to /subdir/ if the app lives in a subdirectory.
-    RewriteBase /
+RewriteEngine on
+RewriteRule litespeed/debug/.*\.log$ - [F,L]
+RewriteRule \.litespeed_conf\.dat - [F,L]
+</IfModule>
+<IfModule LiteSpeed>
+CacheLookup on
+RewriteRule .* - [E=Cache-Control:no-autoflush]
 
-    # Serve real files and directories as-is
-    RewriteCond %{REQUEST_FILENAME} -f [OR]
-    RewriteCond %{REQUEST_FILENAME} -d
-    RewriteRule ^ - [L]
+### marker ASYNC start ###
+RewriteCond %{REQUEST_URI} /wp-admin/admin-ajax\.php
+RewriteCond %{QUERY_STRING} action=async_litespeed
+RewriteRule .* - [E=noabort:1]
+### marker ASYNC end ###
 
-    # /share/[HASH] → cloud_pubblica.php?hash=[HASH]
-    RewriteRule ^share/([a-f0-9]{32})/?$ cloud_pubblica.php?hash=$1 [QSA,L]
+### marker DROPQS start ###
+CacheKeyModify -qs:fbclid
+CacheKeyModify -qs:gclid
+CacheKeyModify -qs:utm*
+CacheKeyModify -qs:_ga
+### marker DROPQS end ###
 
-    # /share/[HASH]/download/[FILE_ID]
-    RewriteRule ^share/([a-f0-9]{32})/download/([0-9]+)/?$ cloud_pubblica.php?hash=$1&action=download&file_id=$2 [QSA,L]
+</IfModule>
+## LITESPEED WP CACHE PLUGIN - Do not edit the contents of this block! ##
+# END LSCACHE
 
-    # /share/[HASH]/stream/[FILE_ID]
-    RewriteRule ^share/([a-f0-9]{32})/stream/([0-9]+)/?$ cloud_pubblica.php?hash=$1&action=stream&file_id=$2 [QSA,L]
+# BEGIN NON_LSCACHE
+## LITESPEED WP CACHE PLUGIN - Do not edit the contents of this block! ##
+## LITESPEED WP CACHE PLUGIN - Do not edit the contents of this block! ##
+# END NON_LSCACHE
+
+# ════════════════════════════════════════════════════════════
+# ☁️ CLOUD STORAGE ROUTES - EASYBOOKING
+# ════════════════════════════════════════════════════════════
+<IfModule mod_rewrite.c>
+RewriteEngine On
+RewriteBase /
+
+# /share/[HASH] (32 hex chars) → index_cloud.php?hash=[HASH]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^share/([a-f0-9]{32})/?$ index_cloud.php?hash=$1 [QSA,L]
+
+# Blocca accesso diretto a cartella cloud_storage
+RewriteRule ^cloud_storage/ - [F,L]
+
+</IfModule>
+
+# Blocca accesso diretto alla cartella cloud_storage a livello di directory
+<Directory "/home/*/cloud_storage">
+    Order allow,deny
+    Deny from all
+</Directory>
+
+# Blocca file nascosti e sensibili
+<FilesMatch "^\.">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# ════════════════════════════════════════════════════════════
+# BLOCCA ACCESSO A /easybooking DAL DOMINIO PRINCIPALE
+# ════════════════════════════════════════════════════════════
+<IfModule mod_rewrite.c>
+RewriteEngine On
+RewriteCond %{HTTP_HOST} ^(www\.)?vocefutura\.it$ [NC]
+RewriteRule ^easybooking(/.*)?$ - [R=404,L]
+</IfModule>
+
+# BEGIN WordPress
+# Le direttive (linee) tra "BEGIN WordPress" e "END WordPress" sono
+# generate dinamicamente, e dovrebbero essere modificate solo tramite i filtri di WordPress.
+# Ogni modifica alle direttive tra questi marcatori verrà sovrascritta.
+<IfModule mod_rewrite.c>
+RewriteEngine On
+RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+RewriteBase /
+RewriteRule ^index\.php$ - [L]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule . /index.php [L]
+</IfModule>
+
+# END WordPress
+
+# ════════════════════════════════════════════════════════════
+# SECURITY HEADERS
+# ════════════════════════════════════════════════════════════
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set X-XSS-Protection "1; mode=block"
+    Header set Referrer-Policy "strict-origin-when-cross-origin"
+    # Cloud Storage - Allow inline content for audio player
+    Header set Content-Security-Policy "default-src 'self' https:; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://cdnjs.cloudflare.com; media-src 'self' data:;"
 </IfModule>
