@@ -74,7 +74,6 @@ $pageTitle = $pageTitles[$currentPage] ?? 'EasyBooking';
             <?php else: ?>
             <div class="logo-text"><?= htmlspecialchars($appName) ?></div>
             <?php endif; ?>
-            <span class="logo-sub">Scuola di Musica</span>
         </div>
     </div>
 
