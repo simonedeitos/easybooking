@@ -53,37 +53,20 @@ function initCalendar(options = {}) {
             businessHours: options.businessHours || true,
             scrollTime: '09:00:00',
 
-            // Load events from server
-            events(info, successCallback, failureCallback) {
-                const params = new URLSearchParams({
-                    start: info.startStr,
-                    end: info.endStr
-                });
-                const teacherId = teacherFilter?.value || '';
-                if (teacherId !== '') {
-                    params.append('insegnante_id', teacherId);
+            // Load events from server – use URL event source so that
+            // extraParams() is re-evaluated on every refetchEvents() call,
+            // which guarantees the teacher filter is applied immediately.
+            eventSources: [{
+                url: 'api/get-eventi-calendario.php',
+                extraParams() {
+                    const teacherId = teacherFilter?.value || '';
+                    return teacherId ? { insegnante_id: teacherId } : {};
+                },
+                failure(err) {
+                    console.error('Calendar events error:', err);
+                    showToast('Impossibile caricare il calendario. Riprova.', 'danger');
                 }
-
-                fetch('api/get-eventi-calendario.php?' + params.toString())
-                    .then((response) => {
-                        if (!response.ok) {
-                            throw new Error('HTTP ' + response.status);
-                        }
-                        return response.json();
-                    })
-                    .then((data) => {
-                        if (!Array.isArray(data)) {
-                            const message = data?.error || 'Errore nel caricamento del calendario.';
-                            throw new Error(message);
-                        }
-                        successCallback(data);
-                    })
-                    .catch((error) => {
-                        console.error('Calendar events error:', error);
-                        showToast('Impossibile caricare il calendario. Riprova.', 'danger');
-                        failureCallback(error);
-                    });
-            },
+            }],
 
             // Color events
             eventDidMount(info) {
