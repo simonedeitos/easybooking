@@ -229,11 +229,15 @@ function openNewEventModal(startStr, endStr) {
 }
 
 // ── Dialog for move confirmation and status change ────────────
-function askMoveConfirmation(event) {
-    const fallbackStatus = Object.hasOwn(CalendarColors.byStatus, 'Riprogrammata')
+function getMoveDefaultStatus() {
+    return Object.hasOwn(CalendarColors.byStatus, 'Riprogrammata')
         ? 'Riprogrammata'
         : (Object.keys(CalendarColors.byStatus)[0] || 'Programmata');
-    const BootstrapModal = window.bootstrap?.Modal || globalThis.bootstrap?.Modal || null;
+}
+
+function askMoveConfirmation(event) {
+    const fallbackStatus = getMoveDefaultStatus();
+    const BootstrapModal = window.bootstrap?.Modal || null;
     if (!BootstrapModal) {
         showToast('Impossibile aprire la conferma di spostamento.', 'danger');
         return Promise.resolve(null);
@@ -304,7 +308,7 @@ function askMoveConfirmation(event) {
 
 // ── Save drag-move ────────────────────────────────────────────
 async function saveEventMove(event, revertFn) {
-    const movedStatus = Object.hasOwn(CalendarColors.byStatus, 'Riprogrammata') ? 'Riprogrammata' : 'Programmata';
+    const movedStatus = getMoveDefaultStatus();
     const data = {
         id: event.id,
         data: event.startStr.slice(0, 10),
