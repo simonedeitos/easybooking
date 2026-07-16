@@ -230,7 +230,7 @@ function openNewEventModal(startStr, endStr) {
 
 // ── Save drag-move ────────────────────────────────────────────
 function askMoveConfirmation(event) {
-    const fallbackStatus = Object.prototype.hasOwnProperty.call(CalendarColors.byStatus, 'Riprogrammata')
+    const fallbackStatus = Object.hasOwn(CalendarColors.byStatus, 'Riprogrammata')
         ? 'Riprogrammata'
         : (Object.keys(CalendarColors.byStatus)[0] || 'Programmata');
 
@@ -280,7 +280,7 @@ function askMoveConfirmation(event) {
 
         const modalEl = modalWrapper.firstElementChild;
         document.body.appendChild(modalEl);
-        const modal = new bootstrap.Modal(modalEl, { backdrop: 'static', keyboard: false });
+        const modal = new bootstrap.Modal(modalEl, { backdrop: 'static' });
         const statusSelect = modalEl.querySelector('#move-event-status');
         if (statusSelect) {
             statusSelect.value = fallbackStatus;
@@ -300,6 +300,7 @@ function askMoveConfirmation(event) {
         });
         modalEl.addEventListener('hidden.bs.modal', () => {
             if (!settled) {
+                settled = true;
                 resolve(null);
             }
             modal.dispose();
