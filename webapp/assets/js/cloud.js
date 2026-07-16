@@ -40,6 +40,14 @@
             .replace(/'/g, '&#39;');
     }
 
+    function normalizeSearchText(value) {
+        return String(value || '')
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .trim()
+            .toLowerCase();
+    }
+
     // ── Cloud Stats (compact badge) ───────────────────────────────────────
 
     function refreshStats() {
@@ -172,11 +180,15 @@
 
     /**
      * Builds the public share URL for a client cloud hash.
-     * Mirrors the PHP cloudShareUrl() fallback: strips the current filename
-     * from window.location.pathname so the URL is correct even when the app
-     * is installed in a subdirectory (e.g. /easybooking/).
+     * Uses the PHP-configured public base URL when present so admin and public
+     * cloud links stay aligned even when they live on different hosts.
      */
     function buildShareUrl(hash) {
+        const app = document.getElementById('cloud-app');
+        const configuredBaseUrl = app?.dataset.cloudBaseUrl?.trim();
+        if (configuredBaseUrl) {
+            return configuredBaseUrl.replace(/\/+$/, '') + '/share/' + encodeURIComponent(hash);
+        }
         const basePath = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/'));
         return window.location.origin + basePath + '/share/' + encodeURIComponent(hash);
     }
@@ -457,6 +469,14 @@
 
     function bindCreateCloudModal() {
         const modalEl = document.getElementById('createCloudModal');
+        const listEl = document.getElementById('create-cloud-list');
+        const searchInput = document.getElementById('create-cloud-search');
+
+        console.debug('[cloud] bindCreateCloudModal()', {
+            modalFound: !!modalEl,
+            listFound: !!listEl,
+            searchFound: !!searchInput
+        });
 
         // Reset search, selection and confirm button every time the modal opens,
         // regardless of how it is triggered (button click, Bootstrap API, etc.)
@@ -470,6 +490,11 @@
                 filterCreateCloudList('');
                 document.querySelectorAll('.create-cloud-list-item').forEach(i => i.classList.remove('active'));
                 if (confirmBtn) { confirmBtn.disabled = true; }
+                console.debug('[cloud] create cloud modal opened and reset');
+            });
+            modalEl.addEventListener('shown.bs.modal', () => {
+                const search = document.getElementById('create-cloud-search');
+                if (search) search.focus();
             });
         }
 
@@ -481,25 +506,32 @@
             });
         }
 
-        // Live search filter
-        const searchInput = document.getElementById('create-cloud-search');
         if (searchInput) {
-            searchInput.addEventListener('input', () => {
-                filterCreateCloudList(searchInput.value.trim().toLowerCase());
-            });
+            const handleSearch = () => {
+                const query = normalizeSearchText(searchInput.value);
+                console.debug('[cloud] filtering create cloud clients', { query });
+                filterCreateCloudList(query);
+            };
+            searchInput.addEventListener('input', handleSearch);
+            searchInput.addEventListener('keyup', handleSearch);
+            searchInput.addEventListener('search', handleSearch);
         }
 
-        // Item selection
-        document.querySelectorAll('.create-cloud-list-item').forEach(item => {
-            item.addEventListener('click', () => {
+        if (listEl) {
+            listEl.addEventListener('click', e => {
+                const item = e.target.closest('.create-cloud-list-item');
+                if (!item) return;
                 document.querySelectorAll('.create-cloud-list-item').forEach(i => i.classList.remove('active'));
                 item.classList.add('active');
                 const hidden = document.getElementById('create-cloud-selected');
                 if (hidden) hidden.value = item.dataset.clientId;
                 const confirmBtn = document.getElementById('create-cloud-confirm-btn');
                 if (confirmBtn) confirmBtn.disabled = false;
+                console.debug('[cloud] create cloud client selected', {
+                    clientId: item.dataset.clientId
+                });
             });
-        });
+        }
 
         const confirmBtn = document.getElementById('create-cloud-confirm-btn');
         if (!confirmBtn) return;
@@ -540,22 +572,38 @@
     function filterCreateCloudList(query) {
         const items     = document.querySelectorAll('.create-cloud-list-item');
         const noResults = document.getElementById('create-cloud-no-results');
+        const hidden    = document.getElementById('create-cloud-selected');
+        const confirmBtn = document.getElementById('create-cloud-confirm-btn');
+        const normalizedQuery = normalizeSearchText(query);
         let   visible   = 0;
+        let   selectionHidden = false;
 
         items.forEach(item => {
-            const name = item.dataset.clientName || '';
-            const show = !query || name.includes(query);
-            // Use setProperty with 'important' priority so the inline style
-            // overrides Bootstrap's d-flex { display: flex !important } rule.
+            const searchText = normalizeSearchText(item.dataset.clientSearch || item.textContent || '');
+            const show = !normalizedQuery || searchText.includes(normalizedQuery);
             if (show) {
+                item.hidden = false;
                 item.style.removeProperty('display');
             } else {
+                if (item.classList.contains('active')) {
+                    item.classList.remove('active');
+                    selectionHidden = true;
+                }
+                item.hidden = true;
                 item.style.setProperty('display', 'none', 'important');
             }
             if (show) visible++;
         });
 
+        if (selectionHidden) {
+            if (hidden) hidden.value = '';
+            if (confirmBtn) confirmBtn.disabled = true;
+        }
         if (noResults) noResults.classList.toggle('d-none', visible > 0);
+        console.debug('[cloud] create cloud filter result', {
+            query: normalizedQuery,
+            visible
+        });
     }
 
     // ── Drag & Drop Upload ────────────────────────────────────────────────

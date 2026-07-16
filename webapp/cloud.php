@@ -56,6 +56,7 @@ $spazioUsato = (int)$stats['spazio_totale_bytes'];
 $spazioMax   = CLOUD_MAX_BYTES;
 $pctUsato    = $spazioMax > 0 ? round($spazioUsato / $spazioMax * 100, 1) : 0;
 $quotaClass  = $pctUsato >= 90 ? 'danger' : ($pctUsato >= 70 ? 'warning' : 'success');
+$cloudPublicBaseUrl = cloudPublicBaseUrl();
 
 require_once __DIR__ . '/includes/header.php';
 ?>
@@ -88,7 +89,9 @@ require_once __DIR__ . '/includes/header.php';
 </div>
 
 <!-- ── Two-column cloud layout ───────────────────────────────────── -->
-<div class="cloud-layout">
+<!-- Share links use this configured public base URL; set CLOUD_PUBLIC_BASE_URL in webapp/.env
+     when the public share page must use a different domain than the admin panel. -->
+<div class="cloud-layout" id="cloud-app" data-cloud-base-url="<?= h($cloudPublicBaseUrl) ?>">
 
     <!-- ── Left sidebar: client list ─────────────────────────────── -->
     <aside class="cloud-clients-sidebar">
@@ -249,7 +252,7 @@ require_once __DIR__ . '/includes/header.php';
                             <button type="button"
                                     class="list-group-item list-group-item-action d-flex justify-content-between align-items-center create-cloud-list-item"
                                     data-client-id="<?= (int)$c['id'] ?>"
-                                    data-client-name="<?= h(strtolower($c['cognome'] . ' ' . $c['nome'])) ?>">
+                                    data-client-search="<?= h(trim($c['cognome'] . ' ' . $c['nome'] . ' ' . ($c['email'] ?? ''))) ?>">
                                 <span class="create-cloud-item-label"><?= h($c['cognome'] . ' ' . $c['nome']) ?></span>
                                 <?php if ($c['email']): ?>
                                 <small class="text-muted ms-2 text-nowrap"><?= h($c['email']) ?></small>
