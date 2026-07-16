@@ -200,8 +200,7 @@
      */
     function buildShareUrl(hash) {
         const app = document.getElementById('cloud-app');
-        const configuredBaseUrlAttr = app ? app.getAttribute('data-cloud-base-url') : null;
-        const configuredBaseUrl = configuredBaseUrlAttr ? configuredBaseUrlAttr.trim() : '';
+        const configuredBaseUrl = (app?.getAttribute('data-cloud-base-url') ?? '').trim();
         if (configuredBaseUrl !== '') {
             return configuredBaseUrl.replace(/\/+$/, '') + '/share/' + encodeURIComponent(hash);
         }
