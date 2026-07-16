@@ -278,7 +278,7 @@ function askMoveConfirmation(event) {
 
         const modalEl = modalWrapper.firstElementChild;
         document.body.appendChild(modalEl);
-        const modal = new BootstrapModal(modalEl, { backdrop: 'static', keyboard: false });
+        const modal = new BootstrapModal(modalEl, { backdrop: 'static' });
         const statusSelect = modalEl.querySelector('#move-event-status');
 
         let modalResolved = false;
