@@ -229,6 +229,89 @@ function openNewEventModal(startStr, endStr) {
 }
 
 // ── Save drag-move ────────────────────────────────────────────
+function askMoveConfirmation(event) {
+    const fallbackStatus = Object.hasOwn(CalendarColors.byStatus, 'Riprogrammata')
+        ? 'Riprogrammata'
+        : (Object.keys(CalendarColors.byStatus)[0] || 'Programmata');
+
+    if (!window.bootstrap?.Modal) {
+        const startDate = event.startStr.slice(0, 10);
+        const startTime = event.startStr.slice(11, 16);
+        const endTime = event.endStr?.slice(11, 16) || '';
+        const safeStartDate = startDate.replace(/[^0-9-]/g, '');
+        const safeStartTime = startTime.replace(/[^0-9:]/g, '');
+        const safeEndTime = endTime.replace(/[^0-9:]/g, '');
+        const confirmed = confirm(`Confermi lo spostamento al ${safeStartDate} dalle ${safeStartTime} alle ${safeEndTime}?`);
+        if (!confirmed) return Promise.resolve(null);
+        const selectedStatus = prompt('Stato appuntamento:', fallbackStatus);
+        if (selectedStatus === null) return Promise.resolve(null);
+        return Promise.resolve({ stato: selectedStatus.trim() || fallbackStatus });
+    }
+
+    return new Promise((resolve) => {
+        const modalWrapper = document.createElement('div');
+        const statusOptions = Object.keys(CalendarColors.byStatus)
+            .map((status) => `<option value="${escapeHtml(status)}">${escapeHtml(status)}</option>`)
+            .join('');
+        const dateLabel = event.start
+            ? event.start.toLocaleDateString('it-IT', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' })
+            : event.startStr.slice(0, 10);
+        const startTime = event.startStr.slice(11, 16);
+        const endTime = event.endStr?.slice(11, 16) || '';
+        modalWrapper.innerHTML = `
+            <div class="modal fade" tabindex="-1" role="dialog" aria-labelledby="move-modal-title" aria-describedby="move-modal-description">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="move-modal-title">Conferma spostamento</h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Chiudi"></button>
+                        </div>
+                        <div class="modal-body" id="move-modal-description">
+                            <p class="mb-2">Nuova data e ora:</p>
+                            <p class="fw-semibold mb-3">${escapeHtml(dateLabel)} · ${escapeHtml(startTime)} - ${escapeHtml(endTime)}</p>
+                            <label for="move-event-status" class="form-label">Stato appuntamento</label>
+                            <select id="move-event-status" class="form-select">${statusOptions}</select>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-outline-light" data-action="cancel">Annulla</button>
+                            <button type="button" class="btn btn-primary" data-action="confirm">Salva</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        const modalEl = modalWrapper.firstElementChild;
+        document.body.appendChild(modalEl);
+        const modal = new bootstrap.Modal(modalEl, { backdrop: 'static' });
+        const statusSelect = modalEl.querySelector('#move-event-status');
+        statusSelect.value = fallbackStatus;
+
+        let modalResolved = false;
+        const finish = (result) => {
+            if (modalResolved) return;
+            modalResolved = true;
+            resolve(result);
+            modal.hide();
+        };
+
+        modalEl.querySelector('[data-action="cancel"]')?.addEventListener('click', () => finish(null));
+        modalEl.querySelector('[data-action="confirm"]')?.addEventListener('click', () => {
+            finish({ stato: statusSelect?.value || fallbackStatus });
+        });
+        modalEl.addEventListener('hidden.bs.modal', () => {
+            if (!modalResolved) {
+                modalResolved = true;
+                resolve(null);
+            }
+            modal.dispose();
+            modalEl.remove();
+        });
+
+        modal.show();
+    });
+}
+
 async function saveEventMove(event, revertFn) {
     const data = {
         id: event.id,
@@ -244,6 +327,12 @@ async function saveEventMove(event, revertFn) {
         revertFn();
         return;
     }
+    const moveConfirmation = await askMoveConfirmation(event);
+    if (!moveConfirmation) {
+        revertFn();
+        return;
+    }
+    data.stato = moveConfirmation.stato;
     try {
         const resp = await fetch('calendario.php', {
             method: 'POST',

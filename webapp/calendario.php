@@ -221,12 +221,24 @@ if ($requestAction !== '') {
             $data = trim(post('data'));
             $oraInizio = calendarNormalizeTime(post('ora_inizio'));
             $oraFine = calendarNormalizeTime(post('ora_fine'));
-            if ($id <= 0 || !calendarValidDate($data) || !calendarValidTime($oraInizio) || !calendarValidTime($oraFine) || !calendarTimeRangeValid($oraInizio, $oraFine)) {
+            $stato = trim(post('stato'));
+            if ($stato === '') {
+                $stato = 'Riprogrammata';
+            }
+            $hasValidId = $id > 0;
+            $hasValidDate = calendarValidDate($data);
+            $hasValidStartTime = calendarValidTime($oraInizio);
+            $hasValidEndTime = calendarValidTime($oraFine);
+            $hasValidRange = calendarTimeRangeValid($oraInizio, $oraFine);
+            if (!$hasValidId || !$hasValidDate || !$hasValidStartTime || !$hasValidEndTime || !$hasValidRange) {
                 jsonResponse(['success' => false, 'message' => 'Dati di spostamento non validi.'], 422);
             }
+            if (!in_array($stato, calendarStatuses(), true)) {
+                jsonResponse(['success' => false, 'message' => 'Stato non valido.'], 422);
+            }
 
-            $stmt = $pdo->prepare('UPDATE prenotazioni SET data = ?, ora_inizio = ?, ora_fine = ? WHERE id = ?');
-            $stmt->execute([$data, $oraInizio, $oraFine, $id]);
+            $stmt = $pdo->prepare('UPDATE prenotazioni SET data = ?, ora_inizio = ?, ora_fine = ?, stato = ? WHERE id = ?');
+            $stmt->execute([$data, $oraInizio, $oraFine, $stato, $id]);
             jsonResponse(['success' => true, 'message' => 'Evento spostato con successo.']);
         }
 
@@ -594,7 +606,7 @@ document.addEventListener('DOMContentLoaded', () => {
             await submitWithConflictCheck(eventForm, 'Errore durante il salvataggio.');
             showToast('Lezione aggiornata con successo.', 'success');
             eventModal.hide();
-            calendarInstance?.refetchEvents();
+            renderCalendar();
         } catch (error) {
             showToast(error.message, 'danger');
         }
@@ -606,7 +618,7 @@ document.addEventListener('DOMContentLoaded', () => {
             await submitWithConflictCheck(newEventForm, 'Errore durante il salvataggio.');
             showToast('Lezione creata con successo.', 'success');
             newEventModal.hide();
-            calendarInstance?.refetchEvents();
+            renderCalendar();
         } catch (error) {
             showToast(error.message, 'danger');
         }
@@ -629,7 +641,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             showToast(result.message, 'success');
             eventModal.hide();
-            calendarInstance?.refetchEvents();
+            renderCalendar();
         } catch (error) {
             showToast(error.message, 'danger');
         }
