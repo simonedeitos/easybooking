@@ -3,10 +3,14 @@ Options -Indexes
 # ── Rewrite engine ───────────────────────────────────────────────────────────
 <IfModule mod_rewrite.c>
     RewriteEngine On
-    # Set this to the URL path where the webapp is installed.
-    # Use / if the app is at the domain root (e.g. easybooking.vocefutura.it/).
-    # Use /easybooking/ if the app is in a subdirectory (e.g. vocefutura.it/easybooking/).
+    # App is deployed at the domain root (e.g. easybooking.vocefutura.it/).
+    # Change to /subdir/ if the app lives in a subdirectory.
     RewriteBase /
+
+    # Serve real files and directories as-is
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
 
     # /share/[HASH] → cloud_pubblica.php?hash=[HASH]
     RewriteRule ^share/([a-f0-9]{32})/?$ cloud_pubblica.php?hash=$1 [QSA,L]
