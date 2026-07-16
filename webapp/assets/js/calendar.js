@@ -95,9 +95,14 @@ function initCalendar(options = {}) {
                 } else {
                     color = CalendarColors.byStatus[extProps.stato] || color;
                 }
+                const textColor = isDark(color) ? '#fff' : '#000';
                 info.el.style.backgroundColor    = color;
                 info.el.style.borderColor        = color;
-                info.el.style.color              = isDark(color) ? '#fff' : '#1e1e2e';
+                info.el.style.color              = textColor;
+                // Apply colour to all child text elements so theme CSS cannot override inheritance
+                info.el.querySelectorAll('.fc-event-main, .fc-event-main-frame, .fc-event-title-container, .fc-event-title, .fc-event-time').forEach(function(child) {
+                    child.style.color = textColor;
+                });
                 info.el.style.borderRadius       = '5px';
                 info.el.style.fontSize           = '0.78rem';
                 info.el.setAttribute('data-bs-toggle', 'tooltip');

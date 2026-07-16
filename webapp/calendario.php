@@ -304,7 +304,7 @@ require_once __DIR__ . '/includes/header.php';
 </div>
 <?php endif; ?>
 
-<div class="card mb-4">
+<div class="card mb-4" id="cal-toolbar-card">
     <div class="card-body d-flex flex-column gap-3">
         <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
             <div class="btn-group" role="group" aria-label="Navigazione calendario">
