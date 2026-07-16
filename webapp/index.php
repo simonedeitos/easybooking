@@ -173,9 +173,10 @@ $theme = $_SESSION['user_theme'] ?? 'dark';
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Main CSS must load before theme CSS so theme variables override defaults -->
+    <link rel="stylesheet" href="assets/css/style.css">
     <link id="theme-dark-css"  rel="stylesheet" href="assets/css/dark-theme.css"  <?= $theme !== 'dark'  ? 'disabled' : '' ?>>
     <link id="theme-light-css" rel="stylesheet" href="assets/css/light-theme.css" <?= $theme !== 'light' ? 'disabled' : '' ?>>
-    <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body data-theme="<?= $theme ?>">
 <div class="login-page">

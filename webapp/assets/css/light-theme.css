@@ -58,6 +58,14 @@
     --bs-pagination-disabled-bg:#f8f9fa;
     --bs-tooltip-bg:       #1a1a2e;
     --bs-tooltip-color:    #ffffff;
+    /* Bootstrap 5.3 tertiary bg (used by bg-body-tertiary) */
+    --bs-tertiary-bg:      #f8f9fa;
+    --bs-tertiary-bg-rgb:  248,249,250;
+    /* Semantic colors for light mode – more saturated for visibility on white */
+    --success:             #198754;
+    --danger:              #dc3545;
+    --warning:             #d97706;
+    --info:                #0891b2;
 }
 
 body { background-color: var(--bg-main); color: var(--text-primary); }
@@ -298,9 +306,67 @@ body[data-theme="light"] .btn-outline-light:focus {
     border-color: var(--border-color) !important;
 }
 
+body[data-theme="light"] .btn-outline-light.active,
+body[data-theme="light"] .btn-outline-light[aria-pressed="true"],
+body[data-theme="light"] .btn-outline-light.btn-primary {
+    background-color: #7c6af7 !important;
+    border-color: #7c6af7 !important;
+    color: #ffffff !important;
+}
+
 body[data-theme="light"] .btn-close-white {
     filter: none;
 }
+
+/* Light secondary button – must be visible on white backgrounds */
+body[data-theme="light"] .btn-secondary {
+    background-color: #f8f9fa !important;
+    border-color: #ced4da !important;
+    color: #495057 !important;
+}
+body[data-theme="light"] .btn-secondary:hover {
+    background-color: #e9ecef !important;
+    border-color: #adb5bd !important;
+    color: #212529 !important;
+}
+
+/* Light danger / success / warning buttons – use standard saturated colors */
+body[data-theme="light"] .btn-danger {
+    background-color: var(--danger) !important;
+    border-color: var(--danger) !important;
+    color: #ffffff !important;
+}
+body[data-theme="light"] .btn-danger:hover {
+    background-color: #bb2d3b !important;
+    border-color: #b02a37 !important;
+    color: #ffffff !important;
+}
+body[data-theme="light"] .btn-success {
+    background-color: var(--success) !important;
+    border-color: var(--success) !important;
+    color: #ffffff !important;
+}
+body[data-theme="light"] .btn-success:hover {
+    background-color: #157347 !important;
+    border-color: #146c43 !important;
+    color: #ffffff !important;
+}
+body[data-theme="light"] .btn-warning {
+    background-color: var(--warning) !important;
+    border-color: var(--warning) !important;
+    color: #ffffff !important;
+}
+body[data-theme="light"] .btn-warning:hover {
+    background-color: #b45309 !important;
+    border-color: #a84e07 !important;
+    color: #ffffff !important;
+}
+
+/* Light stat-icon semantic colors */
+body[data-theme="light"] .stat-icon.green  { background: rgba(25,135,84,0.12); color: var(--success); }
+body[data-theme="light"] .stat-icon.red    { background: rgba(220,53,69,0.12); color: var(--danger); }
+body[data-theme="light"] .stat-icon.orange { background: rgba(217,119,6,0.12); color: var(--warning); }
+body[data-theme="light"] .stat-icon.blue   { background: rgba(8,145,178,0.12); color: var(--info); }
 
 body[data-theme="light"] .detail-box,
 body[data-theme="light"] .instrument-option,
@@ -309,6 +375,7 @@ body[data-theme="light"] .package-alert-item {
     color: var(--text-primary) !important;
 }
 
+/* ── FullCalendar light theme ────────────────────────────────── */
 body[data-theme="light"] .fc,
 body[data-theme="light"] .fc-theme-standard td,
 body[data-theme="light"] .fc-theme-standard th,
@@ -316,6 +383,13 @@ body[data-theme="light"] .fc .fc-col-header-cell-cushion,
 body[data-theme="light"] .fc .fc-timegrid-axis-cushion,
 body[data-theme="light"] .fc .fc-timegrid-slot-label-cushion,
 body[data-theme="light"] .fc .fc-toolbar-title,
-body[data-theme="light"] #cal-title {
-    color: var(--text-primary) !important;
-}
+body[data-theme="light"] #cal-title { color: var(--text-primary) !important; }
+body[data-theme="light"] .fc-theme-standard .fc-scrollgrid { border-color: var(--border-color); }
+body[data-theme="light"] .fc .fc-daygrid-day,
+body[data-theme="light"] .fc .fc-timegrid-col { background-color: #ffffff; }
+body[data-theme="light"] .fc .fc-col-header { background-color: #f8f9fa; }
+body[data-theme="light"] .fc .fc-daygrid-day.fc-day-today,
+body[data-theme="light"] .fc .fc-timegrid-col.fc-day-today { background-color: rgba(124,106,247,0.06) !important; }
+body[data-theme="light"] .fc .fc-list-day-text,
+body[data-theme="light"] .fc .fc-list-day-side-text,
+body[data-theme="light"] .fc .fc-list-event-title a { color: var(--text-primary); }
