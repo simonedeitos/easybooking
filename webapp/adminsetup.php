@@ -170,7 +170,7 @@ function expectedTables(): array
         'impostazioni_generali',
         'notifiche_config',
         'tariffe_coppia',
-        'cloud_files',
+        'cloud_file',
         'cloud_stats',
     ];
 }

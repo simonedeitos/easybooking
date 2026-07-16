@@ -26,9 +26,9 @@ $clientsEnabled = [];
 $clientsDisabled = [];
 try {
     $stmt = $pdo->query(
-        'SELECT c.id, c.nome, c.cognome, c.email, c.cloud_enabled, c.cloud_hash, c.cloud_cartella,
-                COALESCE((SELECT SUM(cf.dimensione_bytes) FROM cloud_files cf WHERE cf.cliente_id = c.id), 0) AS spazio_bytes,
-                COALESCE((SELECT COUNT(*) FROM cloud_files cf WHERE cf.cliente_id = c.id), 0) AS numero_file
+        'SELECT c.id, c.nome, c.cognome, c.email, c.cloud_enabled, c.cloud_hash_accesso, c.cloud_cartella_locale,
+                COALESCE((SELECT SUM(cf.dimensione_bytes) FROM cloud_file cf WHERE cf.cliente_id = c.id), 0) AS spazio_bytes,
+                COALESCE((SELECT COUNT(*) FROM cloud_file cf WHERE cf.cliente_id = c.id), 0) AS numero_file
          FROM clienti c
          ORDER BY c.cognome ASC, c.nome ASC'
     );
@@ -105,21 +105,41 @@ require_once __DIR__ . '/includes/header.php';
                 </div>
             <?php else: ?>
                 <?php foreach ($clientsEnabled as $c): ?>
-                <button type="button"
-                        class="cloud-client-btn"
-                        data-client-id="<?= (int)$c['id'] ?>"
-                        data-client-nome="<?= h($c['cognome'] . ' ' . $c['nome']) ?>"
-                        data-client-hash="<?= h($c['cloud_hash'] ?? '') ?>">
-                    <span class="cloud-client-name"><?= h($c['cognome'] . ' ' . $c['nome']) ?></span>
-                    <span class="cloud-client-badges">
-                        <span class="badge bg-secondary" title="File">
-                            <i class="fas fa-file me-1"></i><?= (int)$c['numero_file'] ?>
+                <div class="cloud-client-item"
+                     data-client-id="<?= (int)$c['id'] ?>">
+                    <button type="button"
+                            class="cloud-client-btn"
+                            data-client-id="<?= (int)$c['id'] ?>"
+                            data-client-nome="<?= h($c['cognome'] . ' ' . $c['nome']) ?>"
+                            data-client-hash="<?= h($c['cloud_hash_accesso'] ?? '') ?>">
+                        <span class="cloud-client-name"><?= h($c['cognome'] . ' ' . $c['nome']) ?></span>
+                        <span class="cloud-client-badges">
+                            <span class="badge bg-secondary" title="File">
+                                <i class="fas fa-file me-1"></i><?= (int)$c['numero_file'] ?>
+                            </span>
+                            <span class="badge bg-secondary" title="Spazio">
+                                <i class="fas fa-hdd me-1"></i><?= h(cloudFormatSize((int)$c['spazio_bytes'])) ?>
+                            </span>
                         </span>
-                        <span class="badge bg-secondary" title="Spazio">
-                            <i class="fas fa-hdd me-1"></i><?= h(cloudFormatSize((int)$c['spazio_bytes'])) ?>
-                        </span>
-                    </span>
-                </button>
+                    </button>
+                    <?php if (!empty($c['cloud_hash_accesso'])): ?>
+                    <div class="cloud-client-actions">
+                        <button type="button"
+                                class="cloud-client-action-btn cloud-sidebar-copy-link"
+                                data-hash="<?= h($c['cloud_hash_accesso']) ?>"
+                                title="Copia link pubblico">
+                            <i class="fas fa-link"></i>
+                        </button>
+                        <a href="<?= h(cloudShareUrl($c['cloud_hash_accesso'])) ?>"
+                           target="_blank"
+                           rel="noopener noreferrer"
+                           class="cloud-client-action-btn"
+                           title="Apri pagina pubblica">
+                            <i class="fas fa-external-link-alt"></i>
+                        </a>
+                    </div>
+                    <?php endif; ?>
+                </div>
                 <?php endforeach; ?>
             <?php endif; ?>
         </div>
