@@ -37,14 +37,8 @@ const ThemeManager = (() => {
     }
 
     function init() {
-        // The server sets the authoritative theme on the <html> element via
-        // the data-theme attribute.  Use that as the source of truth and
-        // sync localStorage so the two stay in agreement.  This prevents
-        // a stale localStorage value from overriding the user's saved
-        // database preference on every page load.
         const serverTheme = document.documentElement.dataset.theme;
         const resolved = serverTheme || localStorage.getItem(KEY) || DARK;
-        // Keep localStorage in sync with the server value.
         localStorage.setItem(KEY, resolved);
         apply(resolved);
     }
@@ -53,8 +47,6 @@ const ThemeManager = (() => {
 })();
 
 // ── CSRF Helpers ─────────────────────────────────────────────
-const MAX_ERROR_MESSAGE_LENGTH = 240;
-
 function getCsrfToken() {
     const meta = document.querySelector('meta[name="csrf-token"]');
     return meta ? meta.getAttribute('content') : '';
@@ -85,7 +77,7 @@ window.fetch = function(url, opts = {}) {
 
                 throw new Error(
                     cleanText !== ''
-                        ? cleanText.slice(0, MAX_ERROR_MESSAGE_LENGTH)
+                        ? cleanText.slice(0, 240)
                         : `Risposta non valida dal server${response.status ? ` (HTTP ${response.status})` : ''}.`
                 );
             }
@@ -187,6 +179,8 @@ function initDataTables() {
 }
 
 // ── AJAX Form Submit Helper ───────────────────────────────────
+// NOTA: NON usare formEl.action — viene sovrascritto dall'input[name="action"] presente nei form.
+// Usare getAttribute('action') per leggere l'attributo HTML originale.
 function ajaxForm(formEl, onSuccess, onError) {
     formEl.addEventListener('submit', async function(e) {
         e.preventDefault();
@@ -196,7 +190,10 @@ function ajaxForm(formEl, onSuccess, onError) {
 
         try {
             const fd = new FormData(formEl);
-            const resp = await fetch(formEl.action || window.location.href, {
+            // Usare getAttribute('action') invece di formEl.action
+            // perché formEl.action viene sovrascritta dall'input hidden name="action"
+            const formAction = formEl.getAttribute('action') || window.location.pathname;
+            const resp = await fetch(formAction, {
                 method: 'POST',
                 headers: {
                     'X-CSRF-Token': getCsrfToken(),
