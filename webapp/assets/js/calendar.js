@@ -56,11 +56,16 @@ function initCalendar(options = {}) {
             // Load events from server – use URL event source so that
             // extraParams() is re-evaluated on every refetchEvents() call,
             // which guarantees the teacher filter is applied immediately.
+            // _t (timestamp) is added to every request to prevent browser
+            // and proxy caches from serving a stale response when the
+            // teacher filter value changes.
             eventSources: [{
                 url: 'api/get-eventi-calendario.php',
                 extraParams() {
                     const teacherId = teacherFilter?.value || '';
-                    return teacherId ? { insegnante_id: teacherId } : {};
+                    const params = { _t: Date.now() };
+                    if (teacherId) params.insegnante_id = teacherId;
+                    return params;
                 },
                 failure(err) {
                     console.error('Calendar events error:', err);

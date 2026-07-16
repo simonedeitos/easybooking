@@ -407,8 +407,10 @@ body[data-theme="light"] .fc .fc-list-event-title a { color: var(--text-primary)
    Hover / focus: solid purple background + white text.
    Active (btn-outline-light.active): solid purple — same as hover. */
 body[data-theme="light"] #cal-toolbar-card .btn-outline-light {
-    /* Override Bootstrap 5.3 CSS-variable layer */
+    /* Override Bootstrap 5.3 CSS-variable layer – include ALL btn variables so
+       Bootstrap's internal machinery (including active/hover states) uses purple */
     --bs-btn-color: #7c6af7;
+    --bs-btn-bg: #ede9ff;
     --bs-btn-border-color: #7c6af7;
     --bs-btn-hover-color: #ffffff;
     --bs-btn-hover-bg: #7c6af7;
@@ -417,6 +419,8 @@ body[data-theme="light"] #cal-toolbar-card .btn-outline-light {
     --bs-btn-active-color: #ffffff;
     --bs-btn-active-bg: #6458d0;
     --bs-btn-active-border-color: #6458d0;
+    --bs-btn-disabled-color: #7c6af7;
+    --bs-btn-disabled-border-color: #7c6af7;
     /* Direct property overrides (beat any remaining Bootstrap rule) */
     color: #7c6af7 !important;
     border-color: #7c6af7 !important;
@@ -439,10 +443,17 @@ body[data-theme="light"] #cal-toolbar-card .btn-outline-light[aria-pressed="true
    inherits from style.css (.btn-primary { background: var(--accent) }).
    Reinforce here so it is never overridden by Bootstrap's blue. */
 body[data-theme="light"] #cal-toolbar-card .btn-primary {
+    --bs-btn-color: #fff;
     --bs-btn-bg: #7c6af7;
     --bs-btn-border-color: #7c6af7;
+    --bs-btn-hover-color: #fff;
     --bs-btn-hover-bg: #6458d0;
     --bs-btn-hover-border-color: #6458d0;
+    --bs-btn-active-color: #fff;
+    --bs-btn-active-bg: #6458d0;
+    --bs-btn-active-border-color: #6458d0;
+    --bs-btn-disabled-bg: #7c6af7;
+    --bs-btn-disabled-border-color: #7c6af7;
     background-color: #7c6af7 !important;
     border-color: #7c6af7 !important;
     color: #ffffff !important;

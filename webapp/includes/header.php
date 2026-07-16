@@ -49,10 +49,18 @@ $pageTitle = $pageTitles[$currentPage] ?? 'EasyBooking';
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;450;500;600;700&display=swap" rel="stylesheet">
 
     <!-- Main CSS -->
-    <link rel="stylesheet" href="assets/css/style.css">
+    <?php
+    // Cache-busting: version = file modification time so browsers always
+    // fetch the latest CSS after a deployment, not a stale cached copy.
+    $cssBust = function(string $rel): string {
+        $abs = __DIR__ . '/../' . $rel;
+        return is_file($abs) ? (string)filemtime($abs) : '1';
+    };
+    ?>
+    <link rel="stylesheet" href="assets/css/style.css?v=<?= $cssBust('assets/css/style.css') ?>">
     <!-- Theme CSS (loaded after style.css so theme variables override defaults) -->
-    <link id="theme-dark-css"  rel="stylesheet" href="assets/css/dark-theme.css"  <?= $theme !== 'dark'  ? 'disabled' : '' ?>>
-    <link id="theme-light-css" rel="stylesheet" href="assets/css/light-theme.css" <?= $theme !== 'light' ? 'disabled' : '' ?>>
+    <link id="theme-dark-css"  rel="stylesheet" href="assets/css/dark-theme.css?v=<?= $cssBust('assets/css/dark-theme.css') ?>"  <?= $theme !== 'dark'  ? 'disabled' : '' ?>>
+    <link id="theme-light-css" rel="stylesheet" href="assets/css/light-theme.css?v=<?= $cssBust('assets/css/light-theme.css') ?>" <?= $theme !== 'light' ? 'disabled' : '' ?>>
 </head>
 <body data-theme="<?= $theme ?>">
 <div class="app-wrapper">

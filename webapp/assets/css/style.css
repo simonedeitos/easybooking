@@ -351,17 +351,48 @@ textarea.form-control { resize: vertical; min-height: 90px; }
     gap: 6px;
 }
 .btn-primary {
-    background: var(--accent);
-    border-color: var(--accent);
-    color: #fff;
+    /* Reset Bootstrap 5 local CSS variables so Bootstrap's own --bs-btn-active-bg etc.
+       can never revert the button to Bootstrap's default blue (#0d6efd). */
+    --bs-btn-color: #fff;
+    --bs-btn-bg: var(--accent);
+    --bs-btn-border-color: var(--accent);
+    --bs-btn-hover-color: #fff;
+    --bs-btn-hover-bg: var(--accent-hover);
+    --bs-btn-hover-border-color: var(--accent-hover);
+    --bs-btn-active-color: #fff;
+    --bs-btn-active-bg: var(--accent-hover);
+    --bs-btn-active-border-color: var(--accent-hover);
+    --bs-btn-disabled-bg: var(--accent);
+    --bs-btn-disabled-border-color: var(--accent);
+    /* Direct property overrides with !important as belt-and-suspenders */
+    background-color: var(--accent) !important;
+    border-color: var(--accent) !important;
+    color: #fff !important;
 }
-.btn-primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); color: #fff; }
+.btn-primary:hover,
+.btn-primary:focus {
+    background-color: var(--accent-hover) !important;
+    border-color: var(--accent-hover) !important;
+    color: #fff !important;
+}
 .btn-outline-primary {
-    border-color: var(--accent);
-    color: var(--accent);
-    background: transparent;
+    --bs-btn-color: var(--accent);
+    --bs-btn-border-color: var(--accent);
+    --bs-btn-hover-color: #fff;
+    --bs-btn-hover-bg: var(--accent);
+    --bs-btn-hover-border-color: var(--accent);
+    --bs-btn-active-color: #fff;
+    --bs-btn-active-bg: var(--accent);
+    --bs-btn-active-border-color: var(--accent);
+    border-color: var(--accent) !important;
+    color: var(--accent) !important;
+    background-color: transparent !important;
 }
-.btn-outline-primary:hover { background: var(--accent); color: #fff; }
+.btn-outline-primary:hover {
+    background-color: var(--accent) !important;
+    color: #fff !important;
+    border-color: var(--accent) !important;
+}
 .btn-secondary {
     background: var(--bg-sidebar);
     border-color: var(--border-color);

@@ -13,7 +13,9 @@ require_once __DIR__ . '/../includes/auth.php';
 requireAuth();
 
 header('Content-Type: application/json; charset=UTF-8');
-header('Cache-Control: no-cache, no-store, must-revalidate');
+header('Cache-Control: no-store');
+header('Pragma: no-cache');
+header('Expires: 0');
 
 function calendarRequestDate(?string $value): ?string
 {
