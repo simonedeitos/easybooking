@@ -148,53 +148,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Handle read-only AJAX get request for teacher detail modal
-if ($_SERVER['REQUEST_METHOD'] === 'GET' && get('action') === 'get') {
-    $id = sanitizeInt(get('id'));
-    if ($id <= 0) {
-        jsonResponse(['success' => false, 'message' => 'Insegnante non valido.'], 422);
-    }
-    try {
-        $stmt = $pdo->prepare('SELECT * FROM insegnanti WHERE id = ? LIMIT 1');
-        $stmt->execute([$id]);
-        $teacher = $stmt->fetch();
-        if (!$teacher) {
-            jsonResponse(['success' => false, 'message' => 'Insegnante non trovato.'], 404);
-        }
-
-        $stmt = $pdo->prepare(
-            'SELECT s.id, s.nome
-             FROM insegnanti_strumenti ins
-             INNER JOIN strumenti s ON s.id = ins.strumento_id
-             WHERE ins.insegnante_id = ?
-             ORDER BY s.nome ASC'
-        );
-        $stmt->execute([$id]);
-        $strumentiRows = $stmt->fetchAll();
-        $teacher['strumenti'] = array_map(static fn(array $row): int => (int)$row['id'], $strumentiRows);
-        $teacher['strumenti_nomi'] = array_map(static fn(array $row): string => (string)$row['nome'], $strumentiRows);
-
-        $stmt = $pdo->prepare('SELECT tariffa FROM tariffe_coppia WHERE insegnante_id = ? LIMIT 1');
-        $stmt->execute([$id]);
-        $teacher['tariffa_coppia'] = $stmt->fetchColumn();
-
-        $stmt = $pdo->prepare(
-            "SELECT p.data, p.ora_inizio, p.ora_fine, p.stato, p.strumento, c.nome, c.cognome
-             FROM prenotazioni p
-             INNER JOIN clienti c ON c.id = p.cliente_id
-             WHERE p.insegnante_id = ? AND p.data >= CURDATE()
-             ORDER BY p.data ASC, p.ora_inizio ASC
-             LIMIT 5"
-        );
-        $stmt->execute([$id]);
-        $teacher['upcoming_lessons'] = $stmt->fetchAll();
-
-        jsonResponse(['success' => true, 'teacher' => $teacher]);
-    } catch (PDOException $e) {
-        jsonResponse(['success' => false, 'message' => 'Errore durante il caricamento.'], 500);
-    }
-}
-
 $teachers = [];
 $instruments = [];
 $pageError = '';
@@ -203,10 +156,12 @@ try {
     $stmt = $pdo->prepare(
         'SELECT i.id, i.nome, i.cognome, i.email, i.telefono, i.tariffa_oraria,
                 COALESCE(GROUP_CONCAT(DISTINCT s.nome ORDER BY s.nome SEPARATOR ","), "") AS strumenti,
-                COALESCE(GROUP_CONCAT(DISTINCT ins.strumento_id ORDER BY ins.strumento_id SEPARATOR ","), "") AS strumenti_ids
+                COALESCE(GROUP_CONCAT(DISTINCT ins.strumento_id ORDER BY ins.strumento_id SEPARATOR ","), "") AS strumenti_ids,
+                COALESCE(MAX(tc.tariffa), 0) AS tariffa_coppia
          FROM insegnanti i
          LEFT JOIN insegnanti_strumenti ins ON ins.insegnante_id = i.id
          LEFT JOIN strumenti s ON s.id = ins.strumento_id
+         LEFT JOIN tariffe_coppia tc ON tc.insegnante_id = i.id
          GROUP BY i.id, i.nome, i.cognome, i.email, i.telefono, i.tariffa_oraria
          ORDER BY i.cognome ASC, i.nome ASC'
     );
@@ -268,7 +223,21 @@ require_once __DIR__ . '/includes/header.php';
                         <td><?= htmlspecialchars($teacher['strumenti'] !== '' ? (string)$teacher['strumenti'] : '—') ?></td>
                         <td>
                             <div class="d-flex flex-wrap gap-2">
-                                <button type="button" class="btn btn-sm btn-outline-info btn-view-teacher" data-id="<?= htmlspecialchars((string)$teacher['id']) ?>">
+                                <?php
+                                $teacherViewData = [
+                                    'id'               => $teacher['id'],
+                                    'nome'             => $teacher['nome'],
+                                    'cognome'          => $teacher['cognome'],
+                                    'telefono'         => $teacher['telefono'],
+                                    'email'            => $teacher['email'],
+                                    'tariffa_oraria'   => $teacher['tariffa_oraria'],
+                                    'tariffa_coppia'   => $teacher['tariffa_coppia'],
+                                    'strumenti_nomi'   => $teacher['strumenti'] !== '' ? array_values(array_filter(array_map('trim', explode(',', (string)$teacher['strumenti'])))) : [],
+                                    'upcoming_lessons' => [],
+                                ];
+                                ?>
+                                <button type="button" class="btn btn-sm btn-outline-info btn-view-teacher"
+                                        data-view="<?= htmlspecialchars(json_encode($teacherViewData), ENT_QUOTES) ?>">
                                     <i class="fas fa-eye"></i>
                                 </button>
                                 <?php
@@ -519,15 +488,6 @@ document.addEventListener('DOMContentLoaded', () => {
         return `<span class="badge bg-${color}">${escapeHtml(status || '')}</span>`;
     }
 
-    async function fetchTeacher(id) {
-        const response = await fetch(`insegnanti.php?action=get&id=${encodeURIComponent(id)}`);
-        const data = await response.json();
-        if (!data.success) {
-            throw new Error(data.message || 'Errore nel caricamento dell\'insegnante.');
-        }
-        return data.teacher;
-    }
-
     document.getElementById('newTeacherBtn').addEventListener('click', () => {
         resetTeacherForm();
         teacherModal.show();
@@ -559,9 +519,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     document.querySelectorAll('.btn-view-teacher').forEach((button) => {
-        button.addEventListener('click', async () => {
+        button.addEventListener('click', () => {
             try {
-                const teacher = await fetchTeacher(button.dataset.id);
+                const teacher = JSON.parse(button.dataset.view || '{}');
                 document.getElementById('teacher_detail_name').textContent = `${teacher.nome || ''} ${teacher.cognome || ''}`.trim() || '—';
                 document.getElementById('teacher_detail_contacts').textContent = `${teacher.email || '—'}\n${teacher.telefono || '—'}`;
                 document.getElementById('teacher_detail_tariffa').textContent = euroValue(teacher.tariffa_oraria || 0);
