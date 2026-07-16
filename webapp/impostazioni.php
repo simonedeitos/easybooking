@@ -229,8 +229,9 @@ try {
 }
 
 $themePreference = $_SESSION['user_theme'] ?? ($user['theme'] ?? 'dark');
-$validTabs = ['generale', 'app', 'profilo', 'tema'];
-if (!$isAdmin && $activeTab === 'app') {
+$adminOnlyTabs = ['app', 'backup', 'importa-xml'];
+$validTabs = ['generale', 'notifiche', 'backup', 'importa-xml', 'app', 'profilo', 'tema'];
+if (!$isAdmin && in_array($activeTab, $adminOnlyTabs, true)) {
     $activeTab = 'profilo';
 }
 if (!in_array($activeTab, $validTabs, true)) {
@@ -242,7 +243,7 @@ require_once __DIR__ . '/includes/header.php';
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
     <div>
         <h2 class="mb-1">Impostazioni</h2>
-        <p class="text-secondary mb-0">Configura operatività, dati applicativi, profilo utente e tema grafico.</p>
+        <p class="text-secondary mb-0">Configura operatività, notifiche, backup, importazioni, dati applicativi, profilo utente e tema grafico.</p>
     </div>
 </div>
 
@@ -254,6 +255,11 @@ require_once __DIR__ . '/includes/header.php';
 
 <ul class="nav nav-tabs mb-4" role="tablist">
     <li class="nav-item"><a class="nav-link <?= $activeTab === 'generale' ? 'active' : '' ?>" href="impostazioni.php?tab=generale">Generale</a></li>
+    <li class="nav-item"><a class="nav-link <?= $activeTab === 'notifiche' ? 'active' : '' ?>" href="impostazioni.php?tab=notifiche">Notifiche</a></li>
+    <?php if ($isAdmin): ?>
+    <li class="nav-item"><a class="nav-link <?= $activeTab === 'backup' ? 'active' : '' ?>" href="impostazioni.php?tab=backup">Backup</a></li>
+    <li class="nav-item"><a class="nav-link <?= $activeTab === 'importa-xml' ? 'active' : '' ?>" href="impostazioni.php?tab=importa-xml">Importa XML</a></li>
+    <?php endif; ?>
     <?php if ($isAdmin): ?><li class="nav-item"><a class="nav-link <?= $activeTab === 'app' ? 'active' : '' ?>" href="impostazioni.php?tab=app">Applicazione</a></li><?php endif; ?>
     <li class="nav-item"><a class="nav-link <?= $activeTab === 'profilo' ? 'active' : '' ?>" href="impostazioni.php?tab=profilo">Profilo</a></li>
     <li class="nav-item"><a class="nav-link <?= $activeTab === 'tema' ? 'active' : '' ?>" href="impostazioni.php?tab=tema">Tema</a></li>
@@ -306,6 +312,120 @@ require_once __DIR__ . '/includes/header.php';
         </form>
     </div>
 </div>
+<?php endif; ?>
+
+<?php if ($activeTab === 'notifiche'): ?>
+<div class="card">
+    <div class="card-header"><i class="fas fa-bell me-2"></i>Notifiche</div>
+    <div class="card-body p-0">
+        <iframe
+            class="settings-embed-frame"
+            src="notifiche.php?embedded=1"
+            title="Configurazione notifiche"
+            data-default-height="1380"
+            style="width:100%; min-height:1380px; border:0; display:block;"
+            loading="lazy"
+        ></iframe>
+    </div>
+</div>
+<?php endif; ?>
+
+<?php if ($activeTab === 'backup' && $isAdmin): ?>
+<div class="card">
+    <div class="card-header"><i class="fas fa-database me-2"></i>Backup</div>
+    <div class="card-body p-0">
+        <iframe
+            class="settings-embed-frame"
+            src="backup.php?embedded=1"
+            title="Backup e ripristino"
+            data-default-height="1180"
+            style="width:100%; min-height:1180px; border:0; display:block;"
+            loading="lazy"
+        ></iframe>
+    </div>
+</div>
+<?php endif; ?>
+
+<?php if ($activeTab === 'importa-xml' && $isAdmin): ?>
+<div class="card">
+    <div class="card-header"><i class="fas fa-file-import me-2"></i>Importa XML</div>
+    <div class="card-body p-0">
+        <iframe
+            class="settings-embed-frame"
+            src="import-xml.php?embedded=1"
+            title="Importazione XML"
+            data-default-height="1080"
+            style="width:100%; min-height:1080px; border:0; display:block;"
+            loading="lazy"
+        ></iframe>
+    </div>
+</div>
+<?php endif; ?>
+
+<?php if (in_array($activeTab, ['notifiche', 'backup', 'importa-xml'], true)): ?>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const frames = document.querySelectorAll('.settings-embed-frame');
+    const resizeFrame = (frame) => {
+        try {
+            const doc = frame.contentDocument;
+            if (!doc) return;
+            const body = doc.body;
+            const html = doc.documentElement;
+            const defaultHeight = Number(frame.dataset.defaultHeight || 0);
+            const nextHeight = Math.max(
+                defaultHeight,
+                body ? body.scrollHeight : 0,
+                body ? body.offsetHeight : 0,
+                html ? html.scrollHeight : 0,
+                html ? html.offsetHeight : 0
+            );
+            frame.style.height = nextHeight + 'px';
+        } catch (error) {
+            // Ignore transient iframe load/access errors; resize observers or bounded polling handle retries.
+        }
+    };
+
+    const watchFrame = (frame) => {
+        const doc = frame.contentDocument;
+        if (!doc) return;
+        if ('ResizeObserver' in window && doc.body) {
+            try {
+                const observer = new ResizeObserver(() => resizeFrame(frame));
+                observer.observe(doc.body);
+                if (doc.documentElement) {
+                    observer.observe(doc.documentElement);
+                }
+                return;
+            } catch (error) {
+                // Fall back to bounded polling below if the browser blocks observing iframe content directly.
+            }
+        }
+
+        let attempts = 0;
+        let stableCount = 0;
+        let lastHeight = 0;
+        const intervalId = window.setInterval(() => {
+            attempts++;
+            resizeFrame(frame);
+            const currentHeight = frame.offsetHeight;
+            stableCount = currentHeight === lastHeight ? stableCount + 1 : 0;
+            lastHeight = currentHeight;
+            if (stableCount >= 3 || attempts >= 12) {
+                window.clearInterval(intervalId);
+            }
+        }, 1000);
+    };
+
+    frames.forEach((frame) => {
+        frame.addEventListener('load', () => {
+            resizeFrame(frame);
+            watchFrame(frame);
+        });
+        resizeFrame(frame);
+    });
+});
+</script>
 <?php endif; ?>
 
 <?php if ($activeTab === 'app' && $isAdmin): ?>

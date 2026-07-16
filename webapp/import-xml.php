@@ -10,6 +10,7 @@ require_once __DIR__ . '/includes/auth.php';
 requireAuth();
 requireAdmin();
 $pdo = Database::getInstance();
+$embedded = get('embedded') === '1';
 
 const EASYBOOKING_XML_IMPORT_DIR = __DIR__ . '/.xml-import-runtime';
 
@@ -162,17 +163,34 @@ if ($requestAction === 'import_xml' && $_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 require_once __DIR__ . '/includes/header.php';
+$selfUrl = 'import-xml.php' . ($embedded ? '?embedded=1' : '');
 ?>
+<?php if ($embedded): ?>
+<style>
+.sidebar,
+.top-navbar { display: none !important; }
+.app-wrapper { display: block; }
+.main-content {
+    margin: 0 !important;
+    min-height: auto;
+    padding: 1rem;
+}
+</style>
+<?php endif; ?>
+<?php if (!$embedded): ?>
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
     <div>
         <h2 class="mb-1">Importa XML</h2>
         <p class="text-secondary mb-0">Importa clienti, insegnanti, prenotazioni e configurazioni da file XML cifrati o in chiaro.</p>
     </div>
 </div>
+<?php endif; ?>
 
-<div class="card mb-4"><div class="card-header"><i class="fas fa-file-import me-2"></i>Importazione XML</div><div class="card-body"><form id="xmlImportForm" action="import-xml.php" method="post" enctype="multipart/form-data"><?= csrfField() ?><input type="hidden" name="action" value="import_xml"><div class="row g-3"><div class="col-12"><label for="xml_files" class="form-label">File XML</label><input type="file" class="form-control" id="xml_files" name="xml_files[]" accept=".xml" multiple required><div class="form-text">Puoi selezionare più file nello stesso caricamento.</div></div><div class="col-12"><label class="form-label d-block">Modalità importazione</label><div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="import_mode" id="mode_replace" value="replace"><label class="form-check-label" for="mode_replace">Sostituisci</label></div><div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="import_mode" id="mode_update" value="update" checked><label class="form-check-label" for="mode_update">Aggiorna</label></div></div><div class="col-12"><button type="submit" class="btn btn-primary" id="xmlImportSubmit"><i class="fas fa-upload me-2"></i>Importa file XML</button></div></div></form></div></div>
-<div class="card mb-4"><div class="card-header"><i class="fas fa-tasks me-2"></i>Progresso importazione</div><div class="card-body"><div class="progress mb-3" style="height:24px;"><div class="progress-bar progress-bar-striped progress-bar-animated" id="xmlImportProgress" role="progressbar" style="width:0%;">0%</div></div><div class="small text-secondary">Il progresso mostra caricamento e completamento della procedura AJAX.</div></div></div>
-<div class="card"><div class="card-header"><i class="fas fa-scroll me-2"></i>Log output</div><div class="card-body"><div id="xmlImportLog" class="border rounded p-3 bg-body-tertiary" style="min-height:260px; max-height:420px; overflow:auto; white-space:pre-wrap; font-family:monospace;">Pronto per l'importazione.</div></div></div>
+<div class="<?= $embedded ? 'p-3' : '' ?>">
+    <div class="card mb-4"><div class="card-header"><i class="fas fa-file-import me-2"></i>Importazione XML</div><div class="card-body"><form id="xmlImportForm" action="<?= h($selfUrl) ?>" method="post" enctype="multipart/form-data"><?= csrfField() ?><input type="hidden" name="action" value="import_xml"><div class="row g-3"><div class="col-12"><label for="xml_files" class="form-label">File XML</label><input type="file" class="form-control" id="xml_files" name="xml_files[]" accept=".xml" multiple required><div class="form-text">Puoi selezionare più file nello stesso caricamento.</div></div><div class="col-12"><label class="form-label d-block">Modalità importazione</label><div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="import_mode" id="mode_replace" value="replace"><label class="form-check-label" for="mode_replace">Sostituisci</label></div><div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="import_mode" id="mode_update" value="update" checked><label class="form-check-label" for="mode_update">Aggiorna</label></div></div><div class="col-12"><button type="submit" class="btn btn-primary" id="xmlImportSubmit"><i class="fas fa-upload me-2"></i>Importa file XML</button></div></div></form></div></div>
+    <div class="card mb-4"><div class="card-header"><i class="fas fa-tasks me-2"></i>Progresso importazione</div><div class="card-body"><div class="progress mb-3" style="height:24px;"><div class="progress-bar progress-bar-striped progress-bar-animated" id="xmlImportProgress" role="progressbar" style="width:0%;">0%</div></div><div class="small text-secondary">Il progresso mostra caricamento e completamento della procedura AJAX.</div></div></div>
+    <div class="card"><div class="card-header"><i class="fas fa-scroll me-2"></i>Log output</div><div class="card-body"><div id="xmlImportLog" class="border rounded p-3 bg-body-tertiary" style="min-height:260px; max-height:420px; overflow:auto; white-space:pre-wrap; font-family:monospace;">Pronto per l'importazione.</div></div></div>
+</div>
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
@@ -186,7 +204,7 @@ document.addEventListener('DOMContentLoaded', () => {
         event.preventDefault();
         if (!document.getElementById('xml_files').files.length) { showToast('Seleziona almeno un file XML.', 'warning'); return; }
         submitBtn.disabled = true; setProgress(5, '5%'); logEl.textContent = 'Avvio importazione...';
-        const xhr = new XMLHttpRequest(); xhr.open('POST', 'import-xml.php', true); xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest'); xhr.setRequestHeader('X-CSRF-Token', getCsrfToken());
+        const xhr = new XMLHttpRequest(); xhr.open('POST', <?= json_encode($selfUrl) ?>, true); xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest'); xhr.setRequestHeader('X-CSRF-Token', getCsrfToken());
         xhr.upload.addEventListener('progress', (e) => { if (e.lengthComputable) { const percent = Math.min(80, Math.max(10, Math.round((e.loaded / e.total) * 80))); setProgress(percent, percent + '%'); } });
         xhr.onreadystatechange = () => { if (xhr.readyState !== 4) return; submitBtn.disabled = false; let data = null; try { data = JSON.parse(xhr.responseText); } catch (error) { setProgress(100, 'Errore'); logEl.textContent = 'Risposta non valida dal server.'; showToast('Importazione fallita.', 'danger'); return; } if (data.success) { setProgress(100, '100%'); writeLog(data.log || [], data.errors || []); showToast('Importazione XML completata.', 'success'); } else { setProgress(100, 'Errore'); writeLog(data.log || [], data.errors || ['Errore sconosciuto']); showToast('Importazione XML non completata.', 'danger'); } };
         xhr.send(new FormData(form));

@@ -137,17 +137,6 @@ $pageTitle = $pageTitles[$currentPage] ?? 'EasyBooking';
             <a href="impostazioni.php" class="nav-link <?= $currentPage === 'impostazioni' ? 'active' : '' ?>">
                 <span class="nav-icon"><i class="fas fa-cog"></i></span> Impostazioni
             </a>
-            <a href="notifiche.php" class="nav-link <?= $currentPage === 'notifiche' ? 'active' : '' ?>">
-                <span class="nav-icon"><i class="fas fa-bell"></i></span> Notifiche
-            </a>
-            <a href="backup.php" class="nav-link <?= $currentPage === 'backup' ? 'active' : '' ?>">
-                <span class="nav-icon"><i class="fas fa-database"></i></span> Backup
-            </a>
-            <?php if ($user['role'] === 'admin'): ?>
-            <a href="import-xml.php" class="nav-link <?= $currentPage === 'import-xml' ? 'active' : '' ?>">
-                <span class="nav-icon"><i class="fas fa-file-import"></i></span> Importa XML
-            </a>
-            <?php endif; ?>
         </div>
     </nav>
 
@@ -172,7 +161,7 @@ $pageTitle = $pageTitles[$currentPage] ?? 'EasyBooking';
         <button id="theme-toggle" class="navbar-btn" title="Cambia tema" aria-label="Cambia tema">
             <i id="theme-toggle-icon" class="fas <?= $theme === 'dark' ? 'fa-sun' : 'fa-moon' ?>"></i>
         </button>
-        <a href="backup.php" class="navbar-btn" title="Backup" aria-label="Backup">
+        <a href="impostazioni.php?tab=backup" class="navbar-btn" title="Backup" aria-label="Backup">
             <i class="fas fa-database"></i>
         </a>
         <a href="logout.php" class="navbar-btn" title="Esci" aria-label="Esci" onclick="return confirm('Vuoi disconnetterti?')">
