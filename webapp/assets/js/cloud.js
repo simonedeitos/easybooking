@@ -199,7 +199,7 @@
      */
     function buildShareUrl(hash) {
         const app = document.getElementById('cloud-app');
-        const configuredBaseUrl = app?.dataset.cloudBaseUrl?.trim();
+        const configuredBaseUrl = app?.getAttribute('data-cloud-base-url')?.trim();
         if (configuredBaseUrl) {
             return configuredBaseUrl.replace(/\/+$/, '') + '/share/' + encodeURIComponent(hash);
         }
@@ -501,6 +501,7 @@
                 const confirmBtn = document.getElementById('create-cloud-confirm-btn');
                 if (search)     { search.value = ''; }
                 if (hidden)     { hidden.value = ''; }
+                document.querySelectorAll('.create-cloud-list-item').forEach(getCreateCloudSearchText);
                 filterCreateCloudList('');
                 document.querySelectorAll('.create-cloud-list-item').forEach(i => i.classList.remove('active'));
                 if (confirmBtn) { confirmBtn.disabled = true; }
@@ -593,7 +594,7 @@
         let   selectionHidden = false;
 
         items.forEach(item => {
-            const searchText = normalizeSearchText(item.dataset.clientSearch || item.textContent || '');
+            const searchText = getCreateCloudSearchText(item);
             const show = !normalizedQuery || searchText.includes(normalizedQuery);
             if (show) {
                 item.hidden = false;
@@ -618,6 +619,14 @@
             query: normalizedQuery,
             visible
         });
+    }
+
+    function getCreateCloudSearchText(item) {
+        const cached = item?.dataset.normalizedSearch;
+        if (cached) return cached;
+        const normalized = normalizeSearchText(item?.dataset.clientSearch || item?.textContent || '');
+        if (item) item.dataset.normalizedSearch = normalized;
+        return normalized;
     }
 
     // ── Drag & Drop Upload ────────────────────────────────────────────────

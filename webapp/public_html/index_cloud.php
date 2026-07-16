@@ -35,7 +35,7 @@ function readEnvConfigValue(string $key, array $envFiles): ?string
             if (($quote === '"' || $quote === "'") && str_ends_with($lineValue, $quote)) {
                 $lineValue = substr($lineValue, 1, -1);
                 if ($quote === '"') {
-                    $lineValue = stripcslashes($lineValue);
+                    $lineValue = stripslashes($lineValue);
                 } else {
                     $lineValue = str_replace(["\\'", "\\\\"], ["'", "\\"], $lineValue);
                 }
