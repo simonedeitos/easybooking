@@ -185,7 +185,7 @@ CREATE TABLE IF NOT EXISTS `notifiche_config` (
     `email_notifiche`                  VARCHAR(255)    DEFAULT NULL,
     `abilita_email`                    TINYINT(1)      NOT NULL DEFAULT 1,
     `reminder_lezioni_enabled`         TINYINT(1)      NOT NULL DEFAULT 1,
-    `reminder_lezioni_giorni_prima`    INT UNSIGNED    NOT NULL DEFAULT 1,
+    `reminder_lezioni_giorni_prima`    INT UNSIGNED    NOT NULL DEFAULT 1 CHECK (`reminder_lezioni_giorni_prima` >= 0),
     `reminder_lezioni_giorno_settimana` ENUM('lun','mar','mer','gio','ven','sab','dom') NOT NULL DEFAULT 'lun',
     `reminder_lezioni_ora`             TIME            NOT NULL DEFAULT '09:00:00',
     `reminder_lezioni_giorni_futuri`   INT UNSIGNED    NOT NULL DEFAULT 7 CHECK (`reminder_lezioni_giorni_futuri` >= 1),

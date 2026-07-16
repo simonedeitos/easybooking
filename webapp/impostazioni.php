@@ -229,8 +229,9 @@ try {
 }
 
 $themePreference = $_SESSION['user_theme'] ?? ($user['theme'] ?? 'dark');
+$adminOnlyTabs = ['app', 'backup', 'importa-xml'];
 $validTabs = ['generale', 'notifiche', 'backup', 'importa-xml', 'app', 'profilo', 'tema'];
-if (!$isAdmin && in_array($activeTab, ['app', 'backup', 'importa-xml'], true)) {
+if (!$isAdmin && in_array($activeTab, $adminOnlyTabs, true)) {
     $activeTab = 'profilo';
 }
 if (!in_array($activeTab, $validTabs, true)) {
@@ -255,8 +256,10 @@ require_once __DIR__ . '/includes/header.php';
 <ul class="nav nav-tabs mb-4" role="tablist">
     <li class="nav-item"><a class="nav-link <?= $activeTab === 'generale' ? 'active' : '' ?>" href="impostazioni.php?tab=generale">Generale</a></li>
     <li class="nav-item"><a class="nav-link <?= $activeTab === 'notifiche' ? 'active' : '' ?>" href="impostazioni.php?tab=notifiche">Notifiche</a></li>
-    <?php if ($isAdmin): ?><li class="nav-item"><a class="nav-link <?= $activeTab === 'backup' ? 'active' : '' ?>" href="impostazioni.php?tab=backup">Backup</a></li><?php endif; ?>
-    <?php if ($isAdmin): ?><li class="nav-item"><a class="nav-link <?= $activeTab === 'importa-xml' ? 'active' : '' ?>" href="impostazioni.php?tab=importa-xml">Importa XML</a></li><?php endif; ?>
+    <?php if ($isAdmin): ?>
+    <li class="nav-item"><a class="nav-link <?= $activeTab === 'backup' ? 'active' : '' ?>" href="impostazioni.php?tab=backup">Backup</a></li>
+    <li class="nav-item"><a class="nav-link <?= $activeTab === 'importa-xml' ? 'active' : '' ?>" href="impostazioni.php?tab=importa-xml">Importa XML</a></li>
+    <?php endif; ?>
     <?php if ($isAdmin): ?><li class="nav-item"><a class="nav-link <?= $activeTab === 'app' ? 'active' : '' ?>" href="impostazioni.php?tab=app">Applicazione</a></li><?php endif; ?>
     <li class="nav-item"><a class="nav-link <?= $activeTab === 'profilo' ? 'active' : '' ?>" href="impostazioni.php?tab=profilo">Profilo</a></li>
     <li class="nav-item"><a class="nav-link <?= $activeTab === 'tema' ? 'active' : '' ?>" href="impostazioni.php?tab=tema">Tema</a></li>
@@ -379,7 +382,7 @@ document.addEventListener('DOMContentLoaded', () => {
             );
             frame.style.height = nextHeight + 'px';
         } catch (error) {
-            // Ignore transient iframe access/load errors and retry on next tick.
+            // Ignore transient iframe load/access errors; resize observers or bounded polling handle retries.
         }
     };
 
@@ -395,7 +398,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 return;
             } catch (error) {
-                // Fall back to bounded polling below if observation is not allowed.
+                // Fall back to bounded polling below if the browser blocks observing iframe content directly.
             }
         }
 

@@ -55,6 +55,16 @@ function notificationRedirectTarget(bool $embedded): string
     return 'notifiche.php' . ($embedded ? '?embedded=1' : '');
 }
 
+function notificationValidEmail(string $email): bool
+{
+    return filter_var($email, FILTER_VALIDATE_EMAIL) !== false;
+}
+
+function notificationInRange(int $value, int $min, int $max): bool
+{
+    return $value >= $min && $value <= $max;
+}
+
 $requestAction = $_SERVER['REQUEST_METHOD'] === 'POST' ? post('action') : get('action');
 
 if ($requestAction === 'save' && $_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -75,11 +85,11 @@ if ($requestAction === 'save' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                 setFlash('danger', 'Inserisci l\'email da usare per le notifiche.');
                 redirect(notificationRedirectTarget($embedded));
             }
-            if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            if (!notificationValidEmail($email)) {
                 setFlash('danger', 'Inserisci un indirizzo email valido per le notifiche.');
                 redirect(notificationRedirectTarget($embedded));
             }
-        } elseif ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        } elseif ($email !== '' && !notificationValidEmail($email)) {
             setFlash('danger', 'L\'email indicata non è valida.');
             redirect(notificationRedirectTarget($embedded));
         }
@@ -104,7 +114,7 @@ if ($requestAction === 'save' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         $reportMensileGiornoMese = sanitizeInt(post('report_mensile_giorno_mese'));
-        if ($reportMensileGiornoMese < 1 || $reportMensileGiornoMese > 31) {
+        if (!notificationInRange($reportMensileGiornoMese, 1, 31)) {
             setFlash('danger', 'Il giorno del report mensile deve essere compreso tra 1 e 31.');
             redirect(notificationRedirectTarget($embedded));
         }
