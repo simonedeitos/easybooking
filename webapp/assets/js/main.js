@@ -25,15 +25,6 @@ const ThemeManager = (() => {
         const current = localStorage.getItem(KEY) || DARK;
         const next = current === DARK ? LIGHT : DARK;
         apply(next);
-        // Persist to server
-        fetch('impostazioni.php?action=set_theme', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-                'X-CSRF-Token': getCsrfToken()
-            },
-            body: 'theme=' + encodeURIComponent(next) + '&csrf_token=' + encodeURIComponent(getCsrfToken())
-        }).catch(() => {/* non-critical */});
     }
 
     function init() {
@@ -51,41 +42,6 @@ function getCsrfToken() {
     const meta = document.querySelector('meta[name="csrf-token"]');
     return meta ? meta.getAttribute('content') : '';
 }
-
-// Auto-attach CSRF and AJAX marker to all non-GET fetch requests
-const _origFetch = window.fetch;
-window.fetch = function(url, opts = {}) {
-    if (!opts.headers) opts.headers = {};
-    opts.headers['X-Requested-With'] = 'XMLHttpRequest';
-
-    if (opts.method && opts.method.toUpperCase() !== 'GET') {
-        opts.headers['X-CSRF-Token'] = getCsrfToken();
-    }
-    return _origFetch(url, opts).then((response) => {
-        const responseClone = response.clone();
-        const originalJson = response.json.bind(response);
-
-        response.json = async () => {
-            try {
-                return await originalJson();
-            } catch (error) {
-                const rawBody = await responseClone.text();
-                const parsedDocument = new DOMParser().parseFromString(rawBody, 'text/html');
-                const cleanText = (parsedDocument.body?.textContent || rawBody)
-                    .replace(/\s+/g, ' ')
-                    .trim();
-
-                throw new Error(
-                    cleanText !== ''
-                        ? cleanText.slice(0, 240)
-                        : `Risposta non valida dal server${response.status ? ` (HTTP ${response.status})` : ''}.`
-                );
-            }
-        };
-
-        return response;
-    });
-};
 
 // ── Sidebar Toggle ────────────────────────────────────────────
 function initSidebar() {
@@ -176,64 +132,6 @@ function initDataTables() {
             });
         }
     });
-}
-
-// ── AJAX Form Submit Helper ───────────────────────────────────
-// NOTA: NON usare formEl.action — viene sovrascritto dall'input[name="action"] presente nei form.
-// Usare getAttribute('action') per leggere l'attributo HTML originale.
-function ajaxForm(formEl, onSuccess, onError) {
-    formEl.addEventListener('submit', async function(e) {
-        e.preventDefault();
-        const btn = formEl.querySelector('[type="submit"]');
-        const original = btn?.innerHTML;
-        if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Salvataggio...'; }
-
-        try {
-            const fd = new FormData(formEl);
-            // Usare getAttribute('action') invece di formEl.action
-            // perché formEl.action viene sovrascritta dall'input hidden name="action"
-            const formAction = formEl.getAttribute('action') || window.location.pathname;
-            const resp = await fetch(formAction, {
-                method: 'POST',
-                headers: {
-                    'X-CSRF-Token': getCsrfToken(),
-                    'X-Requested-With': 'XMLHttpRequest'
-                },
-                body: fd
-            });
-            const data = await resp.json();
-            if (data.success) {
-                onSuccess(data);
-            } else {
-                onError(data.message || 'Errore sconosciuto');
-            }
-        } catch (err) {
-            onError(err.message || 'Errore di rete.');
-        } finally {
-            if (btn) { btn.disabled = false; btn.innerHTML = original; }
-        }
-    });
-}
-
-// ── Inline Status Update ──────────────────────────────────────
-function updateStatus(url, id, newStatus, csrfToken) {
-    fetch(url, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'X-CSRF-Token': csrfToken
-        },
-        body: `id=${encodeURIComponent(id)}&stato=${encodeURIComponent(newStatus)}&action=update_status&csrf_token=${encodeURIComponent(csrfToken)}`
-    })
-    .then(r => r.json())
-    .then(data => {
-        if (data.success) {
-            showToast('Stato aggiornato', 'success');
-        } else {
-            showToast(data.message || 'Errore aggiornamento', 'danger');
-        }
-    })
-    .catch(() => showToast('Errore di rete', 'danger'));
 }
 
 // ── Modal Reset ───────────────────────────────────────────────
