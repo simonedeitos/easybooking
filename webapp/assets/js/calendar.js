@@ -238,7 +238,10 @@ function askMoveConfirmation(event) {
         const startDate = event.startStr.slice(0, 10);
         const startTime = event.startStr.slice(11, 16);
         const endTime = event.endStr?.slice(11, 16) || '';
-        const confirmed = confirm(`Confermi lo spostamento al ${startDate} dalle ${startTime} alle ${endTime}?`);
+        const safeStartDate = startDate.replace(/[^0-9-]/g, '');
+        const safeStartTime = startTime.replace(/[^0-9:]/g, '');
+        const safeEndTime = endTime.replace(/[^0-9:]/g, '');
+        const confirmed = confirm(`Confermi lo spostamento al ${safeStartDate} dalle ${safeStartTime} alle ${safeEndTime}?`);
         if (!confirmed) return Promise.resolve(null);
         const selectedStatus = prompt('Stato appuntamento:', fallbackStatus);
         if (selectedStatus === null) return Promise.resolve(null);
@@ -284,10 +287,10 @@ function askMoveConfirmation(event) {
         const statusSelect = modalEl.querySelector('#move-event-status');
         statusSelect.value = fallbackStatus;
 
-        let settled = false;
+        let modalResolved = false;
         const finish = (result) => {
-            if (settled) return;
-            settled = true;
+            if (modalResolved) return;
+            modalResolved = true;
             resolve(result);
             modal.hide();
         };
@@ -297,8 +300,8 @@ function askMoveConfirmation(event) {
             finish({ stato: statusSelect?.value || fallbackStatus });
         });
         modalEl.addEventListener('hidden.bs.modal', () => {
-            if (!settled) {
-                settled = true;
+            if (!modalResolved) {
+                modalResolved = true;
                 resolve(null);
             }
             modal.dispose();
