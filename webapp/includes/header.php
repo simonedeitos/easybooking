@@ -29,7 +29,7 @@ $pageTitle = $pageTitles[$currentPage] ?? 'EasyBooking';
 $bodyAttributeString = '';
 if (isset($pageBodyAttributes) && is_array($pageBodyAttributes)) {
     foreach ($pageBodyAttributes as $attributeName => $attributeValue) {
-        if (!preg_match('/^[a-zA-Z0-9_-]+$/', (string)$attributeName)) {
+        if (!preg_match('/^data-[a-zA-Z0-9_-]+$/', (string)$attributeName)) {
             continue;
         }
         $bodyAttributeString .= ' ' . htmlspecialchars((string)$attributeName, ENT_QUOTES, 'UTF-8')

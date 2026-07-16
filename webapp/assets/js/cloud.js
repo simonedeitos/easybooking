@@ -179,8 +179,16 @@
         const configuredBaseUrl = document.body ? document.body.getAttribute('data-cloud-public-base-url') : null;
         if (configuredBaseUrl !== null) {
             const normalizedBaseUrl = configuredBaseUrl.trim();
-            if (/^https?:\/\//i.test(normalizedBaseUrl)) {
-                return normalizedBaseUrl.replace(/\/+$/, '') + '/share/' + encodeURIComponent(hash);
+            if (normalizedBaseUrl !== '') {
+                try {
+                    const parsedBaseUrl = new URL(normalizedBaseUrl);
+                    if (parsedBaseUrl.protocol === 'http:' || parsedBaseUrl.protocol === 'https:') {
+                        const basePath = (parsedBaseUrl.pathname || '').replace(/\/+$/, '');
+                        return parsedBaseUrl.origin + basePath + '/share/' + encodeURIComponent(hash);
+                    }
+                } catch (e) {
+                    // Fallback to the current install path below.
+                }
             }
         }
         const basePath = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/'));

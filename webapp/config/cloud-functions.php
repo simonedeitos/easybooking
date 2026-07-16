@@ -287,7 +287,14 @@ function cloudPublicBaseUrl(): string
         return rtrim(CLOUD_PUBLIC_BASE_URL, '/');
     }
     $proto = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-    $host  = $_SERVER['HTTP_HOST'] ?? 'localhost';
+    $host = 'localhost';
+    foreach ([$_SERVER['SERVER_NAME'] ?? '', $_SERVER['HTTP_HOST'] ?? ''] as $candidateHost) {
+        $candidateHost = trim((string)$candidateHost);
+        if ($candidateHost !== '' && preg_match('/^[a-z0-9.-]+(?::\d+)?$/i', $candidateHost)) {
+            $host = $candidateHost;
+            break;
+        }
+    }
     $base = rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? ''), '/');
     if (!preg_match('#^(/[a-zA-Z0-9_/.-]*)?$#', $base)) {
         $base = '';
