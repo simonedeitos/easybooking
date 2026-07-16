@@ -478,13 +478,15 @@
 
         if (!listEl) return;
 
-        // Parse the clients list from the data attribute injected by PHP
+        // Load the clients list from the global variable injected by PHP
         let allClients = [];
         try {
-            allClients = JSON.parse(listEl.dataset.clientsJson || '[]');
-            // Pre-compute a normalised search string for each client
+            const raw = window.__cloudClientsWithoutCloud;
+            if (Array.isArray(raw)) {
+                allClients = raw;
+            }
             allClients.forEach(c => {
-                c.searchText = (c.cognome + ' ' + c.nome + ' ' + c.email).toLowerCase();
+                c.searchText = (c.cognome + ' ' + c.nome + ' ' + (c.email || '')).toLowerCase();
             });
         } catch (e) {
             allClients = [];
@@ -539,7 +541,26 @@
             if (searchInput) searchInput.value = '';
             if (hiddenEl)    hiddenEl.value = '';
             if (confirmBtn)  confirmBtn.disabled = true;
-            renderClientsList('');
+            // Fetch fresh list so newly-enabled clients are excluded
+            listEl.innerHTML = '<div class="text-center py-3" role="status"><div class="spinner-border spinner-border-sm" aria-hidden="true"></div><span class="visually-hidden">Caricamento clienti…</span></div>';
+            fetch('api/cloud-api.php?action=get_clients_without_cloud')
+                .then(r => {
+                    if (!r.ok) throw new Error('HTTP ' + r.status);
+                    return r.json();
+                })
+                .then(data => {
+                    if (data.success && Array.isArray(data.clients)) {
+                        allClients = data.clients.map(c => ({
+                            id: c.id,
+                            cognome: c.cognome || '',
+                            nome: c.nome || '',
+                            email: c.email || '',
+                            searchText: ((c.cognome || '') + ' ' + (c.nome || '') + ' ' + (c.email || '')).toLowerCase()
+                        }));
+                    }
+                    renderClientsList('');
+                })
+                .catch(() => renderClientsList(''));
             if (searchInput) setTimeout(() => searchInput.focus(), 150);
         }
 
