@@ -19,6 +19,7 @@ $pageTitles = [
     'acquisti'           => 'Acquisti',
     'strumenti'          => 'Strumenti',
     'report'             => 'Report',
+    'cloud'              => 'Cloud Storage',
     'impostazioni'       => 'Impostazioni',
     'notifiche'          => 'Notifiche',
     'backup'             => 'Backup',
@@ -129,6 +130,13 @@ $pageTitle = $pageTitles[$currentPage] ?? 'EasyBooking';
             </a>
             <a href="report.php" class="nav-link <?= $currentPage === 'report' ? 'active' : '' ?>">
                 <span class="nav-icon"><i class="fas fa-chart-bar"></i></span> Report
+            </a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-label">Cloud</div>
+            <a href="cloud.php" class="nav-link <?= $currentPage === 'cloud' ? 'active' : '' ?>">
+                <span class="nav-icon"><i class="fas fa-cloud"></i></span> Cloud Storage
             </a>
         </div>
 
