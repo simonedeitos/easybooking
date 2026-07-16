@@ -14,6 +14,14 @@ require_once __DIR__ . '/config/cloud-functions.php';
 
 function h(mixed $v): string { return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
 
+// Compute base URL path for share links (works for any install subdirectory).
+// e.g. if the app is at /easybooking/, SCRIPT_NAME is /easybooking/cloud_pubblica.php
+// so dirname gives /easybooking and share links become /easybooking/share/[hash]/...
+$_scriptDir = rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? ''), '/');
+// Sanitize to guard against unusual proxy/server configurations.
+if (!preg_match('#^(/[a-zA-Z0-9_/.-]*)?$#', $_scriptDir)) {
+    $_scriptDir = '';
+}
 // Validate hash from GET parameter
 $hash = trim(get('hash'));
 
@@ -190,7 +198,7 @@ ob_end_clean();
                         </div>
                     </div>
                     <div class="mt-3 d-flex gap-2 flex-wrap">
-                        <a href="/share/<?= urlencode($hash) ?>/download/<?= (int)$f['id'] ?>"
+                        <a href="<?= h($_scriptDir . '/share/' . urlencode($hash) . '/download/' . (int)$f['id']) ?>"
                            class="btn btn-sm btn-outline-secondary">
                             <i class="fas fa-download me-1"></i>Download
                         </a>
@@ -237,7 +245,7 @@ ob_end_clean();
 function playAudio(fileId, fileName) {
     document.getElementById('audio-modal-title').textContent = fileName;
     const player = document.getElementById('audio-player');
-    player.src = '/share/<?= urlencode($hash) ?>/stream/' + fileId;
+    player.src = '<?= h($_scriptDir . '/share/' . urlencode($hash) . '/stream/') ?>' + fileId;
     player.load();
     new bootstrap.Modal(document.getElementById('audioModal')).show();
 }
