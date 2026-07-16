@@ -65,7 +65,15 @@ $pageTitle = $pageTitles[$currentPage] ?? 'EasyBooking';
     <div class="sidebar-logo">
         <div class="logo-icon"><i class="fas fa-music"></i></div>
         <div>
+            <?php $appNameParts = explode(' - ', $appName, 2); ?>
+            <?php if (count($appNameParts) === 2): ?>
+            <div class="logo-text">
+                <div><?= htmlspecialchars($appNameParts[0]) ?></div>
+                <div><?= htmlspecialchars($appNameParts[1]) ?></div>
+            </div>
+            <?php else: ?>
             <div class="logo-text"><?= htmlspecialchars($appName) ?></div>
+            <?php endif; ?>
             <span class="logo-sub">Scuola di Musica</span>
         </div>
     </div>

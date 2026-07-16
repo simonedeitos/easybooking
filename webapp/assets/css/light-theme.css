@@ -270,6 +270,7 @@ body[data-theme="light"] .text-white {
 
 body[data-theme="light"] {
     color: var(--text-primary);
+    color-scheme: light;
 }
 
 body[data-theme="light"] .card-text,
