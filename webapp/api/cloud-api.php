@@ -346,6 +346,17 @@ switch ($action) {
 
         apiResponse(['success' => true, 'message' => 'Nota aggiornata.']);
 
+    // ── Get clients without cloud enabled ────────────────────────────
+    case 'get_clients_without_cloud':
+        $stmt = $pdo->query(
+            'SELECT id, nome, cognome, email
+             FROM clienti
+             WHERE cloud_enabled = 0 OR cloud_enabled IS NULL
+             ORDER BY cognome ASC, nome ASC'
+        );
+        $clients = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        apiResponse(['success' => true, 'clients' => $clients]);
+
     // ── Get cloud stats ───────────────────────────────────────────────
     case 'get_stats':
         cloudUpdateStats($pdo);

@@ -277,9 +277,16 @@ function cloudShareUrl(string $hash): string
     }
     $proto = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
     $host  = $_SERVER['HTTP_HOST'] ?? 'localhost';
-    // Strip /webapp path if present so we get the root domain URL
-    $base  = $proto . '://' . $host;
-    return $base . '/share/' . urlencode($hash);
+    // Use the webapp's install directory as the URL base so the link works
+    // regardless of whether the app is installed at the root or a subdirectory.
+    // e.g. /easybooking → https://vocefutura.it/easybooking/share/[HASH]
+    $base = rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? ''), '/');
+    // Sanitize: allow only safe path characters to guard against unusual
+    // proxy or server configurations that might inject unexpected values.
+    if (!preg_match('#^(/[a-zA-Z0-9_/.-]*)?$#', $base)) {
+        $base = '';
+    }
+    return $proto . '://' . $host . $base . '/share/' . urlencode($hash);
 }
 
 // ── Filesystem helpers ────────────────────────────────────────────────────
