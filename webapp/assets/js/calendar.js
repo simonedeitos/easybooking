@@ -237,7 +237,7 @@ function getMoveDefaultStatus() {
 
 function askMoveConfirmation(event) {
     const fallbackStatus = getMoveDefaultStatus();
-    const BootstrapModal = window.bootstrap?.Modal || null;
+    const BootstrapModal = window.bootstrap?.Modal;
     if (!BootstrapModal) {
         showToast('Impossibile aprire la conferma di spostamento.', 'danger');
         return Promise.resolve(null);
@@ -328,7 +328,7 @@ async function saveEventMove(event, revertFn) {
         revertFn();
         return;
     }
-    data.stato = moveConfirmation.stato || movedStatus;
+    data.stato = moveConfirmation.stato ?? movedStatus;
     try {
         const resp = await fetch('calendario.php', {
             method: 'POST',
