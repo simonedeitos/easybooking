@@ -24,14 +24,17 @@ function readEnvConfigValue(string $key, array $envFiles): ?string
         }
         foreach (file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $line) {
             $line = trim($line);
-            if ($line === '' || $line[0] === '#' || strpos($line, '=') === false) {
+            if ($line === '') {
+                continue;
+            }
+            if ((isset($line[0]) && $line[0] === '#') || strpos($line, '=') === false) {
                 continue;
             }
             [$lineKey, $lineValue] = array_map('trim', explode('=', $line, 2));
             if ($lineKey !== $key) {
                 continue;
             }
-            $quote = $lineValue[0] ?? '';
+            $quote = isset($lineValue[0]) ? $lineValue[0] : '';
             if (($quote === '"' || $quote === "'") && str_ends_with($lineValue, $quote)) {
                 $lineValue = substr($lineValue, 1, -1);
                 if ($quote === '"') {

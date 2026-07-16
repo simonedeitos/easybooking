@@ -18,9 +18,10 @@
         if (!container) return;
         const id   = 'toast-' + Date.now();
         const icon = type === 'success' ? 'fa-check-circle' : type === 'danger' ? 'fa-times-circle' : 'fa-info-circle';
+        const safeMessage = htmlEsc(message);
         const html = `<div id="${id}" class="toast align-items-center text-bg-${type} border-0" role="alert">
             <div class="d-flex">
-                <div class="toast-body"><i class="fas ${icon} me-2"></i>${message}</div>
+                <div class="toast-body"><i class="fas ${icon} me-2"></i>${safeMessage}</div>
                 <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
             </div>
         </div>`;
@@ -501,7 +502,10 @@
                 const confirmBtn = document.getElementById('create-cloud-confirm-btn');
                 if (search)     { search.value = ''; }
                 if (hidden)     { hidden.value = ''; }
-                document.querySelectorAll('.create-cloud-list-item').forEach(getCreateCloudSearchText);
+                // Warm the cached normalized search text once per item before filtering.
+                document.querySelectorAll('.create-cloud-list-item').forEach(item => {
+                    getCreateCloudSearchText(item);
+                });
                 filterCreateCloudList('');
                 document.querySelectorAll('.create-cloud-list-item').forEach(i => i.classList.remove('active'));
                 if (confirmBtn) { confirmBtn.disabled = true; }
@@ -622,10 +626,11 @@
     }
 
     function getCreateCloudSearchText(item) {
+        if (!item) return '';
         const cached = item?.dataset.normalizedSearch;
         if (cached) return cached;
-        const normalized = normalizeSearchText(item?.dataset.clientSearch || item?.textContent || '');
-        if (item) item.dataset.normalizedSearch = normalized;
+        const normalized = normalizeSearchText(item.dataset.clientSearch || item.textContent || '');
+        item.dataset.normalizedSearch = normalized;
         return normalized;
     }
 

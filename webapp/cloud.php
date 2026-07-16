@@ -253,10 +253,11 @@ require_once __DIR__ . '/includes/header.php';
                         <div id="create-cloud-list" class="list-group overflow-auto border rounded"
                              style="max-height:260px;">
                             <?php foreach ($clientsDisabled as $c): ?>
+                            <?php $clientSearch = implode(' ', array_filter([$c['cognome'], $c['nome'], $c['email'] ?? ''], static fn($value) => $value !== null && $value !== '')); ?>
                             <button type="button"
                                     class="list-group-item list-group-item-action d-flex justify-content-between align-items-center create-cloud-list-item"
                                     data-client-id="<?= (int)$c['id'] ?>"
-                                    data-client-search="<?= h(trim($c['cognome'] . ' ' . $c['nome'] . ' ' . ($c['email'] ?? ''))) ?>">
+                                    data-client-search="<?= h($clientSearch) ?>">
                                 <span class="create-cloud-item-label"><?= h($c['cognome'] . ' ' . $c['nome']) ?></span>
                                 <?php if ($c['email']): ?>
                                 <small class="text-muted ms-2 text-nowrap"><?= h($c['email']) ?></small>
