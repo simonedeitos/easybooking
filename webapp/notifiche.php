@@ -97,7 +97,11 @@ if ($requestAction === 'save' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             $reportMensileTipo = 'lezioni';
         }
 
-        $reminderFutureDays = max(1, sanitizeInt(post('reminder_lezioni_giorni_futuri')));
+        $reminderFutureDays = sanitizeInt(post('reminder_lezioni_giorni_futuri'));
+        if ($reminderFutureDays < 1) {
+            setFlash('danger', 'I giorni futuri da controllare per i promemoria devono essere almeno 1.');
+            redirect(notificationRedirectTarget($embedded));
+        }
 
         $reportMensileGiornoMese = sanitizeInt(post('report_mensile_giorno_mese'));
         if ($reportMensileGiornoMese < 1 || $reportMensileGiornoMese > 31) {
@@ -107,13 +111,13 @@ if ($requestAction === 'save' && $_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $stmt = $pdo->prepare(
             'INSERT INTO notifiche_config (
-                user_id, created_at, email_notifiche, abilita_email,
+                user_id, email_notifiche, abilita_email,
                 reminder_lezioni_enabled, reminder_lezioni_giorni_prima, reminder_lezioni_giorno_settimana, reminder_lezioni_ora, reminder_lezioni_giorni_futuri,
                 report_settimanale_enabled, report_settimanale_giorno, report_settimanale_ora, report_settimanale_tipo,
                 report_mensile_enabled, report_mensile_giorno_mese, report_mensile_ora, report_mensile_tipo,
                 avviso_scadenza_enabled, avviso_scadenza_giorni,
                 avviso_non_confermata_enabled, avviso_non_confermata_giorni
-            ) VALUES (?, CURRENT_TIMESTAMP, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
                 email_notifiche = VALUES(email_notifiche),
                 abilita_email = VALUES(abilita_email),
