@@ -57,6 +57,10 @@ $spazioMax   = CLOUD_MAX_BYTES;
 $pctUsato    = $spazioMax > 0 ? round($spazioUsato / $spazioMax * 100, 1) : 0;
 $quotaClass  = $pctUsato >= 90 ? 'danger' : ($pctUsato >= 70 ? 'warning' : 'success');
 
+$pageBodyAttributes = [
+    'data-cloud-public-base-url' => cloudPublicBaseUrl(),
+];
+
 require_once __DIR__ . '/includes/header.php';
 ?>
 
@@ -240,25 +244,16 @@ require_once __DIR__ . '/includes/header.php';
                     <p class="text-muted mb-0">Tutti i clienti hanno già il cloud abilitato.</p>
                 <?php else: ?>
                     <div class="mb-3">
-                        <label for="create-cloud-search" class="form-label">Cerca cliente</label>
-                        <input type="text" id="create-cloud-search" class="form-control mb-2"
-                               placeholder="Nome o cognome…" autocomplete="off">
-                        <div id="create-cloud-list" class="list-group overflow-auto border rounded"
-                             style="max-height:260px;">
+                        <label for="create-cloud-select" id="create-cloud-select-label" class="form-label">Seleziona cliente</label>
+                        <select id="create-cloud-select" class="form-select" size="8" aria-labelledby="create-cloud-select-label">
+                            <option value="" selected>Seleziona un cliente…</option>
                             <?php foreach ($clientsDisabled as $c): ?>
-                            <button type="button"
-                                    class="list-group-item list-group-item-action d-flex justify-content-between align-items-center create-cloud-list-item"
-                                    data-client-id="<?= (int)$c['id'] ?>"
-                                    data-client-name="<?= h(strtolower($c['cognome'] . ' ' . $c['nome'])) ?>">
-                                <span class="create-cloud-item-label"><?= h($c['cognome'] . ' ' . $c['nome']) ?></span>
-                                <?php if ($c['email']): ?>
-                                <small class="text-muted ms-2 text-nowrap"><?= h($c['email']) ?></small>
-                                <?php endif; ?>
-                            </button>
+                            <option value="<?= (int)$c['id'] ?>">
+                                <?= h($c['cognome'] . ' ' . $c['nome']) ?><?= $c['email'] ? ' — ' . h($c['email']) : '' ?>
+                            </option>
                             <?php endforeach; ?>
-                        </div>
+                        </select>
                         <input type="hidden" id="create-cloud-selected" value="">
-                        <div id="create-cloud-no-results" class="text-muted small mt-2 d-none">Nessun cliente trovato.</div>
                     </div>
                 <?php endif; ?>
             </div>
