@@ -72,7 +72,7 @@ function initCalendar(options = {}) {
                         return response.json();
                     })
                     .then(function(data) {
-                        if (!Array.isArray(data)) throw new Error(data?.error || 'Errore nel caricamento del calendario.');
+                        if (!Array.isArray(data)) throw new Error(data?.error || ('Risposta non valida dal server (atteso array, ricevuto: ' + typeof data + ')'));
                         const filtered = teacherFilterValue
                             ? data.filter(function(ev) { return String(ev?.extendedProps?.insegnante_id ?? '') === String(teacherFilterValue); })
                             : data;
