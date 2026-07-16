@@ -62,7 +62,7 @@
                     textEl.textContent = s.spazio_human + ' / ' + s.spazio_max_human + ' (' + pct + '%)';
                 }
 
-                // Update badge icon colour
+                // Update badge icon color
                 const badge = document.getElementById('cloud-quota-badge');
                 if (badge) {
                     const icon = badge.querySelector('.fa-hdd');

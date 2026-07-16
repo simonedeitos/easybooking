@@ -63,13 +63,13 @@ require_once __DIR__ . '/includes/header.php';
 <!-- ── Page header with compact quota badge ─────────────────────── -->
 <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
     <div>
-        <h2 class="mb-1"><i class="fas fa-cloud me-2"></i>Cloud Storage</h2>
+        <h2 class="mb-1"><i class="fas fa-cloud me-2" aria-hidden="true"></i>Cloud Storage</h2>
         <p class="text-secondary mb-0 small">Gestisci lo spazio cloud per ogni cliente.</p>
     </div>
     <!-- Compact quota badge (top right) -->
     <div class="cloud-quota-badge" id="cloud-quota-badge">
         <div class="d-flex align-items-center gap-2 mb-1">
-            <i class="fas fa-hdd text-<?= $quotaClass ?>"></i>
+            <i class="fas fa-hdd text-<?= $quotaClass ?>" aria-hidden="true"></i>
             <span id="cloud-stats-text" class="fw-semibold small">
                 <?= h(cloudFormatSize($spazioUsato)) ?> / <?= h(cloudFormatSize($spazioMax)) ?> (<?= $pctUsato ?>%)
             </span>
@@ -93,7 +93,7 @@ require_once __DIR__ . '/includes/header.php';
     <!-- ── Left sidebar: client list ─────────────────────────────── -->
     <aside class="cloud-clients-sidebar">
         <div class="cloud-sidebar-header">
-            <i class="fas fa-users me-2"></i>Clienti Cloud
+            <i class="fas fa-users me-2" aria-hidden="true"></i>Clienti Cloud
             <span class="badge bg-secondary ms-auto"><?= count($clientsEnabled) ?></span>
         </div>
 
@@ -136,7 +136,7 @@ require_once __DIR__ . '/includes/header.php';
 
         <!-- Empty state -->
         <div id="cloud-empty-state" class="cloud-empty-state">
-            <i class="fas fa-cloud fa-3x mb-3 text-muted"></i>
+            <i class="fas fa-cloud fa-3x mb-3 text-muted" aria-hidden="true"></i>
             <h5 class="text-muted">Seleziona un cliente</h5>
             <p class="text-muted small">Scegli un cliente dalla lista per gestire i suoi file cloud.</p>
         </div>
@@ -169,7 +169,7 @@ require_once __DIR__ . '/includes/header.php';
 
             <!-- Drag & drop upload zone -->
             <div id="cloud-drop-zone" class="cloud-drop-zone mb-3">
-                <i class="fas fa-cloud-upload-alt fa-2x mb-2 text-muted d-block"></i>
+                <i class="fas fa-cloud-upload-alt fa-2x mb-2 text-muted d-block" aria-hidden="true"></i>
                 <span class="text-muted">Trascina i file qui, oppure clicca per selezionarli</span>
                 <input type="file" id="cloud-file-input" multiple class="d-none">
             </div>
