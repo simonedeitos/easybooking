@@ -61,14 +61,19 @@ function initCalendar(options = {}) {
 
             // Teacher filter value is captured at construction time (passed explicitly
             // via options.teacherFilterValue after a destroy+recreate cycle) and baked
-            // into extraParams. This eliminates any stale-closure or stale-cache issue
-            // that could affect a refetchEvents()-only approach.
+            // into extraParams. Using POST avoids CDN/reverse-proxy GET caching so the
+            // insegnante_id filter is always honoured by the server on every request.
             eventSources: [{
                 url: 'api/get-eventi-calendario.php',
+                method: 'POST',
                 extraParams() {
-                    const params = { cacheBust: Date.now() };
+                    const params = {};
                     if (teacherFilterValue) params.insegnante_id = teacherFilterValue;
                     return params;
+                },
+                eventSourceSuccess(content) {
+                    console.debug('[EasyBooking] Fetched ' + content.length + ' events for insegnante_id=' + (teacherFilterValue || 'tutti'));
+                    return content;
                 },
                 failure(err) {
                     console.error('Calendar events error:', err);
