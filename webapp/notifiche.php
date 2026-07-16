@@ -107,13 +107,13 @@ if ($requestAction === 'save' && $_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $stmt = $pdo->prepare(
             'INSERT INTO notifiche_config (
-                user_id, email_notifiche, abilita_email,
+                user_id, created_at, email_notifiche, abilita_email,
                 reminder_lezioni_enabled, reminder_lezioni_giorni_prima, reminder_lezioni_giorno_settimana, reminder_lezioni_ora, reminder_lezioni_giorni_futuri,
                 report_settimanale_enabled, report_settimanale_giorno, report_settimanale_ora, report_settimanale_tipo,
                 report_mensile_enabled, report_mensile_giorno_mese, report_mensile_ora, report_mensile_tipo,
                 avviso_scadenza_enabled, avviso_scadenza_giorni,
                 avviso_non_confermata_enabled, avviso_non_confermata_giorni
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, CURRENT_TIMESTAMP, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
                 email_notifiche = VALUES(email_notifiche),
                 abilita_email = VALUES(abilita_email),
@@ -335,7 +335,7 @@ require_once __DIR__ . '/includes/header.php';
                                 <div class="col-md-4">
                                     <label for="report_mensile_giorno_mese" class="form-label">Giorno del mese</label>
                                     <input type="number" class="form-control" id="report_mensile_giorno_mese" name="report_mensile_giorno_mese" min="1" max="31" value="<?= h((string)$config['report_mensile_giorno_mese']) ?>">
-                                    <div class="form-text">Inserisci un valore tra 1 e 31. Nei mesi più corti, l'automazione dovrà considerare l'ultimo giorno utile.</div>
+                                    <div class="form-text">Inserisci un valore tra 1 e 31.</div>
                                 </div>
                                 <div class="col-md-4">
                                     <label for="report_mensile_ora" class="form-label">Ora invio</label>

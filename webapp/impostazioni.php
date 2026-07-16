@@ -411,7 +411,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (stableCount >= 3 || attempts >= 12) {
                 window.clearInterval(intervalId);
             }
-        }, 2500);
+        }, 1000);
     };
 
     frames.forEach((frame) => {
