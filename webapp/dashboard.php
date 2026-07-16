@@ -351,7 +351,7 @@ require_once __DIR__ . '/includes/header.php';
     background: rgba(255,255,255,0.02);
     border-color: var(--border-color) !important;
 }
-.stat-icon.orange { background: rgba(249,226,175,0.18); color: #f9e2af; }
+.stat-icon.orange { background: rgba(249,226,175,0.18); color: var(--warning); }
 </style>
 
 <script>

@@ -8,6 +8,7 @@ const ThemeManager = (() => {
 
     function apply(theme) {
         document.documentElement.setAttribute('data-theme', theme);
+        document.body?.setAttribute('data-theme', theme);
         // swap stylesheet
         const darkLink  = document.getElementById('theme-dark-css');
         const lightLink = document.getElementById('theme-light-css');
