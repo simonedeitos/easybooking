@@ -259,14 +259,14 @@ function askMoveConfirmation(event) {
         const startTime = event.startStr.slice(11, 16);
         const endTime = event.endStr?.slice(11, 16) || '';
         modalWrapper.innerHTML = `
-            <div class="modal fade" tabindex="-1" role="dialog" aria-labelledby="move-modal-title">
+            <div class="modal fade" tabindex="-1" role="dialog" aria-labelledby="move-modal-title" aria-describedby="move-modal-description">
                 <div class="modal-dialog">
                     <div class="modal-content">
                         <div class="modal-header">
                             <h5 class="modal-title" id="move-modal-title">Conferma spostamento</h5>
                             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Chiudi"></button>
                         </div>
-                        <div class="modal-body">
+                        <div class="modal-body" id="move-modal-description">
                             <p class="mb-2">Nuova data e ora:</p>
                             <p class="fw-semibold mb-3">${escapeHtml(dateLabel)} · ${escapeHtml(startTime)} - ${escapeHtml(endTime)}</p>
                             <label for="move-event-status" class="form-label">Stato appuntamento</label>

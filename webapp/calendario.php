@@ -225,7 +225,12 @@ if ($requestAction !== '') {
             if ($stato === '') {
                 $stato = 'Riprogrammata';
             }
-            if ($id <= 0 || !calendarValidDate($data) || !calendarValidTime($oraInizio) || !calendarValidTime($oraFine) || !calendarTimeRangeValid($oraInizio, $oraFine)) {
+            $hasValidId = $id > 0;
+            $hasValidDate = calendarValidDate($data);
+            $hasValidStartTime = calendarValidTime($oraInizio);
+            $hasValidEndTime = calendarValidTime($oraFine);
+            $hasValidRange = calendarTimeRangeValid($oraInizio, $oraFine);
+            if (!$hasValidId || !$hasValidDate || !$hasValidStartTime || !$hasValidEndTime || !$hasValidRange) {
                 jsonResponse(['success' => false, 'message' => 'Dati di spostamento non validi.'], 422);
             }
             if (!in_array($stato, calendarStatuses(), true)) {
