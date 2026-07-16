@@ -396,20 +396,36 @@ body[data-theme="light"] .fc .fc-list-day-side-text,
 body[data-theme="light"] .fc .fc-list-event-title a { color: var(--text-primary); }
 
 /* ── Calendar toolbar buttons (light theme) ──────────────────
-   The toolbar uses Bootstrap's btn-outline-light which is designed
-   for dark backgrounds. In the light theme we restyle it to use
-   a purple-accent outline so buttons are visually distinctive
-   (not plain white) and consistent with the app's design language.
-   Scoped to #cal-toolbar-card so modal "Annulla" buttons are unaffected. */
+   Bootstrap 5.3 btn-outline-light is designed for dark backgrounds
+   (white text/border on transparent) — completely invisible on a
+   light background.  We override both the Bootstrap 5.3 CSS-variable
+   layer AND the rendered properties directly so the fix is airtight
+   regardless of CSS cascade order or browser caching of old files.
+   Scoped to #cal-toolbar-card so modal "Annulla" buttons are unaffected.
+
+   Default (inactive) state: light-purple tinted background + purple border/text.
+   Hover / focus: solid purple background + white text.
+   Active (btn-outline-light.active): solid purple — same as hover. */
 body[data-theme="light"] #cal-toolbar-card .btn-outline-light {
+    /* Override Bootstrap 5.3 CSS-variable layer */
+    --bs-btn-color: #7c6af7;
+    --bs-btn-border-color: #7c6af7;
+    --bs-btn-hover-color: #ffffff;
+    --bs-btn-hover-bg: #7c6af7;
+    --bs-btn-hover-border-color: #7c6af7;
+    --bs-btn-focus-shadow-rgb: 124, 106, 247;
+    --bs-btn-active-color: #ffffff;
+    --bs-btn-active-bg: #6458d0;
+    --bs-btn-active-border-color: #6458d0;
+    /* Direct property overrides (beat any remaining Bootstrap rule) */
     color: #7c6af7 !important;
     border-color: #7c6af7 !important;
-    background-color: rgba(124,106,247,0.08) !important;
+    background-color: #ede9ff !important;
 }
 body[data-theme="light"] #cal-toolbar-card .btn-outline-light:hover,
 body[data-theme="light"] #cal-toolbar-card .btn-outline-light:focus {
-    color: #7c6af7 !important;
-    background-color: rgba(124,106,247,0.18) !important;
+    color: #ffffff !important;
+    background-color: #7c6af7 !important;
     border-color: #7c6af7 !important;
     box-shadow: none !important;
 }
@@ -418,4 +434,23 @@ body[data-theme="light"] #cal-toolbar-card .btn-outline-light[aria-pressed="true
     background-color: #7c6af7 !important;
     border-color: #7c6af7 !important;
     color: #ffffff !important;
+}
+/* btn-primary in light theme (used for the currently-active view/color-mode button)
+   inherits from style.css (.btn-primary { background: var(--accent) }).
+   Reinforce here so it is never overridden by Bootstrap's blue. */
+body[data-theme="light"] #cal-toolbar-card .btn-primary {
+    --bs-btn-bg: #7c6af7;
+    --bs-btn-border-color: #7c6af7;
+    --bs-btn-hover-bg: #6458d0;
+    --bs-btn-hover-border-color: #6458d0;
+    background-color: #7c6af7 !important;
+    border-color: #7c6af7 !important;
+    color: #ffffff !important;
+}
+body[data-theme="light"] #cal-toolbar-card .btn-primary:hover,
+body[data-theme="light"] #cal-toolbar-card .btn-primary:focus {
+    background-color: #6458d0 !important;
+    border-color: #6458d0 !important;
+    color: #ffffff !important;
+    box-shadow: none !important;
 }

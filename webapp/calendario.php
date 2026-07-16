@@ -500,7 +500,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const eventForm = document.getElementById('eventForm');
     const newEventForm = document.getElementById('newEventForm');
     const teacherFilter = document.getElementById('calendarTeacherFilter');
-    let currentColorMode = 'teacher';
+    let currentColorMode = 'status';
 
     function resetEventForm() {
         eventForm.reset();
