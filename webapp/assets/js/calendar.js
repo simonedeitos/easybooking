@@ -229,23 +229,18 @@ function openNewEventModal(startStr, endStr) {
 }
 
 // ── Dialog for move confirmation and status change ────────────
-function askMoveConfirmation(event) {
-    const fallbackStatus = Object.hasOwn(CalendarColors.byStatus, 'Riprogrammata')
+function getMoveDefaultStatus() {
+    return Object.hasOwn(CalendarColors.byStatus, 'Riprogrammata')
         ? 'Riprogrammata'
         : (Object.keys(CalendarColors.byStatus)[0] || 'Programmata');
+}
 
-    if (!window.bootstrap?.Modal) {
-        const startDate = event.startStr.slice(0, 10);
-        const startTime = event.startStr.slice(11, 16);
-        const endTime = event.endStr?.slice(11, 16) || '';
-        const safeStartDate = startDate.replace(/[^0-9-]/g, '');
-        const safeStartTime = startTime.replace(/[^0-9:]/g, '');
-        const safeEndTime = endTime.replace(/[^0-9:]/g, '');
-        const confirmed = confirm(`Confermi lo spostamento al ${safeStartDate} dalle ${safeStartTime} alle ${safeEndTime}?`);
-        if (!confirmed) return Promise.resolve(null);
-        const selectedStatus = prompt('Stato appuntamento:', fallbackStatus);
-        if (selectedStatus === null) return Promise.resolve(null);
-        return Promise.resolve({ stato: selectedStatus.trim() || fallbackStatus });
+function askMoveConfirmation(event) {
+    const fallbackStatus = getMoveDefaultStatus();
+    const BootstrapModal = window.bootstrap?.Modal;
+    if (!BootstrapModal) {
+        showToast('Impossibile aprire la conferma di spostamento.', 'danger');
+        return Promise.resolve(null);
     }
 
     return new Promise((resolve) => {
@@ -283,7 +278,7 @@ function askMoveConfirmation(event) {
 
         const modalEl = modalWrapper.firstElementChild;
         document.body.appendChild(modalEl);
-        const modal = new bootstrap.Modal(modalEl, { backdrop: 'static' });
+        const modal = new BootstrapModal(modalEl, { backdrop: 'static' });
         const statusSelect = modalEl.querySelector('#move-event-status');
 
         let modalResolved = false;
@@ -313,6 +308,7 @@ function askMoveConfirmation(event) {
 
 // ── Save drag-move ────────────────────────────────────────────
 async function saveEventMove(event, revertFn) {
+    const movedStatus = getMoveDefaultStatus();
     const data = {
         id: event.id,
         data: event.startStr.slice(0, 10),
@@ -332,7 +328,7 @@ async function saveEventMove(event, revertFn) {
         revertFn();
         return;
     }
-    data.stato = moveConfirmation.stato;
+    data.stato = moveConfirmation.stato ?? movedStatus;
     try {
         const resp = await fetch('calendario.php', {
             method: 'POST',
