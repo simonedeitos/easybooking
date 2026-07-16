@@ -98,7 +98,7 @@ require_once __DIR__ . '/includes/header.php';
     </div>
     <div class="card-body p-0">
         <div class="table-responsive">
-            <table id="cloud-clients-table" class="table table-hover align-middle mb-0 datatable">
+            <table class="table table-hover align-middle mb-0">
                 <thead>
                     <tr>
                         <th>Cliente</th>
@@ -174,9 +174,9 @@ require_once __DIR__ . '/includes/header.php';
     </div>
 </div>
 
-<!-- ══════════════════════════════════════════════════════════════════
+<!-- ═══════════════════════════════════════════════════════════════
      Modal: File manager for a client
-══════════════════════════════════════════════════════════════════════ -->
+═════════════════════════════════════════════════════════════════ -->
 <div class="modal fade" id="cloudFilesModal" tabindex="-1" aria-labelledby="cloud-modal-title" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-scrollable">
         <div class="modal-content">
@@ -218,9 +218,9 @@ require_once __DIR__ . '/includes/header.php';
     </div>
 </div>
 
-<!-- ══════════════════════════════════════════════════════════════════
+<!-- ═══════════════════════════════════════════════════════════════
      Modal: Edit note
-══════════════════════════════════════════════════════════════════════ -->
+═════════════════════════════════════════════════════════════════ -->
 <div class="modal fade" id="cloudNoteModal" tabindex="-1" aria-labelledby="cloudNoteModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -245,9 +245,9 @@ require_once __DIR__ . '/includes/header.php';
     </div>
 </div>
 
-<!-- ══════════════════════════════════════════════════════════════════
+<!-- ═══════════════════════════════════════════════════════════════
      Modal: Audio player
-══════════════════════════════════════════════════════════════════════ -->
+═════════════════════════════════════════════════════════════════ -->
 <div class="modal fade" id="cloudAudioModal" tabindex="-1" aria-labelledby="cloudAudioModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
@@ -273,15 +273,3 @@ require_once __DIR__ . '/includes/header.php';
 
 <?php require_once __DIR__ . '/includes/footer.php'; ?>
 <script src="assets/js/cloud.js"></script>
-<script>
-// Init DataTable for clients
-document.addEventListener('DOMContentLoaded', function () {
-    if (typeof $ !== 'undefined' && $.fn.DataTable) {
-        $('#cloud-clients-table').DataTable({
-            language: { url: 'https://cdn.datatables.net/plug-ins/1.13.7/i18n/it-IT.json' },
-            pageLength: 25,
-            columnDefs: [{ orderable: false, targets: [4, 5] }],
-        });
-    }
-});
-</script>
