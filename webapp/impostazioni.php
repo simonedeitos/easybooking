@@ -319,8 +319,10 @@ require_once __DIR__ . '/includes/header.php';
     <div class="card-header"><i class="fas fa-bell me-2"></i>Notifiche</div>
     <div class="card-body p-0">
         <iframe
+            class="settings-embed-frame"
             src="notifiche.php?embedded=1"
             title="Configurazione notifiche"
+            data-default-height="1380"
             style="width:100%; min-height:1380px; border:0; display:block;"
             loading="lazy"
         ></iframe>
@@ -333,8 +335,10 @@ require_once __DIR__ . '/includes/header.php';
     <div class="card-header"><i class="fas fa-database me-2"></i>Backup</div>
     <div class="card-body p-0">
         <iframe
+            class="settings-embed-frame"
             src="backup.php?embedded=1"
             title="Backup e ripristino"
+            data-default-height="1180"
             style="width:100%; min-height:1180px; border:0; display:block;"
             loading="lazy"
         ></iframe>
@@ -347,13 +351,49 @@ require_once __DIR__ . '/includes/header.php';
     <div class="card-header"><i class="fas fa-file-import me-2"></i>Importa XML</div>
     <div class="card-body p-0">
         <iframe
+            class="settings-embed-frame"
             src="import-xml.php?embedded=1"
             title="Importazione XML"
+            data-default-height="1080"
             style="width:100%; min-height:1080px; border:0; display:block;"
             loading="lazy"
         ></iframe>
     </div>
 </div>
+<?php endif; ?>
+
+<?php if (in_array($activeTab, ['notifiche', 'backup', 'importa-xml'], true)): ?>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const frames = document.querySelectorAll('.settings-embed-frame');
+    const resizeFrame = (frame) => {
+        try {
+            const doc = frame.contentDocument;
+            if (!doc) return;
+            const body = doc.body;
+            const html = doc.documentElement;
+            const defaultHeight = Number(frame.dataset.defaultHeight || 0);
+            const nextHeight = Math.max(
+                defaultHeight,
+                body ? body.scrollHeight : 0,
+                body ? body.offsetHeight : 0,
+                html ? html.scrollHeight : 0,
+                html ? html.offsetHeight : 0
+            );
+            frame.style.height = nextHeight + 'px';
+        } catch (error) {
+            // Ignore transient iframe access/load errors and retry on next tick.
+        }
+    };
+
+    frames.forEach((frame) => {
+        frame.addEventListener('load', () => resizeFrame(frame));
+        resizeFrame(frame);
+    });
+
+    window.setInterval(() => frames.forEach((frame) => resizeFrame(frame)), 1000);
+});
+</script>
 <?php endif; ?>
 
 <?php if ($activeTab === 'app' && $isAdmin): ?>

@@ -44,11 +44,11 @@ function notificationFlag(string $key): int
 function notificationTime(string $value, string $fallback): string
 {
     $value = trim($value);
-    if (preg_match('/^\d{2}:\d{2}$/', $value) === 1) {
+    if (preg_match('/^(?:[01]\d|2[0-3]):[0-5]\d$/', $value) === 1) {
         return $value . ':00';
     }
-    if (preg_match('/^\d{2}:\d{2}:\d{2}$/', $value) === 1) {
-        return substr($value, 0, 8);
+    if (preg_match('/^(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d$/', $value) === 1) {
+        return $value;
     }
     return $fallback;
 }
@@ -100,6 +100,18 @@ if ($requestAction === 'save' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             $reportMensileTipo = 'lezioni';
         }
 
+        $reminderFutureDays = sanitizeInt(post('reminder_lezioni_giorni_futuri'));
+        if ($reminderFutureDays < 1) {
+            setFlash('danger', 'I giorni futuri da controllare per i promemoria devono essere almeno 1.');
+            redirect(notificationRedirectTarget($embedded));
+        }
+
+        $reportMensileGiornoMese = sanitizeInt(post('report_mensile_giorno_mese'));
+        if ($reportMensileGiornoMese < 1 || $reportMensileGiornoMese > 31) {
+            setFlash('danger', 'Il giorno del report mensile deve essere compreso tra 1 e 31.');
+            redirect(notificationRedirectTarget($embedded));
+        }
+
         $stmt = $pdo->prepare(
             'INSERT INTO notifiche_config (
                 user_id, email_notifiche, abilita_email,
@@ -139,13 +151,13 @@ if ($requestAction === 'save' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             max(0, sanitizeInt(post('reminder_lezioni_giorni_prima'))),
             $reminderDay,
             notificationTime(post('reminder_lezioni_ora'), '09:00:00'),
-            max(1, sanitizeInt(post('reminder_lezioni_giorni_futuri'))),
+            $reminderFutureDays,
             notificationFlag('report_settimanale_enabled'),
             $reportSettimanaleGiorno,
             notificationTime(post('report_settimanale_ora'), '18:00:00'),
             $reportSettimanaleTipo,
             notificationFlag('report_mensile_enabled'),
-            min(31, max(1, sanitizeInt(post('report_mensile_giorno_mese')))),
+            $reportMensileGiornoMese,
             notificationTime(post('report_mensile_ora'), '18:00:00'),
             $reportMensileTipo,
             notificationFlag('avviso_scadenza_enabled'),
@@ -330,6 +342,7 @@ require_once __DIR__ . '/includes/header.php';
                                 <div class="col-md-4">
                                     <label for="report_mensile_giorno_mese" class="form-label">Giorno del mese</label>
                                     <input type="number" class="form-control" id="report_mensile_giorno_mese" name="report_mensile_giorno_mese" min="1" max="31" value="<?= h((string)$config['report_mensile_giorno_mese']) ?>">
+                                    <div class="form-text">Inserisci un valore tra 1 e 31.</div>
                                 </div>
                                 <div class="col-md-4">
                                     <label for="report_mensile_ora" class="form-label">Ora invio</label>
