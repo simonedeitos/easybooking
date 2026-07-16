@@ -67,9 +67,14 @@ CREATE TABLE IF NOT EXISTS `clienti` (
     `note`                      TEXT            DEFAULT NULL,
     `mega_cartella_pubblica`    TEXT            DEFAULT NULL,
     `mega_cartella_locale`      TEXT            DEFAULT NULL,
+    `cloud_enabled`             TINYINT(1)      NOT NULL DEFAULT 0,
+    `cloud_hash`                VARCHAR(64)     DEFAULT NULL,
+    `cloud_cartella`            VARCHAR(255)    DEFAULT NULL,
     `created_at`                DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
     `updated_at`                DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    PRIMARY KEY (`id`)
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_cloud_hash` (`cloud_hash`),
+    INDEX `idx_cloud_hash` (`cloud_hash`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ── Insegnanti (Teachers) ──────────────────────────────────
@@ -214,5 +219,33 @@ CREATE TABLE IF NOT EXISTS `tariffe_coppia` (
     PRIMARY KEY (`insegnante_id`),
     FOREIGN KEY (`insegnante_id`) REFERENCES `insegnanti`(`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ── Cloud Files ────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS `cloud_files` (
+    `id`                INT UNSIGNED    NOT NULL AUTO_INCREMENT,
+    `cliente_id`        INT UNSIGNED    NOT NULL,
+    `nome_originale`    VARCHAR(255)    NOT NULL,
+    `nome_file`         VARCHAR(255)    NOT NULL,
+    `dimensione_bytes`  BIGINT UNSIGNED NOT NULL DEFAULT 0,
+    `mime_type`         VARCHAR(100)    DEFAULT NULL,
+    `nota`              TEXT            DEFAULT NULL,
+    `created_at`        DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at`        DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    FOREIGN KEY (`cliente_id`) REFERENCES `clienti`(`id`) ON DELETE CASCADE,
+    INDEX `idx_cliente_id` (`cliente_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ── Cloud Stats ────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS `cloud_stats` (
+    `id`                    INT UNSIGNED    NOT NULL AUTO_INCREMENT,
+    `spazio_totale_bytes`   BIGINT UNSIGNED NOT NULL DEFAULT 0,
+    `numero_file`           INT UNSIGNED    NOT NULL DEFAULT 0,
+    `numero_clienti`        INT UNSIGNED    NOT NULL DEFAULT 0,
+    `aggiornato_at`         DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT IGNORE INTO `cloud_stats` (`id`, `spazio_totale_bytes`, `numero_file`, `numero_clienti`) VALUES (1, 0, 0, 0);
 
 SET FOREIGN_KEY_CHECKS = 1;

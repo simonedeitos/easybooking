@@ -1,0 +1,16 @@
+Options -Indexes
+
+# ── Rewrite engine ───────────────────────────────────────────────────────────
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /
+
+    # /share/[HASH] → cloud_pubblica.php?hash=[HASH]
+    RewriteRule ^share/([a-f0-9]{32})/?$ cloud_pubblica.php?hash=$1 [QSA,L]
+
+    # /share/[HASH]/download/[FILE_ID] → cloud_pubblica.php?hash=[HASH]&action=download&file_id=[FILE_ID]
+    RewriteRule ^share/([a-f0-9]{32})/download/([0-9]+)/?$ cloud_pubblica.php?hash=$1&action=download&file_id=$2 [QSA,L]
+
+    # /share/[HASH]/stream/[FILE_ID] → cloud_pubblica.php?hash=[HASH]&action=stream&file_id=[FILE_ID]
+    RewriteRule ^share/([a-f0-9]{32})/stream/([0-9]+)/?$ cloud_pubblica.php?hash=$1&action=stream&file_id=$2 [QSA,L]
+</IfModule>
