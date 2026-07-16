@@ -56,6 +56,9 @@ $requestAction = $_SERVER['REQUEST_METHOD'] === 'POST' ? post('action') : get('a
 
 if ($requestAction !== '') {
     try {
+        // Legacy endpoint — no longer called by the frontend (which uses
+        // api/get-eventi-calendario.php instead). Kept for backwards compat
+        // in case any external integrations reference it.
         if ($requestAction === 'get_events') {
             $teacherId = sanitizeInt(get('insegnante_id'));
             $sql =
@@ -332,6 +335,9 @@ require_once __DIR__ . '/includes/header.php';
                     <option value="<?= htmlspecialchars((string)$teacher['id']) ?>"><?= htmlspecialchars(trim((string)$teacher['nome'] . ' ' . (string)$teacher['cognome'])) ?></option>
                     <?php endforeach; ?>
                 </select>
+                <button type="button" class="btn btn-outline-light" id="applyTeacherFilterBtn" title="Applica filtro insegnante" aria-label="Applica filtro insegnante">
+                    <i class="fas fa-filter me-1"></i>Applica
+                </button>
             </div>
         </div>
     </div>
@@ -521,10 +527,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function applyTeacherFilter() {
-        if (!calendarInstance) {
-            return;
-        }
-        calendarInstance.refetchEvents();
+        const teacherId = teacherFilter?.value || '';
+        console.debug('[EasyBooking] Teacher filter applied → insegnante_id=' + (teacherId || 'tutti'));
+        renderCalendar();
     }
 
     function updateColorButtons() {
@@ -540,7 +545,8 @@ document.addEventListener('DOMContentLoaded', () => {
             calendarInstance.destroy();
             document.getElementById('calendar').innerHTML = '';
         }
-        initCalendar({ slotMin: '08:00:00', slotMax: '21:00:00', colorMode: currentColorMode, initialView: savedView });
+        const teacherFilterValue = teacherFilter?.value || '';
+        initCalendar({ slotMin: '08:00:00', slotMax: '21:00:00', colorMode: currentColorMode, initialView: savedView, teacherFilterValue });
         document.getElementById('cal-title').textContent = calendarInstance?.view?.title || 'Calendario';
         updateColorButtons();
     }
@@ -580,6 +586,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     teacherFilter.addEventListener('change', applyTeacherFilter);
+    document.getElementById('applyTeacherFilterBtn')?.addEventListener('click', applyTeacherFilter);
 
     eventForm.addEventListener('submit', async (event) => {
         event.preventDefault();
