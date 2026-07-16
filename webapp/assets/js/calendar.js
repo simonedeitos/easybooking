@@ -63,7 +63,7 @@ function initCalendar(options = {}) {
                 url: 'api/get-eventi-calendario.php',
                 extraParams() {
                     const teacherId = teacherFilter?.value || '';
-                    const params = { _t: Date.now() };
+                    const params = { cacheBust: Date.now() };
                     if (teacherId) params.insegnante_id = teacherId;
                     return params;
                 },
