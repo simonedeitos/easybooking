@@ -470,77 +470,80 @@
     // ── Create Cloud Modal ────────────────────────────────────────────────
 
     function bindCreateCloudModal() {
-        const modalEl = document.getElementById('createCloudModal');
+        const modalEl     = document.getElementById('createCloudModal');
         const searchInput = document.getElementById('create-cloud-search');
-        const select = document.getElementById('create-cloud-select');
-        const hidden = document.getElementById('create-cloud-selected');
-        const confirmBtn = document.getElementById('create-cloud-confirm-btn');
-        const defaultOption = select?.querySelector('option[value=""]') || null;
-        const clientOptions = select
-            ? Array.from(select.querySelectorAll('option')).filter(option => option.value !== '').map(option => ({
-                value: option.value,
-                label: option.textContent.replace(/\s+/g, ' ').trim(),
-            }))
-            : [];
+        const listEl      = document.getElementById('create-cloud-clients-list');
+        const hiddenEl    = document.getElementById('create-cloud-selected-id');
+        const confirmBtn  = document.getElementById('create-cloud-confirm-btn');
 
-        function syncCreateCloudSelection() {
-            const selectedValue = select?.value || '';
-            if (hidden) {
-                hidden.value = selectedValue;
-            }
-            if (confirmBtn) {
-                confirmBtn.disabled = !selectedValue;
-            }
+        if (!listEl) return;
+
+        // Parse the clients list from the data attribute injected by PHP
+        let allClients = [];
+        try {
+            allClients = JSON.parse(listEl.dataset.clientsJson || '[]');
+        } catch (e) {
+            allClients = [];
         }
 
-        function filterSelectOptions() {
-            if (!select) return;
+        /** Render (or re-render) the button list, optionally filtered by query */
+        function renderClientsList(query) {
+            const q = (query || '').toLowerCase().trim();
+            const matches = q
+                ? allClients.filter(c =>
+                    (c.cognome + ' ' + c.nome + ' ' + c.email).toLowerCase().includes(q))
+                : allClients;
 
-            const selectedValue = hidden?.value || select.value || '';
-            const query = (searchInput?.value || '').toLowerCase().trim();
-            const filteredOptions = query
-                ? clientOptions.filter(option => option.label.toLowerCase().includes(query))
-                : clientOptions;
+            listEl.innerHTML = '';
 
-            select.innerHTML = '';
-            if (defaultOption) {
-                defaultOption.selected = !selectedValue;
-                select.appendChild(defaultOption);
+            if (matches.length === 0) {
+                const msg = document.createElement('p');
+                msg.className = 'text-muted text-center small my-2';
+                msg.textContent = 'Nessun cliente trovato';
+                listEl.appendChild(msg);
+                return;
             }
 
-            filteredOptions.forEach(optionData => {
-                const option = document.createElement('option');
-                option.value = optionData.value;
-                option.textContent = optionData.label;
-                option.selected = optionData.value === selectedValue;
-                select.appendChild(option);
+            matches.forEach(c => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'btn btn-outline-primary w-100 text-start mb-1';
+                btn.dataset.clienteId = String(c.id);
+                const label = c.cognome + ' ' + c.nome + (c.email ? ' — ' + c.email : '');
+                btn.textContent = label;
+
+                btn.addEventListener('click', () => {
+                    // Deselect all buttons
+                    listEl.querySelectorAll('button[data-cliente-id]').forEach(b => {
+                        b.classList.replace('btn-primary', 'btn-outline-primary');
+                    });
+                    // Select this button
+                    btn.classList.replace('btn-outline-primary', 'btn-primary');
+                    // Store selected ID
+                    if (hiddenEl) hiddenEl.value = String(c.id);
+                    // Enable CREA button
+                    if (confirmBtn) confirmBtn.disabled = false;
+                });
+
+                listEl.appendChild(btn);
             });
-
-            if (selectedValue && !filteredOptions.some(option => option.value === selectedValue)) {
-                select.value = '';
-            }
-
-            syncCreateCloudSelection();
         }
 
+        /** Reset modal state */
+        function resetModal() {
+            if (searchInput) searchInput.value = '';
+            if (hiddenEl)    hiddenEl.value = '';
+            if (confirmBtn)  confirmBtn.disabled = true;
+            renderClientsList('');
+            if (searchInput) setTimeout(() => searchInput.focus(), 150);
+        }
+
+        // Reset on every open
         if (modalEl) {
-            modalEl.addEventListener('show.bs.modal', () => {
-                if (searchInput) {
-                    searchInput.value = '';
-                }
-                if (select) {
-                    select.value = '';
-                }
-                if (hidden) {
-                    hidden.value = '';
-                }
-                filterSelectOptions();
-                if (searchInput) {
-                    setTimeout(() => searchInput.focus(), 150);
-                }
-            });
+            modalEl.addEventListener('show.bs.modal', resetModal);
         }
 
+        // Open button
         const openBtn = document.getElementById('create-cloud-btn');
         if (openBtn) {
             openBtn.addEventListener('click', () => {
@@ -549,24 +552,23 @@
             });
         }
 
+        // Live search
         if (searchInput) {
-            searchInput.addEventListener('input', filterSelectOptions);
+            searchInput.addEventListener('input', () => {
+                // Deselect any selection when the user types
+                if (hiddenEl) hiddenEl.value = '';
+                if (confirmBtn) confirmBtn.disabled = true;
+                renderClientsList(searchInput.value);
+            });
         }
 
-        if (select) {
-            select.addEventListener('change', syncCreateCloudSelection);
-            select.addEventListener('input', syncCreateCloudSelection);
-        }
+        // Initial render
+        renderClientsList('');
 
-        filterSelectOptions();
-
+        // Confirm / create
         if (!confirmBtn) return;
         confirmBtn.addEventListener('click', () => {
-            if (!hidden) {
-                showToast('Selezione cliente non disponibile.', 'danger');
-                return;
-            }
-            const clienteId = hidden.value;
+            const clienteId = hiddenEl ? hiddenEl.value : '';
             if (!clienteId) {
                 showToast('Seleziona un cliente.', 'warning');
                 return;
@@ -584,7 +586,6 @@
                     confirmBtn.disabled = false;
                     if (data.success) {
                         showToast(data.message || 'Cloud abilitato.', 'success');
-                        const modalEl = document.getElementById('createCloudModal');
                         if (modalEl) bootstrap.Modal.getInstance(modalEl).hide();
                         setTimeout(() => location.reload(), 800);
                     } else {
