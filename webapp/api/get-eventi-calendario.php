@@ -50,15 +50,12 @@ function calendarContrastColor(string $hexColor): string
 try {
     $pdo = Database::getInstance();
 
-    // Accept parameters from POST (preferred – POST is never cached by reverse proxies/CDNs)
-    // or fall back to GET for backward compatibility with any direct GET callers.
-    $input = array_merge($_GET, $_POST);
-
-    $teacherId = isset($input['insegnante_id']) ? (int)$input['insegnante_id'] : 0;
+    // Accept parameters from GET (matches the plain fetch() GET in calendar.js).
+    $teacherId = isset($_GET['insegnante_id']) ? (int)$_GET['insegnante_id'] : 0;
 
     // FullCalendar sends start/end as ISO strings (e.g. 2025-01-01T00:00:00)
-    $startDate = calendarRequestDate($input['start'] ?? null);
-    $endDate   = calendarRequestDate($input['end'] ?? null);
+    $startDate = calendarRequestDate($_GET['start'] ?? null);
+    $endDate   = calendarRequestDate($_GET['end'] ?? null);
 
     $sql =
         'SELECT p.id, p.data, p.ora_inizio, p.ora_fine, p.stato, p.strumento, p.note,

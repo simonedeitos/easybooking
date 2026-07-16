@@ -61,25 +61,30 @@ function initCalendar(options = {}) {
 
             // Teacher filter value is captured at construction time (passed explicitly
             // via options.teacherFilterValue after a destroy+recreate cycle) and baked
-            // into extraParams. Using POST avoids CDN/reverse-proxy GET caching so the
-            // insegnante_id filter is always honoured by the server on every request.
-            eventSources: [{
-                url: 'api/get-eventi-calendario.php',
-                method: 'POST',
-                extraParams() {
-                    const params = {};
-                    if (teacherFilterValue) params.insegnante_id = teacherFilterValue;
-                    return params;
-                },
-                eventSourceSuccess(content) {
-                    console.debug('[EasyBooking] Fetched ' + content.length + ' events for insegnante_id=' + (teacherFilterValue || 'tutti'));
-                    return content;
-                },
-                failure(err) {
-                    console.error('Calendar events error:', err);
-                    showToast('Impossibile caricare il calendario. Riprova.', 'danger');
-                }
-            }],
+            // into the GET query string on every fetch request.
+            events(info, successCallback, failureCallback) {
+                const params = new URLSearchParams({ start: info.startStr, end: info.endStr });
+                if (teacherFilterValue) params.append('insegnante_id', teacherFilterValue);
+                console.debug('[EasyBooking] Fetching events → insegnante_id=' + (teacherFilterValue || 'tutti') + ' start=' + info.startStr + ' end=' + info.endStr);
+                fetch('api/get-eventi-calendario.php?' + params.toString())
+                    .then(function(response) {
+                        if (!response.ok) throw new Error('HTTP ' + response.status);
+                        return response.json();
+                    })
+                    .then(function(data) {
+                        if (!Array.isArray(data)) throw new Error(data?.error || 'Errore nel caricamento del calendario.');
+                        const filtered = teacherFilterValue
+                            ? data.filter(function(ev) { return String(ev?.extendedProps?.insegnante_id ?? '') === String(teacherFilterValue); })
+                            : data;
+                        console.debug('[EasyBooking] Received ' + data.length + ' events, showing ' + filtered.length + ' after client-side teacher filter (insegnante_id=' + (teacherFilterValue || 'tutti') + ')');
+                        successCallback(filtered);
+                    })
+                    .catch(function(error) {
+                        console.error('Calendar events error:', error);
+                        showToast('Impossibile caricare il calendario. Riprova.', 'danger');
+                        failureCallback(error);
+                    });
+            },
 
             // Color events
             eventDidMount(info) {
