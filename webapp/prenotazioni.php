@@ -44,12 +44,11 @@ function bookingTimeRangeValid(string $start, string $end): bool
     return strtotime('1970-01-01 ' . $end) > strtotime('1970-01-01 ' . $start);
 }
 
-$requestAction = $_SERVER['REQUEST_METHOD'] === 'POST' ? post('action') : get('action');
-
-if ($requestAction !== '') {
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $requestAction = post('action');
     try {
-        if ($requestAction === 'save' && $_SERVER['REQUEST_METHOD'] === 'POST') {
-            verifyCsrf();
+        if ($requestAction === 'save') {
+            verifyCsrfOrRedirect('prenotazioni.php');
 
             $id = sanitizeInt(post('id'));
             $data = trim(post('data'));
@@ -65,35 +64,42 @@ if ($requestAction !== '') {
             $acquistoId = $acquistoId > 0 ? $acquistoId : null;
 
             if (!bookingValidDate($data) || !bookingValidTime($oraInizio) || !bookingValidTime($oraFine)) {
-                jsonResponse(['success' => false, 'message' => 'Data o orario non validi.'], 422);
+                setFlash('warning', 'Data o orario non validi.');
+                redirect('prenotazioni.php');
             }
             if ($clienteId <= 0 || $insegnanteId <= 0) {
-                jsonResponse(['success' => false, 'message' => 'Cliente e insegnante sono obbligatori.'], 422);
+                setFlash('warning', 'Cliente e insegnante sono obbligatori.');
+                redirect('prenotazioni.php');
             }
             if (!in_array($stato, bookingStatuses(), true)) {
-                jsonResponse(['success' => false, 'message' => 'Stato non valido.'], 422);
+                setFlash('warning', 'Stato non valido.');
+                redirect('prenotazioni.php');
             }
             if (!bookingTimeRangeValid($oraInizio, $oraFine)) {
-                jsonResponse(['success' => false, 'message' => 'L\'ora di fine deve essere successiva all\'ora di inizio.'], 422);
+                setFlash('warning', 'L\'ora di fine deve essere successiva all\'ora di inizio.');
+                redirect('prenotazioni.php');
             }
 
             $stmt = $pdo->prepare('SELECT COUNT(*) FROM clienti WHERE id = ?');
             $stmt->execute([$clienteId]);
             if ((int)$stmt->fetchColumn() === 0) {
-                jsonResponse(['success' => false, 'message' => 'Cliente non trovato.'], 404);
+                setFlash('warning', 'Cliente non trovato.');
+                redirect('prenotazioni.php');
             }
 
             $stmt = $pdo->prepare('SELECT COUNT(*) FROM insegnanti WHERE id = ?');
             $stmt->execute([$insegnanteId]);
             if ((int)$stmt->fetchColumn() === 0) {
-                jsonResponse(['success' => false, 'message' => 'Insegnante non trovato.'], 404);
+                setFlash('warning', 'Insegnante non trovato.');
+                redirect('prenotazioni.php');
             }
 
             if ($acquistoId !== null) {
                 $stmt = $pdo->prepare('SELECT COUNT(*) FROM acquisti WHERE id = ?');
                 $stmt->execute([$acquistoId]);
                 if ((int)$stmt->fetchColumn() === 0) {
-                    jsonResponse(['success' => false, 'message' => 'Acquisto collegato non trovato.'], 404);
+                    setFlash('warning', 'Acquisto collegato non trovato.');
+                    redirect('prenotazioni.php');
                 }
             }
 
@@ -104,7 +110,8 @@ if ($requestAction !== '') {
                      WHERE id = ?'
                 );
                 $stmt->execute([$data, $oraInizio, $oraFine, $clienteId, $insegnanteId, $strumento, $stato, $pacchettoNome, $acquistoId, $note, $id]);
-                jsonResponse(['success' => true, 'message' => 'Prenotazione aggiornata con successo.']);
+                setFlash('success', 'Prenotazione aggiornata con successo.');
+                redirect('prenotazioni.php');
             }
 
             $stmt = $pdo->prepare(
@@ -113,70 +120,49 @@ if ($requestAction !== '') {
             );
             $stmt->execute([$data, $oraInizio, $oraFine, $clienteId, $insegnanteId, $strumento, $stato, $pacchettoNome, $acquistoId, $note]);
 
-            jsonResponse(['success' => true, 'message' => 'Prenotazione creata con successo.', 'id' => (int)$pdo->lastInsertId()]);
-        } elseif ($requestAction === 'delete' && $_SERVER['REQUEST_METHOD'] === 'POST') {
-            verifyCsrf();
+            setFlash('success', 'Prenotazione creata con successo.');
+            redirect('prenotazioni.php');
+        } elseif ($requestAction === 'delete') {
+            verifyCsrfOrRedirect('prenotazioni.php');
             $id = sanitizeInt(post('id'));
             if ($id <= 0) {
-                jsonResponse(['success' => false, 'message' => 'Prenotazione non valida.'], 422);
+                setFlash('warning', 'Prenotazione non valida.');
+                redirect('prenotazioni.php');
             }
 
             $stmt = $pdo->prepare('DELETE FROM prenotazioni WHERE id = ?');
             $stmt->execute([$id]);
             if ($stmt->rowCount() === 0) {
-                jsonResponse(['success' => false, 'message' => 'Prenotazione non trovata.'], 404);
+                setFlash('warning', 'Prenotazione non trovata.');
+                redirect('prenotazioni.php');
             }
 
-            jsonResponse(['success' => true, 'message' => 'Prenotazione eliminata con successo.']);
-        } elseif ($requestAction === 'get') {
-            $id = sanitizeInt($_GET['id'] ?? $_POST['id'] ?? 0);
-            if ($id <= 0) {
-                jsonResponse(['success' => false, 'message' => 'Prenotazione non valida.'], 422);
-            }
-
-            $stmt = $pdo->prepare(
-                'SELECT p.*, c.nome AS cliente_nome, c.cognome AS cliente_cognome, i.nome AS insegnante_nome, i.cognome AS insegnante_cognome
-                 FROM prenotazioni p
-                 INNER JOIN clienti c ON c.id = p.cliente_id
-                 INNER JOIN insegnanti i ON i.id = p.insegnante_id
-                 WHERE p.id = ?
-                 LIMIT 1'
-            );
-            $stmt->execute([$id]);
-            $booking = $stmt->fetch();
-            if (!$booking) {
-                jsonResponse(['success' => false, 'message' => 'Prenotazione non trovata.'], 404);
-            }
-
-            jsonResponse(['success' => true, 'booking' => $booking]);
-        } elseif ($requestAction === 'update_status' && $_SERVER['REQUEST_METHOD'] === 'POST') {
-            verifyCsrf();
+            setFlash('success', 'Prenotazione eliminata con successo.');
+            redirect('prenotazioni.php');
+        } elseif ($requestAction === 'update_status') {
+            verifyCsrfOrRedirect('prenotazioni.php');
             $id = sanitizeInt(post('id'));
             $stato = trim(post('stato'));
             if ($id <= 0 || !in_array($stato, bookingStatuses(), true)) {
-                jsonResponse(['success' => false, 'message' => 'Dati non validi per aggiornare lo stato.'], 422);
+                setFlash('warning', 'Dati non validi per aggiornare lo stato.');
+                redirect('prenotazioni.php');
             }
 
             $stmt = $pdo->prepare('UPDATE prenotazioni SET stato = ? WHERE id = ?');
             $stmt->execute([$stato, $id]);
-            if ($stmt->rowCount() === 0) {
-                $checkStmt = $pdo->prepare('SELECT COUNT(*) FROM prenotazioni WHERE id = ?');
-                $checkStmt->execute([$id]);
-                if ((int)$checkStmt->fetchColumn() === 0) {
-                    jsonResponse(['success' => false, 'message' => 'Prenotazione non trovata.'], 404);
-                }
-            }
-
-            jsonResponse(['success' => true, 'message' => 'Stato aggiornato con successo.']);
-        } elseif ($requestAction === 'bulk_status' && $_SERVER['REQUEST_METHOD'] === 'POST') {
-            verifyCsrf();
+            setFlash('success', 'Stato aggiornato con successo.');
+            redirect('prenotazioni.php');
+        } elseif ($requestAction === 'bulk_status') {
+            verifyCsrfOrRedirect('prenotazioni.php');
             $stato = trim(post('stato'));
             $ids = $_POST['ids'] ?? [];
             if (!in_array($stato, bookingStatuses(), true)) {
-                jsonResponse(['success' => false, 'message' => 'Stato non valido.'], 422);
+                setFlash('warning', 'Stato non valido.');
+                redirect('prenotazioni.php');
             }
             if (!is_array($ids) || $ids === []) {
-                jsonResponse(['success' => false, 'message' => 'Seleziona almeno una prenotazione.'], 422);
+                setFlash('warning', 'Seleziona almeno una prenotazione.');
+                redirect('prenotazioni.php');
             }
 
             $cleanIds = [];
@@ -188,23 +174,24 @@ if ($requestAction !== '') {
             }
             $cleanIds = array_values(array_unique($cleanIds));
             if ($cleanIds === []) {
-                jsonResponse(['success' => false, 'message' => 'Seleziona almeno una prenotazione valida.'], 422);
+                setFlash('warning', 'Seleziona almeno una prenotazione valida.');
+                redirect('prenotazioni.php');
             }
 
             $placeholders = implode(',', array_fill(0, count($cleanIds), '?'));
             $stmt = $pdo->prepare("UPDATE prenotazioni SET stato = ? WHERE id IN ($placeholders)");
             $stmt->execute(array_merge([$stato], $cleanIds));
 
-            jsonResponse(['success' => true, 'message' => 'Stato aggiornato per le prenotazioni selezionate.']);
-        } else {
-            jsonResponse(['success' => false, 'message' => 'Azione non riconosciuta.'], 400);
+            setFlash('success', 'Stato aggiornato per le prenotazioni selezionate.');
+            redirect('prenotazioni.php');
         }
     } catch (Throwable $e) {
         error_log('[prenotazioni.php] ' . get_class($e) . ': ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
         if ($pdo->inTransaction()) {
             $pdo->rollBack();
         }
-        jsonResponse(['success' => false, 'message' => 'Errore durante l\'operazione richiesta.'], 500);
+        setFlash('danger', 'Errore durante l\'operazione richiesta.');
+        redirect('prenotazioni.php');
     }
 }
 
@@ -311,13 +298,21 @@ require_once __DIR__ . '/includes/header.php';
     <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-3">
         <div><i class="fas fa-calendar-check"></i> Elenco prenotazioni</div>
         <div class="d-flex flex-wrap align-items-center gap-2">
-            <select class="form-select form-select-sm" id="bulkStatusSelect" style="min-width: 180px;">
-                <option value="">Aggiorna stato selezionati</option>
-                <?php foreach ($statusOptions as $statusOption): ?>
-                <option value="<?= htmlspecialchars($statusOption) ?>"><?= htmlspecialchars($statusOption) ?></option>
-                <?php endforeach; ?>
-            </select>
-            <button type="button" class="btn btn-sm btn-outline-primary" id="applyBulkStatusBtn">Applica</button>
+            <form method="post" action="prenotazioni.php" id="bulkStatusForm">
+                <?= csrfField() ?>
+                <input type="hidden" name="action" value="bulk_status">
+                <input type="hidden" name="stato" id="bulkStatusValue" value="">
+                <div id="bulkIdsContainer"></div>
+                <div class="d-flex flex-wrap align-items-center gap-2">
+                    <select class="form-select form-select-sm" id="bulkStatusSelect" style="min-width: 180px;">
+                        <option value="">Aggiorna stato selezionati</option>
+                        <?php foreach ($statusOptions as $statusOption): ?>
+                        <option value="<?= htmlspecialchars($statusOption) ?>"><?= htmlspecialchars($statusOption) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                    <button type="button" class="btn btn-sm btn-outline-primary" id="applyBulkStatusBtn">Applica</button>
+                </div>
+            </form>
         </div>
     </div>
     <div class="card-body">
@@ -356,12 +351,19 @@ require_once __DIR__ . '/includes/header.php';
                         <td><?= htmlspecialchars((string)($booking['pacchetto_nome'] ?: '—')) ?></td>
                         <td>
                             <div class="d-flex flex-wrap gap-2">
-                                <button type="button" class="btn btn-sm btn-outline-primary btn-edit-booking" data-id="<?= htmlspecialchars((string)$booking['id']) ?>">
+                                <button type="button" class="btn btn-sm btn-outline-primary btn-edit-booking"
+                                        data-edit="<?= htmlspecialchars(json_encode($booking), ENT_QUOTES) ?>">
                                     <i class="fas fa-pen"></i>
                                 </button>
-                                <button type="button" class="btn btn-sm btn-outline-danger btn-delete-booking" data-id="<?= htmlspecialchars((string)$booking['id']) ?>" data-name="<?= htmlspecialchars(trim((string)$booking['cliente_nome'] . ' ' . (string)$booking['cliente_cognome'])) ?>">
-                                    <i class="fas fa-trash"></i>
-                                </button>
+                                <form method="post" action="prenotazioni.php" class="d-inline">
+                                    <?= csrfField() ?>
+                                    <input type="hidden" name="action" value="delete">
+                                    <input type="hidden" name="id" value="<?= htmlspecialchars((string)$booking['id']) ?>">
+                                    <button type="button" class="btn btn-sm btn-outline-danger"
+                                            onclick="confirmDelete(this.form, '<?= htmlspecialchars(addslashes(trim((string)$booking['cliente_nome'] . ' ' . (string)$booking['cliente_cognome'])), ENT_QUOTES) ?>')">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
                             </div>
                         </td>
                     </tr>
@@ -501,15 +503,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    async function fetchBooking(id) {
-        const response = await fetch(`prenotazioni.php?action=get&id=${encodeURIComponent(id)}`);
-        const data = await response.json();
-        if (!data.success) {
-            throw new Error(data.message || 'Errore nel caricamento della prenotazione.');
-        }
-        return data.booking;
-    }
-
     function initBookingTable() {
         if (typeof $ === 'undefined' || typeof $.fn.DataTable === 'undefined') {
             return;
@@ -568,9 +561,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     document.querySelectorAll('.btn-edit-booking').forEach((button) => {
-        button.addEventListener('click', async () => {
+        button.addEventListener('click', () => {
             try {
-                const booking = await fetchBooking(button.dataset.id);
+                const booking = JSON.parse(button.dataset.edit);
                 resetBookingForm();
                 document.getElementById('bookingModalTitle').textContent = 'Modifica Prenotazione';
                 document.getElementById('booking_id').value = booking.id || '';
@@ -585,38 +578,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.getElementById('booking_note').value = booking.note || '';
                 filterPurchasesByClient(booking.cliente_id || '', booking.acquisto_id || '');
                 bookingModal.show();
-            } catch (error) {
-                showToast(error.message, 'danger');
+            } catch (e) {
+                showToast('Errore nel caricamento della prenotazione.', 'danger');
             }
         });
     });
 
-    document.querySelectorAll('.btn-delete-booking').forEach((button) => {
-        button.addEventListener('click', async () => {
-            const name = button.dataset.name || 'questa prenotazione';
-            if (!confirm(`Eliminare la prenotazione di ${name}?`)) {
-                return;
-            }
-            try {
-                const formData = new FormData();
-                formData.append('action', 'delete');
-                formData.append('id', button.dataset.id);
-                formData.append('csrf_token', getCsrfToken());
-
-                const response = await fetch('prenotazioni.php', { method: 'POST', body: formData });
-                const data = await response.json();
-                if (!data.success) {
-                    throw new Error(data.message || 'Errore durante l\'eliminazione.');
-                }
-                showToast(data.message, 'success');
-                window.location.reload();
-            } catch (error) {
-                showToast(error.message, 'danger');
-            }
-        });
-    });
-
-    document.getElementById('applyBulkStatusBtn')?.addEventListener('click', async () => {
+    document.getElementById('applyBulkStatusBtn')?.addEventListener('click', () => {
         const status = document.getElementById('bulkStatusSelect').value || '';
         const ids = Array.from(document.querySelectorAll('.booking-checkbox:checked')).map((checkbox) => checkbox.value);
         if (!status) {
@@ -628,36 +596,23 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        try {
-            const formData = new FormData();
-            formData.append('action', 'bulk_status');
-            formData.append('stato', status);
-            formData.append('csrf_token', getCsrfToken());
-            ids.forEach((id) => formData.append('ids[]', id));
-
-            const response = await fetch('prenotazioni.php', { method: 'POST', body: formData });
-            const data = await response.json();
-            if (!data.success) {
-                throw new Error(data.message || 'Errore nell\'aggiornamento multiplo.');
-            }
-            showToast(data.message, 'success');
-            window.location.reload();
-        } catch (error) {
-            showToast(error.message, 'danger');
-        }
+        const container = document.getElementById('bulkIdsContainer');
+        container.innerHTML = '';
+        ids.forEach((id) => {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'ids[]';
+            input.value = id;
+            container.appendChild(input);
+        });
+        document.getElementById('bulkStatusValue').value = status;
+        document.getElementById('bulkStatusForm').submit();
     });
 
     document.getElementById('selectAllBookings')?.addEventListener('change', (event) => {
         document.querySelectorAll('.booking-checkbox').forEach((checkbox) => {
             checkbox.checked = !!event.target.checked;
         });
-    });
-
-    ajaxForm(bookingForm, (data) => {
-        showToast(data.message || 'Prenotazione salvata.', 'success');
-        window.location.reload();
-    }, (message) => {
-        showToast(message, 'danger');
     });
 
     bookingModalEl.addEventListener('hidden.bs.modal', resetBookingForm);

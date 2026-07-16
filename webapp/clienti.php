@@ -29,12 +29,11 @@ function clientPreview(?string $value, int $length = 60): string
     return strlen($value) > $length ? substr($value, 0, $length - 3) . '...' : $value;
 }
 
-$requestAction = $_SERVER['REQUEST_METHOD'] === 'POST' ? post('action') : get('action');
-
-if ($requestAction !== '') {
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $requestAction = post('action');
     try {
-        if ($requestAction === 'save' && $_SERVER['REQUEST_METHOD'] === 'POST') {
-            verifyCsrf();
+        if ($requestAction === 'save') {
+            verifyCsrfOrRedirect('clienti.php');
 
             $id = sanitizeInt(post('id'));
             $nome = trim(post('nome'));
@@ -48,13 +47,15 @@ if ($requestAction !== '') {
             $megaLocale = clientNullableString(post('mega_cartella_locale'));
 
             if ($nome === '' || $cognome === '') {
-                jsonResponse(['success' => false, 'message' => 'Nome e cognome sono obbligatori.'], 422);
+                setFlash('warning', 'Nome e cognome sono obbligatori.');
+                redirect('clienti.php');
             }
 
             $email = null;
             if ($emailRaw !== null) {
                 if (!filter_var($emailRaw, FILTER_VALIDATE_EMAIL)) {
-                    jsonResponse(['success' => false, 'message' => 'Inserisci un indirizzo email valido.'], 422);
+                    setFlash('warning', 'Inserisci un indirizzo email valido.');
+                    redirect('clienti.php');
                 }
                 $email = $emailRaw;
             }
@@ -66,7 +67,8 @@ if ($requestAction !== '') {
                      WHERE id = ?'
                 );
                 $stmt->execute([$nome, $cognome, $telefono, $email, $indirizzo, $codiceFiscale, $note, $megaPubblica, $megaLocale, $id]);
-                jsonResponse(['success' => true, 'message' => 'Cliente aggiornato con successo.']);
+                setFlash('success', 'Cliente aggiornato con successo.');
+                redirect('clienti.php');
             }
 
             $stmt = $pdo->prepare(
@@ -74,13 +76,15 @@ if ($requestAction !== '') {
                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
             );
             $stmt->execute([$nome, $cognome, $telefono, $email, $indirizzo, $codiceFiscale, $note, $megaPubblica, $megaLocale]);
-            jsonResponse(['success' => true, 'message' => 'Cliente creato con successo.', 'id' => (int)$pdo->lastInsertId()]);
-        } elseif ($requestAction === 'delete' && $_SERVER['REQUEST_METHOD'] === 'POST') {
-            verifyCsrf();
+            setFlash('success', 'Cliente creato con successo.');
+            redirect('clienti.php');
+        } elseif ($requestAction === 'delete') {
+            verifyCsrfOrRedirect('clienti.php');
 
             $id = sanitizeInt(post('id'));
             if ($id <= 0) {
-                jsonResponse(['success' => false, 'message' => 'Cliente non valido.'], 422);
+                setFlash('warning', 'Cliente non valido.');
+                redirect('clienti.php');
             }
 
             $stmt = $pdo->prepare('SELECT COUNT(*) FROM prenotazioni WHERE cliente_id = ?');
@@ -92,41 +96,28 @@ if ($requestAction !== '') {
             $purchases = (int)$stmt->fetchColumn();
 
             if ($bookings > 0 || $purchases > 0) {
-                jsonResponse(['success' => false, 'message' => 'Impossibile eliminare il cliente: sono presenti prenotazioni o acquisti collegati.'], 409);
+                setFlash('warning', 'Impossibile eliminare il cliente: sono presenti prenotazioni o acquisti collegati.');
+                redirect('clienti.php');
             }
 
             $stmt = $pdo->prepare('DELETE FROM clienti WHERE id = ?');
             $stmt->execute([$id]);
 
             if ($stmt->rowCount() === 0) {
-                jsonResponse(['success' => false, 'message' => 'Cliente non trovato.'], 404);
+                setFlash('warning', 'Cliente non trovato.');
+                redirect('clienti.php');
             }
 
-            jsonResponse(['success' => true, 'message' => 'Cliente eliminato con successo.']);
-        } elseif ($requestAction === 'get') {
-            $id = sanitizeInt($_GET['id'] ?? $_POST['id'] ?? 0);
-            if ($id <= 0) {
-                jsonResponse(['success' => false, 'message' => 'Cliente non valido.'], 422);
-            }
-
-            $stmt = $pdo->prepare('SELECT * FROM clienti WHERE id = ? LIMIT 1');
-            $stmt->execute([$id]);
-            $client = $stmt->fetch();
-
-            if (!$client) {
-                jsonResponse(['success' => false, 'message' => 'Cliente non trovato.'], 404);
-            }
-
-            jsonResponse(['success' => true, 'client' => $client]);
-        } else {
-            jsonResponse(['success' => false, 'message' => 'Azione non riconosciuta.'], 400);
+            setFlash('success', 'Cliente eliminato con successo.');
+            redirect('clienti.php');
         }
     } catch (Throwable $e) {
         error_log('[clienti.php] ' . get_class($e) . ': ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
         if ($pdo->inTransaction()) {
             $pdo->rollBack();
         }
-        respondOperationResult(false, 'Errore durante l\'operazione richiesta.', 'clienti.php', 500);
+        setFlash('danger', 'Errore durante l\'operazione richiesta.');
+        redirect('clienti.php');
     }
 }
 
@@ -196,12 +187,19 @@ require_once __DIR__ . '/includes/header.php';
                                    class="btn btn-sm btn-outline-info">
                                     <i class="fas fa-eye"></i>
                                 </a>
-                                <button type="button" class="btn btn-sm btn-outline-primary btn-edit-client" data-id="<?= htmlspecialchars((string)$client['id']) ?>">
+                                <button type="button" class="btn btn-sm btn-outline-primary btn-edit-client"
+                                        data-edit="<?= htmlspecialchars(json_encode($client), ENT_QUOTES) ?>">
                                     <i class="fas fa-pen"></i>
                                 </button>
-                                <button type="button" class="btn btn-sm btn-outline-danger btn-delete-client" data-id="<?= htmlspecialchars((string)$client['id']) ?>" data-name="<?= htmlspecialchars(trim((string)$client['nome'] . ' ' . (string)$client['cognome'])) ?>">
-                                    <i class="fas fa-trash"></i>
-                                </button>
+                                <form method="post" action="clienti.php" class="d-inline">
+                                    <?= csrfField() ?>
+                                    <input type="hidden" name="action" value="delete">
+                                    <input type="hidden" name="id" value="<?= htmlspecialchars((string)$client['id']) ?>">
+                                    <button type="button" class="btn btn-sm btn-outline-danger"
+                                            onclick="confirmDelete(this.form, '<?= htmlspecialchars(addslashes(trim((string)$client['nome'] . ' ' . (string)$client['cognome'])), ENT_QUOTES) ?>')">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
                             </div>
                         </td>
                     </tr>
@@ -368,9 +366,7 @@ require_once __DIR__ . '/includes/header.php';
 <script>
 document.addEventListener('DOMContentLoaded', () => {
     const clientModalEl = document.getElementById('clientModal');
-    const detailModalEl = document.getElementById('detailModal');
     const clientModal = new bootstrap.Modal(clientModalEl);
-    const detailModal = new bootstrap.Modal(detailModalEl);
     const clientForm = document.getElementById('clientForm');
 
     function resetClientForm() {
@@ -379,32 +375,15 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('clientModalTitle').textContent = 'Nuovo Cliente';
     }
 
-    async function fetchClient(id) {
-        const response = await fetch(`clienti.php?action=get&id=${encodeURIComponent(id)}`);
-        const data = await response.json();
-        if (!data.success) {
-            throw new Error(data.message || 'Errore nel caricamento del cliente.');
-        }
-        return data.client;
-    }
-
-    function setText(id, value) {
-        document.getElementById(id).textContent = value && String(value).trim() !== '' ? value : '—';
-    }
-
-    document.getElementById('detail_whatsapp').innerHTML = '<i class="fab fa-whatsapp me-2"></i>WhatsApp';
-    document.getElementById('detail_mega_public').innerHTML = '<i class="fas fa-folder-open me-2"></i>MEGA Pubblica';
-    document.getElementById('detail_mega_local').innerHTML = '<i class="fas fa-desktop me-2"></i>MEGA Locale';
-
     document.getElementById('newClientBtn').addEventListener('click', () => {
         resetClientForm();
         clientModal.show();
     });
 
     document.querySelectorAll('.btn-edit-client').forEach((button) => {
-        button.addEventListener('click', async () => {
+        button.addEventListener('click', () => {
             try {
-                const client = await fetchClient(button.dataset.id);
+                const client = JSON.parse(button.dataset.edit);
                 resetClientForm();
                 document.getElementById('clientModalTitle').textContent = 'Modifica Cliente';
                 document.getElementById('client_id').value = client.id || '';
@@ -418,102 +397,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.getElementById('mega_cartella_pubblica').value = client.mega_cartella_pubblica || '';
                 document.getElementById('mega_cartella_locale').value = client.mega_cartella_locale || '';
                 clientModal.show();
-            } catch (error) {
-                showToast(error.message, 'danger');
+            } catch (e) {
+                showToast('Errore nel caricamento del cliente.', 'danger');
             }
         });
-    });
-
-    document.querySelectorAll('.btn-view-client').forEach((button) => {
-        button.addEventListener('click', async () => {
-            try {
-                const client = await fetchClient(button.dataset.id);
-                setText('detail_full_name', `${client.nome || ''} ${client.cognome || ''}`.trim());
-                setText('detail_cf', client.codice_fiscale || '');
-                setText('detail_phone', client.telefono || '');
-                setText('detail_email', client.email || '');
-                setText('detail_address', client.indirizzo || '');
-                setText('detail_note', client.note || '');
-
-                const phoneDigits = String(client.telefono || '').replace(/\D+/g, '');
-                const whatsapp = document.getElementById('detail_whatsapp');
-                if (phoneDigits) {
-                    whatsapp.href = `https://wa.me/${phoneDigits}`;
-                    whatsapp.classList.remove('d-none');
-                } else {
-                    whatsapp.classList.add('d-none');
-                    whatsapp.removeAttribute('href');
-                }
-
-                const megaPublic = document.getElementById('detail_mega_public');
-                if (client.mega_cartella_pubblica) {
-                    megaPublic.href = client.mega_cartella_pubblica;
-                    megaPublic.classList.remove('d-none');
-                } else {
-                    megaPublic.classList.add('d-none');
-                    megaPublic.removeAttribute('href');
-                }
-
-                const megaLocal = document.getElementById('detail_mega_local');
-                if (client.mega_cartella_locale) {
-                    megaLocal.href = client.mega_cartella_locale;
-                    megaLocal.classList.remove('d-none');
-                } else {
-                    megaLocal.classList.add('d-none');
-                    megaLocal.removeAttribute('href');
-                }
-
-                const pdfFuturi = document.getElementById('detail_pdf_futuri');
-                const pdfStorico = document.getElementById('detail_pdf_storico');
-                if (client.id) {
-                    pdfFuturi.href = `api/export-cliente-pdf.php?id=${encodeURIComponent(client.id)}&tipo=futuri`;
-                    pdfFuturi.classList.remove('d-none');
-                    pdfStorico.href = `api/export-cliente-pdf.php?id=${encodeURIComponent(client.id)}&tipo=storico`;
-                    pdfStorico.classList.remove('d-none');
-                } else {
-                    pdfFuturi.classList.add('d-none');
-                    pdfStorico.classList.add('d-none');
-                }
-
-                detailModal.show();
-            } catch (error) {
-                showToast(error.message, 'danger');
-            }
-        });
-    });
-
-    document.querySelectorAll('.btn-delete-client').forEach((button) => {
-        button.addEventListener('click', async () => {
-            const name = button.dataset.name || 'questo cliente';
-            if (!confirm(`Eliminare ${name}?`)) {
-                return;
-            }
-
-            try {
-                const formData = new FormData();
-                formData.append('action', 'delete');
-                formData.append('id', button.dataset.id);
-                formData.append('csrf_token', getCsrfToken());
-
-                const response = await fetch('clienti.php', { method: 'POST', body: formData });
-                const data = await response.json();
-                if (!data.success) {
-                    throw new Error(data.message || 'Errore durante l\'eliminazione.');
-                }
-
-                showToast(data.message, 'success');
-                window.location.reload();
-            } catch (error) {
-                showToast(error.message, 'danger');
-            }
-        });
-    });
-
-    ajaxForm(clientForm, (data) => {
-        showToast(data.message || 'Cliente salvato.', 'success');
-        window.location.reload();
-    }, (message) => {
-        showToast(message, 'danger');
     });
 
     clientModalEl.addEventListener('hidden.bs.modal', resetClientForm);
