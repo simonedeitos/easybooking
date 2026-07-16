@@ -33,7 +33,13 @@ function initCalendar(options = {}) {
     if (!calEl) return;
 
     const colorMode = options.colorMode || 'status'; // 'status' | 'teacher'
-    const teacherFilter = document.getElementById('calendarTeacherFilter');
+    // Teacher filter value is passed explicitly by renderCalendar() at construction
+    // time. Defaults to empty string (= show all teachers) if not provided.
+    const teacherFilterValue = typeof options.teacherFilterValue === 'string'
+        ? options.teacherFilterValue
+        : '';
+
+    console.debug('[EasyBooking] initCalendar → insegnante_id=' + (teacherFilterValue || 'tutti') + ' view=' + (options.initialView || 'timeGridWeek'));
 
     try {
         calendarInstance = new FullCalendar.Calendar(calEl, {
@@ -53,18 +59,15 @@ function initCalendar(options = {}) {
             businessHours: options.businessHours || true,
             scrollTime: '09:00:00',
 
-            // Load events from server – use URL event source so that
-            // extraParams() is re-evaluated on every refetchEvents() call,
-            // which guarantees the teacher filter is applied immediately.
-            // _t (timestamp) is added to every request to prevent browser
-            // and proxy caches from serving a stale response when the
-            // teacher filter value changes.
+            // Teacher filter value is captured at construction time (passed explicitly
+            // via options.teacherFilterValue after a destroy+recreate cycle) and baked
+            // into extraParams. This eliminates any stale-closure or stale-cache issue
+            // that could affect a refetchEvents()-only approach.
             eventSources: [{
                 url: 'api/get-eventi-calendario.php',
                 extraParams() {
-                    const teacherId = teacherFilter?.value || '';
                     const params = { cacheBust: Date.now() };
-                    if (teacherId) params.insegnante_id = teacherId;
+                    if (teacherFilterValue) params.insegnante_id = teacherFilterValue;
                     return params;
                 },
                 failure(err) {
