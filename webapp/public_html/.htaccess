@@ -34,6 +34,9 @@ CacheKeyModify -qs:_ga
 # ════════════════════════════════════════════════════════════
 # ☁️ CLOUD STORAGE ROUTES - EASYBOOKING
 # ════════════════════════════════════════════════════════════
+# This file belongs to the public domain document root (e.g. vocefutura.it/).
+# If index_cloud.php cannot find webapp/config/database.php automatically,
+# configure EASYBOOKING_CONFIG_PATH in the environment or in webapp/.env.
 <IfModule mod_rewrite.c>
 RewriteEngine On
 RewriteBase /

@@ -16,18 +16,72 @@ ini_set('display_errors', '0');
 $config_path = null;
 $cloud_functions_path = null;
 
+function readEnvConfigValue(string $key, array $envFiles): ?string
+{
+    foreach ($envFiles as $envFile) {
+        if (!$envFile || !is_file($envFile)) {
+            continue;
+        }
+        foreach (file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $line) {
+            $line = trim($line);
+            if ($line === '') {
+                continue;
+            }
+            if ((isset($line[0]) && $line[0] === '#') || strpos($line, '=') === false) {
+                continue;
+            }
+            [$lineKey, $lineValue] = array_map('trim', explode('=', $line, 2));
+            if ($lineKey !== $key) {
+                continue;
+            }
+            $quote = isset($lineValue[0]) ? $lineValue[0] : '';
+            if (($quote === '"' || $quote === "'") && str_ends_with($lineValue, $quote)) {
+                $lineValue = substr($lineValue, 1, -1);
+                if ($quote === '"') {
+                    $lineValue = stripslashes($lineValue);
+                } else {
+                    $lineValue = str_replace(["\\'", "\\\\"], ["'", "\\"], $lineValue);
+                }
+            }
+            return trim($lineValue);
+        }
+    }
+
+    return null;
+}
+
 // Determina il percorso base
 $current_dir = __DIR__;
 $parent_dir = dirname($current_dir);
 $grandparent_dir = dirname($parent_dir);
+$great_grandparent_dir = dirname($grandparent_dir);
 
-// Prova vari percorsi possibili
-$possible_configs = [
+$possible_env_files = array_values(array_unique([
+    // Hostinger / public_html document root + EasyBooking in /public_html/easybooking/webapp
+    $current_dir . '/../public_html/easybooking/webapp/.env',
+    $current_dir . '/easybooking/webapp/.env',
+    $parent_dir . '/.env',
+    $parent_dir . '/easybooking/webapp/.env',
+    $grandparent_dir . '/webapp/.env',
+    $great_grandparent_dir . '/webapp/.env',
+]));
+
+$explicit_config_path = getenv('EASYBOOKING_CONFIG_PATH')
+    ?: ($_SERVER['EASYBOOKING_CONFIG_PATH'] ?? '')
+    ?: ($_ENV['EASYBOOKING_CONFIG_PATH'] ?? '')
+    ?: readEnvConfigValue('EASYBOOKING_CONFIG_PATH', $possible_env_files);
+
+// Prova prima un percorso esplicito da ambiente/.env, poi i layout più comuni.
+$possible_configs = array_values(array_filter(array_unique([
+    $explicit_config_path,
+    $current_dir . '/../public_html/easybooking/webapp/config/database.php',
+    $current_dir . '/easybooking/webapp/config/database.php',
     $current_dir . '/../../config/database.php',           // Se in public_html/
     $parent_dir . '/config/database.php',                  // Se in webapp/public_html/
     $grandparent_dir . '/webapp/config/database.php',      // Se in webapp/
     dirname(dirname(dirname(__FILE__))) . '/webapp/config/database.php',
-];
+    $great_grandparent_dir . '/webapp/config/database.php',
+])));
 
 foreach ($possible_configs as $path) {
     if (file_exists($path)) {

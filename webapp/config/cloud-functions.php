@@ -3,7 +3,8 @@
 
 // ── Cloud Storage Path ────────────────────────────────────────────────────
 // The cloud storage folder lives OUTSIDE the public web root.
-// Override via CLOUD_STORAGE_PATH constant or environment variable.
+// Override via CLOUD_STORAGE_PATH constant or environment variable when the
+// auto-detected path does not match the real shared storage location.
 if (!defined('CLOUD_STORAGE_PATH')) {
     $envPath = getenv('CLOUD_STORAGE_PATH');
     define('CLOUD_STORAGE_PATH', $envPath !== false ? rtrim($envPath, '/') : dirname(__DIR__, 3) . '/cloud_storage');
@@ -12,8 +13,9 @@ if (!defined('CLOUD_STORAGE_PATH')) {
 // ── Public base URL ───────────────────────────────────────────────────────
 // Optionally override the auto-detected base URL used in cloudShareUrl().
 // Set CLOUD_PUBLIC_BASE_URL in .env when behind a reverse proxy or when the
-// auto-detection produces wrong results (e.g. https://yourdomain.com or
-// https://yourdomain.com/easybooking).
+// public share links must use a different host than the admin area
+// (e.g. admin at https://easybooking.vocefutura.it and share links at
+// https://vocefutura.it).
 if (!defined('CLOUD_PUBLIC_BASE_URL')) {
     $envUrl = getenv('CLOUD_PUBLIC_BASE_URL');
     if ($envUrl !== false && $envUrl !== '') {
@@ -279,14 +281,12 @@ function cloudFileIcon(?string $mime): string
 // ── Public share URL ──────────────────────────────────────────────────────
 
 /**
- * Builds the public share URL for a client cloud hash.
- * Uses the CLOUD_PUBLIC_BASE_URL constant if defined, otherwise falls back
- * to the current host.
+ * Returns the public base URL used for cloud share links.
  */
-function cloudShareUrl(string $hash): string
+function cloudPublicBaseUrl(): string
 {
     if (defined('CLOUD_PUBLIC_BASE_URL')) {
-        return rtrim(CLOUD_PUBLIC_BASE_URL, '/') . '/share/' . urlencode($hash);
+        return rtrim(CLOUD_PUBLIC_BASE_URL, '/');
     }
     $proto = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
     $host  = $_SERVER['HTTP_HOST'] ?? 'localhost';
@@ -299,7 +299,15 @@ function cloudShareUrl(string $hash): string
     if (!preg_match('#^(/[a-zA-Z0-9_/.-]*)?$#', $base)) {
         $base = '';
     }
-    return $proto . '://' . $host . $base . '/share/' . urlencode($hash);
+    return $proto . '://' . $host . $base;
+}
+
+/**
+ * Builds the public share URL for a client cloud hash.
+ */
+function cloudShareUrl(string $hash): string
+{
+    return cloudPublicBaseUrl() . '/share/' . urlencode($hash);
 }
 
 // ── Filesystem helpers ────────────────────────────────────────────────────

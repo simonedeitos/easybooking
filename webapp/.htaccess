@@ -6,6 +6,7 @@ Options -Indexes
     # Set this to the URL path where the webapp is installed.
     # Use / if the app is at the domain root (e.g. easybooking.vocefutura.it/).
     # Use /easybooking/ if the app is in a subdirectory (e.g. vocefutura.it/easybooking/).
+    # Public share links can still point somewhere else via CLOUD_PUBLIC_BASE_URL in webapp/.env.
     RewriteBase /
 
     # /share/[HASH] → cloud_pubblica.php?hash=[HASH]

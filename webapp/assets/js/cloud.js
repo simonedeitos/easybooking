@@ -18,9 +18,10 @@
         if (!container) return;
         const id   = 'toast-' + Date.now();
         const icon = type === 'success' ? 'fa-check-circle' : type === 'danger' ? 'fa-times-circle' : 'fa-info-circle';
+        const safeMessage = htmlEsc(message);
         const html = `<div id="${id}" class="toast align-items-center text-bg-${type} border-0" role="alert">
             <div class="d-flex">
-                <div class="toast-body"><i class="fas ${icon} me-2"></i>${message}</div>
+                <div class="toast-body"><i class="fas ${icon} me-2"></i>${safeMessage}</div>
                 <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
             </div>
         </div>`;
@@ -38,6 +39,28 @@
             .replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;')
             .replace(/'/g, '&#39;');
+    }
+
+    function normalizeSearchText(value) {
+        return String(value || '')
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .trim()
+            .toLowerCase();
+    }
+
+    function cloudDebugEnabled() {
+        const app = document.getElementById('cloud-app');
+        return app?.dataset.cloudDebug === '1';
+    }
+
+    function cloudDebugLog(message, details) {
+        if (!cloudDebugEnabled()) return;
+        if (typeof details === 'undefined') {
+            console.debug(message);
+            return;
+        }
+        console.debug(message, details);
     }
 
     // ── Cloud Stats (compact badge) ───────────────────────────────────────
@@ -172,11 +195,15 @@
 
     /**
      * Builds the public share URL for a client cloud hash.
-     * Mirrors the PHP cloudShareUrl() fallback: strips the current filename
-     * from window.location.pathname so the URL is correct even when the app
-     * is installed in a subdirectory (e.g. /easybooking/).
+     * Uses the PHP-configured public base URL when present so admin and public
+     * cloud links stay aligned even when they live on different hosts.
      */
     function buildShareUrl(hash) {
+        const app = document.getElementById('cloud-app');
+        const configuredBaseUrl = (app?.getAttribute('data-cloud-base-url') ?? '').trim();
+        if (configuredBaseUrl !== '') {
+            return configuredBaseUrl.replace(/\/+$/, '') + '/share/' + encodeURIComponent(hash);
+        }
         const basePath = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/'));
         return window.location.origin + basePath + '/share/' + encodeURIComponent(hash);
     }
@@ -457,6 +484,14 @@
 
     function bindCreateCloudModal() {
         const modalEl = document.getElementById('createCloudModal');
+        const listEl = document.getElementById('create-cloud-list');
+        const searchInput = document.getElementById('create-cloud-search');
+
+        cloudDebugLog('[cloud] bindCreateCloudModal()', {
+            modalFound: !!modalEl,
+            listFound: !!listEl,
+            searchFound: !!searchInput
+        });
 
         // Reset search, selection and confirm button every time the modal opens,
         // regardless of how it is triggered (button click, Bootstrap API, etc.)
@@ -467,9 +502,18 @@
                 const confirmBtn = document.getElementById('create-cloud-confirm-btn');
                 if (search)     { search.value = ''; }
                 if (hidden)     { hidden.value = ''; }
+                // Warm the cached normalized search text once per item before filtering.
+                document.querySelectorAll('.create-cloud-list-item').forEach(item => {
+                    getCreateCloudSearchText(item);
+                });
                 filterCreateCloudList('');
                 document.querySelectorAll('.create-cloud-list-item').forEach(i => i.classList.remove('active'));
                 if (confirmBtn) { confirmBtn.disabled = true; }
+                cloudDebugLog('[cloud] create cloud modal opened and reset');
+            });
+            modalEl.addEventListener('shown.bs.modal', () => {
+                const search = document.getElementById('create-cloud-search');
+                if (search) search.focus();
             });
         }
 
@@ -481,25 +525,32 @@
             });
         }
 
-        // Live search filter
-        const searchInput = document.getElementById('create-cloud-search');
         if (searchInput) {
-            searchInput.addEventListener('input', () => {
-                filterCreateCloudList(searchInput.value.trim().toLowerCase());
-            });
+            const handleSearch = () => {
+                const query = normalizeSearchText(searchInput.value);
+                cloudDebugLog('[cloud] filtering create cloud clients', { query });
+                filterCreateCloudList(query);
+            };
+            searchInput.addEventListener('input', handleSearch);
+            searchInput.addEventListener('keyup', handleSearch);
+            searchInput.addEventListener('search', handleSearch);
         }
 
-        // Item selection
-        document.querySelectorAll('.create-cloud-list-item').forEach(item => {
-            item.addEventListener('click', () => {
+        if (listEl) {
+            listEl.addEventListener('click', e => {
+                const item = e.target.closest('.create-cloud-list-item');
+                if (!item) return;
                 document.querySelectorAll('.create-cloud-list-item').forEach(i => i.classList.remove('active'));
                 item.classList.add('active');
                 const hidden = document.getElementById('create-cloud-selected');
                 if (hidden) hidden.value = item.dataset.clientId;
                 const confirmBtn = document.getElementById('create-cloud-confirm-btn');
                 if (confirmBtn) confirmBtn.disabled = false;
+                cloudDebugLog('[cloud] create cloud client selected', {
+                    clientId: item.dataset.clientId
+                });
             });
-        });
+        }
 
         const confirmBtn = document.getElementById('create-cloud-confirm-btn');
         if (!confirmBtn) return;
@@ -540,22 +591,47 @@
     function filterCreateCloudList(query) {
         const items     = document.querySelectorAll('.create-cloud-list-item');
         const noResults = document.getElementById('create-cloud-no-results');
+        const hidden    = document.getElementById('create-cloud-selected');
+        const confirmBtn = document.getElementById('create-cloud-confirm-btn');
+        const normalizedQuery = normalizeSearchText(query);
         let   visible   = 0;
+        let   selectionHidden = false;
 
         items.forEach(item => {
-            const name = item.dataset.clientName || '';
-            const show = !query || name.includes(query);
-            // Use setProperty with 'important' priority so the inline style
-            // overrides Bootstrap's d-flex { display: flex !important } rule.
+            const searchText = getCreateCloudSearchText(item);
+            const show = !normalizedQuery || searchText.includes(normalizedQuery);
             if (show) {
+                item.hidden = false;
                 item.style.removeProperty('display');
             } else {
+                if (item.classList.contains('active')) {
+                    item.classList.remove('active');
+                    selectionHidden = true;
+                }
+                item.hidden = true;
                 item.style.setProperty('display', 'none', 'important');
             }
             if (show) visible++;
         });
 
+        if (selectionHidden) {
+            if (hidden) hidden.value = '';
+            if (confirmBtn) confirmBtn.disabled = true;
+        }
         if (noResults) noResults.classList.toggle('d-none', visible > 0);
+        cloudDebugLog('[cloud] create cloud filter result', {
+            query: normalizedQuery,
+            visible
+        });
+    }
+
+    function getCreateCloudSearchText(item) {
+        if (!item) return '';
+        const cached = item.dataset.normalizedSearch;
+        if (cached) return cached;
+        const normalized = normalizeSearchText(item.dataset.clientSearch || item.textContent || '');
+        item.dataset.normalizedSearch = normalized;
+        return normalized;
     }
 
     // ── Drag & Drop Upload ────────────────────────────────────────────────
