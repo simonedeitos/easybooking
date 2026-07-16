@@ -231,8 +231,9 @@ switch ($action) {
         }
 
         ob_end_clean();
+        $safeName = preg_replace('/[\r\n"\\\\]/', '_', $row['nome_originale']);
         header('Content-Type: ' . ($row['mime_type'] ?? 'application/octet-stream'));
-        header('Content-Disposition: attachment; filename="' . addslashes($row['nome_originale']) . '"');
+        header('Content-Disposition: attachment; filename="' . $safeName . '"');
         header('Content-Length: ' . filesize($path));
         header('X-Content-Type-Options: nosniff');
         readfile($path);

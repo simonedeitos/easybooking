@@ -187,8 +187,9 @@ foreach ($configs as $cfg) {
     if ($cfg['report_settimanale_enabled']) {
         if (isRightDayAndTime($cfg['report_settimanale_giorno'], $cfg['report_settimanale_ora'])) {
             $tipo      = $cfg['report_settimanale_tipo'];
-            $lunedi    = date('Y-m-d', strtotime('last monday'));
-            $domenica  = date('Y-m-d', strtotime('last sunday'));
+            // Report covers the previous complete week (Mon–Sun)
+            $lunedi    = date('Y-m-d', strtotime('monday last week'));
+            $domenica  = date('Y-m-d', strtotime('sunday last week'));
 
             $body  = "Report settimanale – " . formatDateIt($lunedi) . " / " . formatDateIt($domenica) . "\n\n";
 
@@ -239,10 +240,11 @@ foreach ($configs as $cfg) {
     if ($cfg['report_mensile_enabled']) {
         if (isRightDayOfMonthAndTime((int)$cfg['report_mensile_giorno_mese'], $cfg['report_mensile_ora'])) {
             $tipo        = $cfg['report_mensile_tipo'];
-            $primaMese   = date('Y-m-01');
-            $ultimoMese  = date('Y-m-t');
+            // Report covers the previous complete month
+            $primaMese   = date('Y-m-01', strtotime('first day of last month'));
+            $ultimoMese  = date('Y-m-t', strtotime('last day of last month'));
 
-            $body  = "Report mensile – " . formatDateIt($primaMese) . " / " . formatDateIt($ultimoMese) . "\n\n";
+            $body  = "Report mensile precedente – " . formatDateIt($primaMese) . " / " . formatDateIt($ultimoMese) . "\n\n";
 
             switch ($tipo) {
                 case 'lezioni':

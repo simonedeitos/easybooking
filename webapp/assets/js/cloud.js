@@ -293,15 +293,23 @@
         if (navigator.clipboard) {
             navigator.clipboard.writeText(url)
                 .then(() => showToast('Link copiato negli appunti!', 'success'))
-                .catch(() => showToast('Impossibile copiare.', 'warning'));
+                .catch(() => showToast('Impossibile copiare automaticamente. Copia manualmente: ' + url, 'warning'));
         } else {
-            const el = document.createElement('textarea');
-            el.value = url;
-            document.body.appendChild(el);
-            el.select();
-            document.execCommand('copy');
-            document.body.removeChild(el);
-            showToast('Link copiato!', 'success');
+            // Legacy fallback – execCommand is deprecated but still works in many browsers
+            try {
+                const el = document.createElement('textarea');
+                el.value = url;
+                el.style.position = 'fixed';
+                el.style.opacity  = '0';
+                document.body.appendChild(el);
+                el.focus();
+                el.select();
+                const ok = document.execCommand('copy');
+                document.body.removeChild(el);
+                showToast(ok ? 'Link copiato!' : 'Copia non supportata. URL: ' + url, ok ? 'success' : 'warning');
+            } catch (e) {
+                showToast('Copia non supportata. URL: ' + url, 'warning');
+            }
         }
     };
 

@@ -84,7 +84,7 @@ function cloudEnableForClient(PDO $pdo, int $clienteId): array
     $cartella = 'cliente_' . $clienteId . '_' . substr($hash, 0, 8);
     $dir = cloudClientDir($cartella);
 
-    if (!is_dir($dir) && !mkdir($dir, 0750, true)) {
+    if (!is_dir($dir) && !mkdir($dir, 0700, true)) {
         return ['success' => false, 'message' => 'Impossibile creare la cartella cloud.', 'hash' => null];
     }
 

@@ -70,8 +70,9 @@ if (!preg_match('/^[a-f0-9]{32}$/', $hash)) {
                         $filePath = cloudFilePath($cliente['cloud_cartella'], $fileRow['nome_file']);
                         if (is_file($filePath)) {
                             ob_end_clean();
+                            $safeName = preg_replace('/[\r\n"\\\\]/', '_', $fileRow['nome_originale']);
                             header('Content-Type: ' . ($fileRow['mime_type'] ?? 'application/octet-stream'));
-                            header('Content-Disposition: attachment; filename="' . addslashes($fileRow['nome_originale']) . '"');
+                            header('Content-Disposition: attachment; filename="' . $safeName . '"');
                             header('Content-Length: ' . filesize($filePath));
                             header('X-Content-Type-Options: nosniff');
                             readfile($filePath);
