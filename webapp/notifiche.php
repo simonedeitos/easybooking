@@ -119,39 +119,12 @@ if ($requestAction === 'save' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             redirect(notificationRedirectTarget($embedded));
         }
 
-        $stmt = $pdo->prepare(
-            'INSERT INTO notifiche_config (
-                user_id, email_notifiche, abilita_email,
-                reminder_lezioni_enabled, reminder_lezioni_giorni_prima, reminder_lezioni_giorno_settimana, reminder_lezioni_ora, reminder_lezioni_giorni_futuri,
-                report_settimanale_enabled, report_settimanale_giorno, report_settimanale_ora, report_settimanale_tipo,
-                report_mensile_enabled, report_mensile_giorno_mese, report_mensile_ora, report_mensile_tipo,
-                avviso_scadenza_enabled, avviso_scadenza_giorni,
-                avviso_non_confermata_enabled, avviso_non_confermata_giorni
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ON DUPLICATE KEY UPDATE
-                email_notifiche = VALUES(email_notifiche),
-                abilita_email = VALUES(abilita_email),
-                reminder_lezioni_enabled = VALUES(reminder_lezioni_enabled),
-                reminder_lezioni_giorni_prima = VALUES(reminder_lezioni_giorni_prima),
-                reminder_lezioni_giorno_settimana = VALUES(reminder_lezioni_giorno_settimana),
-                reminder_lezioni_ora = VALUES(reminder_lezioni_ora),
-                reminder_lezioni_giorni_futuri = VALUES(reminder_lezioni_giorni_futuri),
-                report_settimanale_enabled = VALUES(report_settimanale_enabled),
-                report_settimanale_giorno = VALUES(report_settimanale_giorno),
-                report_settimanale_ora = VALUES(report_settimanale_ora),
-                report_settimanale_tipo = VALUES(report_settimanale_tipo),
-                report_mensile_enabled = VALUES(report_mensile_enabled),
-                report_mensile_giorno_mese = VALUES(report_mensile_giorno_mese),
-                report_mensile_ora = VALUES(report_mensile_ora),
-                report_mensile_tipo = VALUES(report_mensile_tipo),
-                avviso_scadenza_enabled = VALUES(avviso_scadenza_enabled),
-                avviso_scadenza_giorni = VALUES(avviso_scadenza_giorni),
-                avviso_non_confermata_enabled = VALUES(avviso_non_confermata_enabled),
-                avviso_non_confermata_giorni = VALUES(avviso_non_confermata_giorni),
-                updated_at = CURRENT_TIMESTAMP'
-        );
-        $stmt->execute([
-            (int)$user['id'],
+        $userId = isset($user['id']) && is_numeric($user['id']) ? (int)$user['id'] : 0;
+        if ($userId <= 0) {
+            throw new \RuntimeException('User ID non valido.');
+        }
+
+        $params = [
             $email !== '' ? $email : null,
             $abilitaEmail,
             notificationFlag('reminder_lezioni_enabled'),
@@ -171,12 +144,66 @@ if ($requestAction === 'save' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             max(0, sanitizeInt(post('avviso_scadenza_giorni'))),
             notificationFlag('avviso_non_confermata_enabled'),
             max(0, sanitizeInt(post('avviso_non_confermata_giorni'))),
-        ]);
+        ];
+
+        $updateStmt = $pdo->prepare(
+            'UPDATE notifiche_config SET
+                email_notifiche = ?,
+                abilita_email = ?,
+                reminder_lezioni_enabled = ?,
+                reminder_lezioni_giorni_prima = ?,
+                reminder_lezioni_giorno_settimana = ?,
+                reminder_lezioni_ora = ?,
+                reminder_lezioni_giorni_futuri = ?,
+                report_settimanale_enabled = ?,
+                report_settimanale_giorno = ?,
+                report_settimanale_ora = ?,
+                report_settimanale_tipo = ?,
+                report_mensile_enabled = ?,
+                report_mensile_giorno_mese = ?,
+                report_mensile_ora = ?,
+                report_mensile_tipo = ?,
+                avviso_scadenza_enabled = ?,
+                avviso_scadenza_giorni = ?,
+                avviso_non_confermata_enabled = ?,
+                avviso_non_confermata_giorni = ?
+            WHERE user_id = ?'
+        );
+
+        $checkStmt = $pdo->prepare('SELECT id FROM notifiche_config WHERE user_id = ? LIMIT 1');
+        $checkStmt->execute([$userId]);
+        $existingRow = $checkStmt->fetch();
+
+        if ($existingRow) {
+            $updateStmt->execute(array_merge($params, [$userId]));
+        } else {
+            try {
+                $insertStmt = $pdo->prepare(
+                    'INSERT INTO notifiche_config (
+                        user_id, email_notifiche, abilita_email,
+                        reminder_lezioni_enabled, reminder_lezioni_giorni_prima, reminder_lezioni_giorno_settimana, reminder_lezioni_ora, reminder_lezioni_giorni_futuri,
+                        report_settimanale_enabled, report_settimanale_giorno, report_settimanale_ora, report_settimanale_tipo,
+                        report_mensile_enabled, report_mensile_giorno_mese, report_mensile_ora, report_mensile_tipo,
+                        avviso_scadenza_enabled, avviso_scadenza_giorni,
+                        avviso_non_confermata_enabled, avviso_non_confermata_giorni
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+                );
+                $insertStmt->execute(array_merge([$userId], $params));
+            } catch (PDOException $insertEx) {
+                // Race condition: another request inserted first; fall back to UPDATE.
+                // SQLSTATE 23000 = Integrity Constraint Violation (e.g. duplicate key).
+                if (($insertEx->errorInfo[0] ?? '') === '23000') {
+                    $updateStmt->execute(array_merge($params, [$userId]));
+                } else {
+                    throw $insertEx;
+                }
+            }
+        }
 
         setFlash('success', 'Preferenze notifiche salvate con successo.');
         redirect(notificationRedirectTarget($embedded));
-    } catch (PDOException $e) {
-        error_log('notifiche.php save error: ' . $e->getMessage());
+    } catch (\Exception $e) {
+        error_log('notifiche.php save error [' . $e->getCode() . ']: ' . $e->getMessage());
         setFlash('danger', 'Errore durante il salvataggio delle notifiche. Contatta il supporto se il problema persiste.');
         redirect(notificationRedirectTarget($embedded));
     }
