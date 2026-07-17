@@ -289,7 +289,7 @@ require_once __DIR__ . '/includes/header.php';
                         data-status="<?= htmlspecialchars((string)$purchase['stato_pagamento']) ?>"
                     >
                         <td><?= htmlspecialchars((string)$purchase['id']) ?></td>
-                        <td>
+                        <td data-order="<?= htmlspecialchars((string)$purchase['data_acquisto']) ?>">
                             <div><?= htmlspecialchars(formatDate((string)$purchase['data_acquisto'])) ?></div>
                             <?php if ((int)$purchase['pianificato'] === 1): ?>
                             <div class="small text-info">Pianificato</div>
