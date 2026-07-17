@@ -98,6 +98,11 @@ function initCalendar(options = {}) {
                 });
                 info.el.style.borderRadius       = '5px';
                 info.el.style.fontSize           = '0.78rem';
+                // Add a dashed border for provini to visually distinguish them from lezioni
+                if (extProps.tipo_evento === 'provino') {
+                    info.el.style.borderStyle = 'dashed';
+                    info.el.style.borderWidth = '2px';
+                }
                 info.el.setAttribute('data-bs-toggle', 'tooltip');
                 info.el.setAttribute('title', buildTooltip(extProps));
                 new bootstrap.Tooltip(info.el, { trigger: 'hover', html: true });
@@ -183,9 +188,12 @@ function updateViewButtons(viewType) {
 
 // ── Build tooltip HTML ────────────────────────────────────────
 function buildTooltip(props) {
-    const cliente = props.cliente || 'N/D';
+    const cliente    = props.cliente || 'N/D';
     const insegnante = props.insegnante || 'N/D';
-    return `<b>${escapeHtml(cliente)}</b><br>
+    const tipoLabel  = props.tipo_evento === 'provino'
+        ? '<span class="badge bg-warning text-dark me-1">Provino</span>'
+        : '';
+    return `${tipoLabel}<b>${escapeHtml(cliente)}</b><br>
             ${escapeHtml(insegnante)}${props.strumento ? ' – ' + escapeHtml(props.strumento) : ''}<br>
             Stato: ${escapeHtml(props.stato || '')}`;
 }
@@ -206,7 +214,16 @@ function openEventModal(event) {
     modal.querySelector('#event-note').value        = props.note || '';
 
     const titleEl = modal.querySelector('.modal-title');
-    if (titleEl) titleEl.textContent = `Lezione: ${props.cliente || ''} - ${props.insegnante || ''}`;
+    if (titleEl) {
+        const tipo = props.tipo_evento === 'provino' ? 'Provino' : 'Lezione';
+        // Keep the badge span intact; update only the text node before it
+        const firstChild = titleEl.firstChild;
+        if (firstChild && firstChild.nodeType === Node.TEXT_NODE) {
+            firstChild.textContent = `Modifica ${tipo} `;
+        } else {
+            titleEl.textContent = `Modifica ${tipo}`;
+        }
+    }
 
     m.show();
 }
@@ -218,12 +235,19 @@ function openNewEventModal(startStr, endStr) {
 
     const m = new bootstrap.Modal(modal);
     if (startStr) {
-        const dateInput = modal.querySelector('#new-event-data');
-        const startInput = modal.querySelector('#new-event-ora-inizio');
-        const endInput   = modal.querySelector('#new-event-ora-fine');
-        if (dateInput) dateInput.value = startStr.slice(0, 10);
-        if (startInput && startStr.length > 10) startInput.value = startStr.slice(11, 16);
-        if (endInput   && endStr?.length > 10)  endInput.value   = endStr.slice(11, 16);
+        // Pre-fill both the lezione and provino date/time fields
+        const fields = [
+            ['#new-event-data',        '#provino-data',       startStr.slice(0, 10)],
+            ['#new-event-ora-inizio',  '#provino-ora-inizio', startStr.length > 10 ? startStr.slice(11, 16) : ''],
+            ['#new-event-ora-fine',    '#provino-ora-fine',   endStr?.length > 10   ? endStr.slice(11, 16)   : ''],
+        ];
+        fields.forEach(([lezSel, provSel, val]) => {
+            if (!val) return;
+            const lezEl  = modal.querySelector(lezSel);
+            const provEl = modal.querySelector(provSel);
+            if (lezEl)  lezEl.value  = val;
+            if (provEl) provEl.value = val;
+        });
     }
     m.show();
 }
