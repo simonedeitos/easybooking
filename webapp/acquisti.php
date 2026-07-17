@@ -391,9 +391,9 @@ require_once __DIR__ . '/includes/header.php';
                         <div class="col-md-4">
                             <label for="purchase_cliente_id" class="form-label">Cliente *</label>
                             <select class="form-select" id="purchase_cliente_id" name="cliente_id" required>
-                                <option value="">Seleziona cliente</option>
+                                <option value=""></option>
                                 <?php foreach ($clients as $client): ?>
-                                <option value="<?= htmlspecialchars((string)$client['id']) ?>"><?= htmlspecialchars(trim((string)$client['nome'] . ' ' . (string)$client['cognome'])) ?></option>
+                                <option value="<?= htmlspecialchars((string)$client['id']) ?>"><?= htmlspecialchars(trim((string)$client['cognome'] . ' ' . (string)$client['nome']) . ' (' . (string)$client['id'] . ')') ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
@@ -645,11 +645,38 @@ document.addEventListener('DOMContentLoaded', () => {
     const purchaseModalEl = document.getElementById('purchaseModal');
     const purchaseModal = new bootstrap.Modal(purchaseModalEl);
     const purchaseForm = document.getElementById('purchaseForm');
+    const purchaseClientSelect = document.getElementById('purchase_cliente_id');
     const packageSelect = document.getElementById('purchase_pacchetto_id');
     let table = null;
 
+    function caseInsensitiveSelectMatcher(params, data) {
+        const term = (params.term || '').trim().toLowerCase();
+        if (term === '') {
+            return data;
+        }
+        const text = ((data.text || '') + '').toLowerCase();
+        return text.includes(term) ? data : null;
+    }
+
+    function initClientSelect() {
+        if (!purchaseClientSelect || typeof window.$ === 'undefined' || typeof $.fn.select2 === 'undefined') {
+            return;
+        }
+        $(purchaseClientSelect).select2({
+            placeholder: 'Cerca cliente...',
+            allowClear: true,
+            theme: 'bootstrap-5',
+            width: '100%',
+            dropdownParent: $(purchaseModalEl),
+            matcher: caseInsensitiveSelectMatcher
+        });
+    }
+
     function resetPurchaseForm() {
         purchaseForm.reset();
+        if (typeof window.$ !== 'undefined' && purchaseClientSelect) {
+            $(purchaseClientSelect).val('').trigger('change.select2');
+        }
         document.getElementById('purchase_id').value = '';
         document.getElementById('purchaseModalTitle').textContent = 'Nuovo Acquisto';
         document.getElementById('purchase_importo_pagato').value = '0.00';
@@ -726,6 +753,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.getElementById('purchase_id').value = purchase.id || '';
                 document.getElementById('purchase_data_acquisto').value = purchase.data_acquisto || '';
                 document.getElementById('purchase_cliente_id').value = purchase.cliente_id || '';
+                if (typeof window.$ !== 'undefined' && purchaseClientSelect) {
+                    $(purchaseClientSelect).val(purchase.cliente_id || '').trigger('change.select2');
+                }
                 document.getElementById('purchase_pacchetto_id').value = purchase.pacchetto_id || '';
                 document.getElementById('purchase_importo_pagato').value = Number(purchase.importo_pagato || 0).toFixed(2);
                 document.getElementById('purchase_stato_pagamento').value = purchase.stato_pagamento || 'Non Pagato';
@@ -740,6 +770,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    initClientSelect();
     purchaseModalEl.addEventListener('hidden.bs.modal', resetPurchaseForm);
 
     // ── Scheduling Modal ───────────────────────────────────────────────────────
