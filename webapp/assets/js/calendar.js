@@ -230,7 +230,7 @@ function openNewEventModal(startStr, endStr) {
             ['#new-event-ora-fine',    '#provino-ora-fine',   endStr?.length > 10   ? endStr.slice(11, 16)   : ''],
         ];
         fields.forEach(([lezSel, provSel, val]) => {
-            if (!val) return;
+            if (val === null || val === undefined) return;
             const lezEl  = modal.querySelector(lezSel);
             const provEl = modal.querySelector(provSel);
             if (lezEl)  lezEl.value  = val;

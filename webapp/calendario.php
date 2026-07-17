@@ -191,13 +191,16 @@ if ($requestAction !== '') {
                 $clienteId = (int)$pdo->lastInsertId();
             }
 
-            // Populate strumento text from strumento_id when not explicitly provided
-            if ($strumentoId !== null && $strumento === null) {
+            // Resolve strumento_id: validate existence and populate strumento text
+            if ($strumentoId !== null) {
                 $stmt = $pdo->prepare('SELECT nome FROM strumenti WHERE id = ? LIMIT 1');
                 $stmt->execute([$strumentoId]);
-                $strumentoNome = $stmt->fetchColumn();
-                if ($strumentoNome !== false) {
-                    $strumento = (string)$strumentoNome;
+                $strumentoRow = $stmt->fetch();
+                if ($strumentoRow === false) {
+                    jsonResponse(['success' => false, 'message' => 'Strumento non trovato.'], 404);
+                }
+                if ($strumento === null) {
+                    $strumento = (string)$strumentoRow['nome'];
                 }
             }
 
@@ -224,14 +227,6 @@ if ($requestAction !== '') {
             $stmt->execute([$insegnanteId]);
             if ((int)$stmt->fetchColumn() === 0) {
                 jsonResponse(['success' => false, 'message' => 'Insegnante non trovato.'], 404);
-            }
-
-            if ($strumentoId !== null) {
-                $stmt = $pdo->prepare('SELECT COUNT(*) FROM strumenti WHERE id = ?');
-                $stmt->execute([$strumentoId]);
-                if ((int)$stmt->fetchColumn() === 0) {
-                    $strumentoId = null;
-                }
             }
 
             if ($id > 0) {
@@ -669,7 +664,7 @@ require_once __DIR__ . '/includes/header.php';
 const IS_RELATIONS = <?= json_encode(array_map(static fn(array $r): array => [
     'i' => (int)$r['insegnante_id'],
     's' => (int)$r['strumento_id'],
-], $insegnantiStrumentiRelazioni), JSON_UNESCAPED_UNICODE) ?>;
+], $insegnantiStrumentiRelazioni), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP) ?>;
 
 /**
  * Filter insegnanti select to show only those who teach the selected strumento.
@@ -756,7 +751,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function applyTeacherFilter() {
-        console.debug('[EasyBooking] Teacher filter applied → insegnante_id=' + (teacherFilter?.value || 'tutti'));
+        console.debug(`[EasyBooking] Teacher filter applied → insegnante_id=${teacherFilter?.value || 'tutti'}`);
         renderCalendar();
     }
 
