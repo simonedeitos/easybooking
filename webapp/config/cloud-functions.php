@@ -375,16 +375,38 @@ function cloudLezioniFuture(PDO $pdo, int $clienteId): array
 {
     // Future lessons with stato = 'Programmata'
     $stmt = $pdo->prepare(
-        'SELECT data, ora_inizio, ora_fine, pacchetto_nome, strumento
-         FROM prenotazioni
-         WHERE cliente_id = ? AND data >= CURDATE() AND stato = ?
-         ORDER BY data ASC, ora_inizio ASC'
+        'SELECT pr.data, pr.ora_inizio, pr.ora_fine, pr.pacchetto_nome, pr.strumento, pr.acquisto_id,
+                COALESCE(NULLIF(a.numero_lezioni, 0), pk.numero_lezioni, 0) AS totale_lezioni_pacchetto
+         FROM prenotazioni pr
+         LEFT JOIN acquisti a ON a.id = pr.acquisto_id
+         LEFT JOIN pacchetti pk ON pk.id = a.pacchetto_id
+         WHERE pr.cliente_id = ? AND pr.data >= CURDATE() AND pr.stato = ?
+         ORDER BY pr.data ASC, pr.ora_inizio ASC'
     );
     $stmt->execute([$clienteId, 'Programmata']);
     $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     $lezioni = [];
     $totale  = count($rows);
+    $lezioniSvolteByAcquisto = [];
+    $futureOffsetByAcquisto  = [];
+
+    if (!empty($rows)) {
+        $stmt = $pdo->prepare(
+            'SELECT acquisto_id, COUNT(*) AS lezioni_svolte
+             FROM prenotazioni
+             WHERE cliente_id = ? AND stato = ? AND acquisto_id IS NOT NULL
+             GROUP BY acquisto_id'
+        );
+        $stmt->execute([$clienteId, 'Svolta']);
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            $acquistoId = (int)($row['acquisto_id'] ?? 0);
+            if ($acquistoId > 0) {
+                $lezioniSvolteByAcquisto[$acquistoId] = (int)($row['lezioni_svolte'] ?? 0);
+            }
+        }
+    }
+
     foreach ($rows as $idx => $r) {
         $ts = strtotime((string)$r['data']);
         $meseIdx = (int)date('n', $ts);
@@ -392,12 +414,25 @@ function cloudLezioniFuture(PDO $pdo, int $clienteId): array
         $meseFull = CLOUD_MESI_FULL_IT[$meseIdx] ?? '';
         $giornoIdx = (int)date('w', $ts);
         $giornoNome = CLOUD_GIORNI_IT[$giornoIdx] ?? '';
+
+        // Fallback for legacy/unstyled rows without a valid purchase link.
+        $numeroLezione = ($idx + 1) . '/' . $totale;
+        $acquistoId = (int)($r['acquisto_id'] ?? 0);
+        $totaleLezioniPacchetto = (int)($r['totale_lezioni_pacchetto'] ?? 0);
+        if ($acquistoId > 0 && $totaleLezioniPacchetto > 0) {
+            $futureOffsetByAcquisto[$acquistoId] = ($futureOffsetByAcquisto[$acquistoId] ?? 0) + 1;
+            $lezioniSvolte = $lezioniSvolteByAcquisto[$acquistoId] ?? 0;
+            $progressivo = $lezioniSvolte + $futureOffsetByAcquisto[$acquistoId];
+            // Keep the badge bounded even if historical data is inconsistent.
+            $numeroLezione = min($progressivo, $totaleLezioniPacchetto) . '/' . $totaleLezioniPacchetto;
+        }
+
         $lezioni[] = [
             'data'         => (string)$r['data'],
             'data_human'   => date('d', $ts) . ' ' . $meseIt . ' ' . date('Y', $ts),
             'data_full'    => $giornoNome . ' ' . date('d', $ts) . ' ' . $meseFull . ' ' . date('Y', $ts),
             'giorno_nome'  => $giornoNome,
-            'numero'       => ($idx + 1) . '/' . $totale,
+            'numero'       => $numeroLezione,
             'giorno'       => date('d', $ts),
             'mese'         => strtoupper($meseIt),
             'ora_inizio'   => substr((string)$r['ora_inizio'], 0, 5),
