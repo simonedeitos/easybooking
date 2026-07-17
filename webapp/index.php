@@ -162,6 +162,10 @@ if (empty($_SESSION['user_id']) && !empty($_COOKIE['remember_token'])) {
 }
 
 $theme = $_SESSION['user_theme'] ?? 'dark';
+
+// Cache-busting helper: version = file modification time so browsers/CDN always
+// fetch the latest asset after a deployment.
+require_once __DIR__ . '/includes/asset-helpers.php';
 ?>
 <!DOCTYPE html>
 <html lang="it" data-theme="<?= $theme ?>">
@@ -301,7 +305,7 @@ $theme = $_SESSION['user_theme'] ?? 'dark';
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-<script src="assets/js/main.js"></script>
+<script src="assets/js/main.js?v=<?= $getAssetVersion('assets/js/main.js') ?>"></script>
 <script>
 function togglePwd() {
     const input = document.getElementById('passwordInput');

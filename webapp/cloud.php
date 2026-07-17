@@ -352,4 +352,6 @@ window.__cloudClientsWithoutCloud = <?= json_encode(
 </script>
 
 <?php require_once __DIR__ . '/includes/footer.php'; ?>
-<script src="assets/js/cloud.js"></script>
+<!-- Cache-busting version prevents browsers/CDN from serving a stale cloud.js
+     after a deployment (e.g. missing bindClientSearch after the live-filter fix). -->
+<script src="assets/js/cloud.js?v=<?= $getAssetVersion('assets/js/cloud.js') ?>"></script>

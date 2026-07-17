@@ -61,19 +61,12 @@ if (isset($pageBodyAttributes) && is_array($pageBodyAttributes)) {
 
     <!-- Main CSS -->
     <?php
-    // Cache-busting: version = file modification time so browsers always
-    // fetch the latest CSS after a deployment, not a stale cached copy.
-    // $rel accepts only the two fixed subdirectory names used below; the
-    // closure is a local helper and $rel is never user-supplied.
-    $getAssetVersion = function(string $rel): string {
-        $base = realpath(__DIR__ . '/../assets/css');
-        $abs  = realpath(__DIR__ . '/../' . $rel);
-        // Reject any path that escapes the assets/css directory.
-        if ($abs === false || $base === false || strpos($abs, $base) !== 0) {
-            return '1';
-        }
-        return (string)filemtime($abs);
-    };
+    // Cache-busting: version = file modification time so browsers (and CDN/reverse
+    // proxies) always fetch the latest asset after a deployment, not a stale cached
+    // copy.  $getAssetVersion is defined in asset-helpers.php and accepts paths
+    // under assets/css OR assets/js.  It is always a hard-coded string, never
+    // user-supplied.
+    require_once __DIR__ . '/asset-helpers.php';
     ?>
     <link rel="stylesheet" href="assets/css/style.css?v=<?= $getAssetVersion('assets/css/style.css') ?>">
     <!-- Theme CSS (loaded after style.css so theme variables override defaults) -->
