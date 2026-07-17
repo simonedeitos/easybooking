@@ -456,19 +456,19 @@ $_downloadBase = h($_scriptDir . '/share/' . urlencode($hash) . '/download/');
     <div class="section-card">
         <div class="section-title">
             <i class="fas fa-calendar-alt"></i> Prossime lezioni
-            <?php if ($lezioniData['scadenza_pacchetto'] || $lezioniData['data_acquisto_pacchetto'] || $lezioniData['pacchetto_da_saldare']): ?>
+            <?php if ($lezioniData['scadenza_pacchetto'] !== null || $lezioniData['data_acquisto_pacchetto'] !== null || $lezioniData['pacchetto_da_saldare'] === true): ?>
                 <span class="section-badges">
-                    <?php if ($lezioniData['scadenza_pacchetto']): ?>
+                    <?php if ($lezioniData['scadenza_pacchetto'] !== null): ?>
                         <span class="badge-scadenza">
                             <i class="fas fa-clock me-1"></i>Scadenza pacchetto: <?= h($lezioniData['scadenza_pacchetto']) ?>
                         </span>
                     <?php endif; ?>
-                    <?php if ($lezioniData['data_acquisto_pacchetto']): ?>
+                    <?php if ($lezioniData['data_acquisto_pacchetto'] !== null): ?>
                         <span class="badge-acquisto">
                             <i class="fas fa-receipt me-1"></i>Pacchetto acquistato il: <?= h($lezioniData['data_acquisto_pacchetto']) ?>
                         </span>
                     <?php endif; ?>
-                    <?php if ($lezioniData['pacchetto_da_saldare']): ?>
+                    <?php if ($lezioniData['pacchetto_da_saldare'] === true): ?>
                         <span class="badge-da-saldare">Pacchetto ancora da saldare</span>
                     <?php endif; ?>
                 </span>

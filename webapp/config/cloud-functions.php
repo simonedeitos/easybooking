@@ -342,7 +342,7 @@ function cloudLezioniFuture(PDO $pdo, int $clienteId): array
 
     // Find most recent active purchase (numero_lezioni > 0)
     $stmt = $pdo->prepare(
-        '        SELECT a.id, a.data_acquisto, a.stato_pagamento, p.nome AS pacchetto_nome
+        'SELECT a.id, a.data_acquisto, a.stato_pagamento, p.nome AS pacchetto_nome
          FROM acquisti a
          LEFT JOIN pacchetti p ON p.id = a.pacchetto_id
          WHERE a.cliente_id = ? AND a.numero_lezioni > 0
