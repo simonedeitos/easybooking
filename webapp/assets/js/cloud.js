@@ -483,9 +483,11 @@
                 const btn  = item.querySelector('.cloud-client-btn');
                 const nome = (btn ? (btn.dataset.clientNome || btn.textContent || '') : '').toLowerCase();
                 if (!q || nome.includes(q)) {
-                    item.style.setProperty('display', '', '');
+                    // Remove the inline style so the element's default display (flex) is restored
+                    item.style.removeProperty('display');
                     visibleCount++;
                 } else {
+                    // Use !important so the hide overrides Bootstrap's d-flex/d-block utilities
                     item.style.setProperty('display', 'none', 'important');
                 }
             });
