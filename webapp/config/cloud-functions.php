@@ -399,13 +399,13 @@ function cloudLezioniFuture(PDO $pdo, int $clienteId): array
     // there is no linked future lesson yet, fall back to the latest active one.
     $stmt = $pdo->prepare(
         'SELECT a.id, a.data_acquisto, a.stato_pagamento, p.nome AS pacchetto_nome,
-                MAX(CASE WHEN pr.data >= CURDATE() AND pr.stato = ? THEN pr.data END) AS ultima_lezione_futura
+                MAX(CASE WHEN pr.data >= CURDATE() AND pr.stato = ? THEN pr.data END) AS massima_data_futura
          FROM acquisti a
          LEFT JOIN pacchetti p ON p.id = a.pacchetto_id
          LEFT JOIN prenotazioni pr ON pr.acquisto_id = a.id AND pr.cliente_id = a.cliente_id
          WHERE a.cliente_id = ? AND a.numero_lezioni > 0
          GROUP BY a.id, a.data_acquisto, a.stato_pagamento, p.nome
-         ORDER BY (ultima_lezione_futura IS NOT NULL) DESC, ultima_lezione_futura DESC, a.data_acquisto DESC, a.id DESC
+         ORDER BY (massima_data_futura IS NOT NULL) DESC, massima_data_futura DESC, a.data_acquisto DESC, a.id DESC
          LIMIT 1'
     );
     $stmt->execute(['Programmata', $clienteId]);
@@ -434,6 +434,9 @@ function cloudLezioniFuture(PDO $pdo, int $clienteId): array
                 $dataAcquistoPacchetto = date('d', $ts) . ' ' . $meseIt . ' ' . date('Y', $ts);
             }
         }
+        // Keep the future-date filter here too: the ranking query above selects
+        // the active purchase, while this second query computes the public
+        // expiry badge from that purchase's upcoming scheduled lessons only.
         // Scadenza = MAX(data) of Programmata lessons linked to this purchase
         $stmt = $pdo->prepare(
             'SELECT MAX(data) FROM prenotazioni WHERE acquisto_id = ? AND stato = ? AND data >= CURDATE()'
@@ -463,7 +466,7 @@ function cloudLezioniFuture(PDO $pdo, int $clienteId): array
 function cloudNormalizePaymentStatus(?string $status): string
 {
     // Collapse duplicated internal whitespace too (for example "Non  Pagato").
-    $status = preg_replace('/\s+/u', ' ', trim((string) $status));
+    $status = preg_replace('/\s+/', ' ', trim((string) $status));
     if ($status === '') {
         return '';
     }
