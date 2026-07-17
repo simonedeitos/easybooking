@@ -603,7 +603,7 @@ try {
         $totalSize += $dimensioneBytes;
         $file['dimensione_human'] = cloudFormatSize($dimensioneBytes);
         $file['icon'] = cloudFileIcon($file['mime_type'] ?? null);
-        $file['is_audio'] = in_array($file['mime_type'] ?? '', CLOUD_AUDIO_MIMES, true);
+        $file['is_audio'] = cloudIsAudioMime($file['mime_type'] ?? null);
         $file['created_at_human'] = !empty($file['created_at'])
             ? date('d/m/Y H:i', strtotime((string) $file['created_at']))
             : '';

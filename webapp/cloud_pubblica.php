@@ -70,7 +70,7 @@ if (!preg_match('/^[a-f0-9]{32}$/', $hash)) {
         foreach ($files as &$f) {
             $f['dimensione_human']  = cloudFormatSize((int)$f['dimensione_bytes']);
             $f['icon']              = cloudFileIcon($f['mime_type']);
-            $f['is_audio']          = in_array($f['mime_type'], CLOUD_AUDIO_MIMES, true);
+            $f['is_audio']          = cloudIsAudioMime($f['mime_type'] ?? null);
             $f['created_at_human']  = !empty($f['created_at'])
                 ? date('d/m/Y', strtotime((string)$f['created_at']))
                 : '';
@@ -304,6 +304,7 @@ $_downloadBase = h($_scriptDir . '/share/' . urlencode($hash) . '/download/');
         .file-item:last-child { border-bottom: none; }
         .file-item:hover { background: #f7f9fc; }
         .file-icon-box {
+            position: relative;
             width: 2.6rem;
             height: 2.6rem;
             border-radius: 0.5rem;
@@ -315,8 +316,26 @@ $_downloadBase = h($_scriptDir . '/share/' . urlencode($hash) . '/download/');
             font-size: 1.25rem;
             flex-shrink: 0;
             color: var(--accent);
+            overflow: hidden;
         }
         .file-icon-box i { display: block; font-size: 1.18rem; line-height: 1; }
+        .file-icon-fallback {
+            position: absolute;
+            right: 0.16rem;
+            bottom: 0.14rem;
+            max-width: calc(100% - 0.32rem);
+            padding: 0.08rem 0.2rem;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.92);
+            font-size: 0.5rem;
+            font-weight: 700;
+            line-height: 1;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
         .file-icon-box.audio { background: #e7f5ee; color: #198754; }
         .file-icon-box.video { background: #fceaea; color: #dc3545; }
         .file-icon-box.image { background: #fff0e6; color: #fd7e14; }
@@ -429,6 +448,7 @@ $_downloadBase = h($_scriptDir . '/share/' . urlencode($hash) . '/download/');
     </style>
 </head>
 <body>
+<!-- public-cloud: badge-payment-normalized + file-icon-fallback -->
 
 <!-- ── Header ─────────────────────────────────────────────── -->
 <header class="cloud-header mb-4">
@@ -517,19 +537,21 @@ $_downloadBase = h($_scriptDir . '/share/' . urlencode($hash) . '/download/');
         <?php else: ?>
             <?php foreach ($files as $f):
                 // Determine icon colour class
+                $mime = cloudNormalizeMime($f['mime_type'] ?? null);
                 $iconClass = 'file-icon-box';
                 if ($f['is_audio']) $iconClass .= ' audio';
-                elseif (str_starts_with($f['mime_type'] ?? '', 'video/')) $iconClass .= ' video';
-                elseif (str_starts_with($f['mime_type'] ?? '', 'image/')) $iconClass .= ' image';
-                elseif (($f['mime_type'] ?? '') === 'application/pdf') $iconClass .= ' pdf';
+                elseif (str_starts_with($mime, 'video/')) $iconClass .= ' video';
+                elseif (str_starts_with($mime, 'image/')) $iconClass .= ' image';
+                elseif ($mime === 'application/pdf') $iconClass .= ' pdf';
                 elseif (str_contains($f['icon'], 'word'))  $iconClass .= ' word';
                 elseif (str_contains($f['icon'], 'excel')) $iconClass .= ' excel';
                 elseif (str_contains($f['icon'], 'powerpoint')) $iconClass .= ' pptx';
-                elseif (str_contains($f['icon'], 'archive')) $iconClass .= ' zip';
+                elseif (str_contains($f['icon'], 'zipper')) $iconClass .= ' zip';
             ?>
             <div class="file-item">
                 <div class="<?= $iconClass ?>">
-                    <i class="fas <?= h($f['icon']) ?>"></i>
+                    <i class="fa-solid <?= h($f['icon']) ?>" aria-hidden="true"></i>
+                    <span class="file-icon-fallback" aria-hidden="true"><?= h(cloudFileIconFallback($f['nome_originale'] ?? '', $mime)) ?></span>
                 </div>
                 <div class="file-body">
                     <div class="file-name"><?= h($f['nome_originale']) ?></div>
