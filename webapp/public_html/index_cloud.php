@@ -20,6 +20,8 @@ ob_start();
 ini_set('log_errors', '1');
 ini_set('display_errors', '0');
 
+const PUBLIC_CLOUD_MIN_DEBUG_TOKEN_LENGTH = 32;
+
 function h($value): string
 {
     return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
@@ -141,7 +143,22 @@ function requestDebugToken(): string
 
 function canShowDebugDetails(): bool
 {
+    static $weakTokenWarningLogged = false;
     $configured = configuredDebugToken();
+    $tokenLength = function_exists('mb_strlen') ? mb_strlen($configured, '8bit') : strlen($configured);
+    if ($configured !== '' && $tokenLength < PUBLIC_CLOUD_MIN_DEBUG_TOKEN_LENGTH) {
+        if (!$weakTokenWarningLogged) {
+            error_log(
+                'Public cloud debug token is configured but too short (<'
+                . PUBLIC_CLOUD_MIN_DEBUG_TOKEN_LENGTH
+                . ' chars). ' .
+                'Debug details are disabled until EASYBOOKING_DEBUG_TOKEN is updated.'
+            );
+            $weakTokenWarningLogged = true;
+        }
+        return false;
+    }
+
     $provided = requestDebugToken();
     if ($configured === '' || $provided === '') {
         return false;
@@ -510,17 +527,20 @@ try {
         'debug_details' => canShowDebugDetails() ? formatDebugDetails($e) : '',
     ]);
 } catch (PublicCloudDatabaseException $e) {
-    $technicalError = $e->getPrevious() instanceof Throwable ? $e->getPrevious()->getMessage() : $e->getMessage();
+    $previous = $e->getPrevious();
+    $errorType = $previous instanceof Throwable ? get_class($previous) : get_class($e);
+    $errorCode = $previous instanceof Throwable ? (string) $previous->getCode() : (string) $e->getCode();
+    $debugException = $previous instanceof Throwable ? $previous : $e;
     error_log(
         'Public cloud database connection error. Bootstrap resolved but database connection failed. ' .
-        'This is a database connectivity/credentials issue. Details: ' . $technicalError
+        'This is a database connectivity/credentials issue. Error type: ' . $errorType . ', code: ' . $errorCode . '.'
     );
     http_response_code(500);
     renderCloudPage([
         'page_title' => 'Servizio temporaneamente non disponibile',
         'error_title' => 'Servizio temporaneamente non disponibile',
         'error_message' => 'Non è stato possibile aprire lo spazio cloud in questo momento. Riprova più tardi o contatta la scuola.',
-        'debug_details' => canShowDebugDetails() ? formatDebugDetails($e->getPrevious() instanceof Throwable ? $e->getPrevious() : $e) : '',
+        'debug_details' => canShowDebugDetails() ? formatDebugDetails($debugException) : '',
     ]);
 } catch (Throwable $e) {
     error_log('Public cloud controller unexpected error: ' . $e->getMessage());

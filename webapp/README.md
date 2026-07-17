@@ -155,6 +155,8 @@ Opzionale per diagnostica protetta (mai attiva di default):
 EASYBOOKING_DEBUG_TOKEN=token-segreto-lungo
 ```
 
+Usa un token lungo e crittograficamente casuale (almeno 32 caratteri).
+
 Con token configurato puoi ottenere il dettaglio tecnico su `index_cloud.php` passando
 `?debug_token=...` oppure l'header `X-EasyBooking-Debug-Token`.
 
