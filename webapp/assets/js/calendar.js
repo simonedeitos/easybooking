@@ -204,7 +204,7 @@ function openEventModal(event) {
     if (!modal) return;
 
     const props = event.extendedProps;
-    const m = new bootstrap.Modal(modal);
+    const m = bootstrap.Modal.getOrCreateInstance(modal);
 
     modal.querySelector('#event-id').value          = event.id;
     modal.querySelector('#event-data').value        = event.startStr.slice(0, 10);
@@ -221,7 +221,7 @@ function openNewEventModal(startStr, endStr) {
     const modal = document.getElementById('newEventModal');
     if (!modal) return;
 
-    const m = new bootstrap.Modal(modal);
+    const m = bootstrap.Modal.getOrCreateInstance(modal);
     if (startStr) {
         // Pre-fill both the lezione and provino date/time fields
         const fields = [

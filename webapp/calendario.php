@@ -187,7 +187,7 @@ if ($requestAction !== '') {
                     jsonResponse(['success' => false, 'message' => 'Nome e cognome del nuovo cliente sono obbligatori.'], 422);
                 }
                 $stmt = $pdo->prepare('INSERT INTO clienti (nome, cognome, telefono) VALUES (?, ?, ?)');
-                $stmt->execute([encryptField($nomeNuovo), encryptField($cognomeNuovo), $contattoNuovo]);
+                $stmt->execute([$nomeNuovo, $cognomeNuovo, $contattoNuovo]);
                 $clienteId = (int)$pdo->lastInsertId();
             }
 
@@ -524,9 +524,9 @@ require_once __DIR__ . '/includes/header.php';
                                 <div class="col-md-6">
                                     <label for="new-event-cliente-id" class="form-label">Cliente *</label>
                                     <select class="form-select" id="new-event-cliente-id" name="cliente_id" required>
-                                        <option value="">Seleziona cliente</option>
+                                        <option value="">Cerca cliente...</option>
                                         <?php foreach ($clients as $client): ?>
-                                        <option value="<?= htmlspecialchars((string)$client['id']) ?>"><?= htmlspecialchars(trim((string)$client['nome'] . ' ' . (string)$client['cognome'])) ?></option>
+                                        <option value="<?= htmlspecialchars((string)$client['id']) ?>"><?= htmlspecialchars(trim((string)$client['cognome'] . ' ' . (string)$client['nome']) . ' (' . (string)$client['id'] . ')') ?></option>
                                         <?php endforeach; ?>
                                     </select>
                                 </div>
@@ -614,9 +614,9 @@ require_once __DIR__ . '/includes/header.php';
                                     </div>
                                     <div id="provino-cliente-existing-section">
                                         <select class="form-select" id="provino-cliente-id" name="cliente_id">
-                                            <option value="">Seleziona cliente</option>
+                                            <option value="">Cerca cliente...</option>
                                             <?php foreach ($clients as $client): ?>
-                                            <option value="<?= htmlspecialchars((string)$client['id']) ?>"><?= htmlspecialchars(trim((string)$client['nome'] . ' ' . (string)$client['cognome'])) ?></option>
+                                            <option value="<?= htmlspecialchars((string)$client['id']) ?>"><?= htmlspecialchars(trim((string)$client['cognome'] . ' ' . (string)$client['nome']) . ' (' . (string)$client['id'] . ')') ?></option>
                                             <?php endforeach; ?>
                                         </select>
                                     </div>
@@ -707,12 +707,14 @@ function filterStrumentiByInsegnante(insegnanteId, strumentiSel) {
 document.addEventListener('DOMContentLoaded', () => {
     const eventModalEl    = document.getElementById('eventModal');
     const newEventModalEl = document.getElementById('newEventModal');
-    const eventModal    = new bootstrap.Modal(eventModalEl);
-    const newEventModal = new bootstrap.Modal(newEventModalEl);
+    const eventModal    = bootstrap.Modal.getOrCreateInstance(eventModalEl);
+    const newEventModal = bootstrap.Modal.getOrCreateInstance(newEventModalEl);
     const eventForm     = document.getElementById('eventForm');
     const newEventForm  = document.getElementById('newEventForm');
     const newProvinoForm = document.getElementById('newProvinoForm');
     const teacherFilter = document.getElementById('calendarTeacherFilter');
+    const lezClienteSel = document.getElementById('new-event-cliente-id');
+    const provClienteSel = document.getElementById('provino-cliente-id');
     let currentColorMode = 'status';
 
     // ── Dropdown references for bidirectional filtering ───────
@@ -720,6 +722,29 @@ document.addEventListener('DOMContentLoaded', () => {
     const lezInsegnanteSel = document.getElementById('new-event-insegnante-id');
     const provStrumentoSel  = document.getElementById('provino-strumento-id');
     const provInsegnanteSel = document.getElementById('provino-insegnante-id');
+
+    function caseInsensitiveSelectMatcher(params, data) {
+        const term = (params.term || '').trim().toLowerCase();
+        if (term === '') {
+            return data;
+        }
+        const text = ((data.text || '') + '').toLowerCase();
+        return text.includes(term) ? data : null;
+    }
+
+    function initClientSelect(selectEl, dropdownParentEl) {
+        if (!selectEl || typeof window.$ === 'undefined' || typeof $.fn.select2 === 'undefined') {
+            return;
+        }
+        $(selectEl).select2({
+            placeholder: 'Cerca cliente...',
+            allowClear: true,
+            theme: 'bootstrap-5',
+            width: '100%',
+            dropdownParent: $(dropdownParentEl),
+            matcher: caseInsensitiveSelectMatcher
+        });
+    }
 
     function resetEventForm() {
         eventForm.reset();
@@ -737,12 +762,18 @@ document.addEventListener('DOMContentLoaded', () => {
     function resetNewEventForm() {
         newEventForm.reset();
         document.getElementById('new-event-stato').value = 'Programmata';
+        if (typeof window.$ !== 'undefined' && lezClienteSel) {
+            $(lezClienteSel).val(null).trigger('change');
+        }
         filterInsegnantiByStrumento(0, lezInsegnanteSel);
         filterStrumentiByInsegnante(0, lezStrumentoSel);
     }
 
     function resetProvinoForm() {
         newProvinoForm.reset();
+        if (typeof window.$ !== 'undefined' && provClienteSel) {
+            $(provClienteSel).val(null).trigger('change');
+        }
         document.getElementById('provino-cliente-existing-section').style.display = '';
         document.getElementById('provino-cliente-new-section').style.display      = 'none';
         document.getElementById('provino-cliente-existing').checked = true;
@@ -967,6 +998,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // ── Init ──────────────────────────────────────────────────
+    initClientSelect(lezClienteSel, newEventModalEl);
+    initClientSelect(provClienteSel, newEventModalEl);
     resetEventForm();
     resetNewEventForm();
     resetProvinoForm();
