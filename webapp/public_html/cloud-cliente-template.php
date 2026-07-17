@@ -148,6 +148,7 @@
         .file-item:last-child { border-bottom: none; }
         .file-item:hover { background: #f7f9fc; }
         .file-icon-box {
+            position: relative;
             width: 2.6rem;
             height: 2.6rem;
             border-radius: 0.5rem;
@@ -159,8 +160,26 @@
             font-size: 1.25rem;
             flex-shrink: 0;
             color: var(--accent);
+            overflow: hidden;
         }
         .file-icon-box i { display: block; font-size: 1.18rem; line-height: 1; }
+        .file-icon-fallback {
+            position: absolute;
+            right: 0.16rem;
+            bottom: 0.14rem;
+            max-width: calc(100% - 0.32rem);
+            padding: 0.08rem 0.2rem;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.92);
+            font-size: 0.5rem;
+            font-weight: 700;
+            line-height: 1;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
         .file-icon-box.audio { background: #e7f5ee; color: #198754; }
         .file-icon-box.video { background: #fceaea; color: #dc3545; }
         .file-icon-box.image { background: #fff0e6; color: #fd7e14; }
@@ -274,6 +293,7 @@
     </style>
 </head>
 <body>
+<!-- public-cloud: badge-payment-normalized + file-icon-fallback -->
 
 <!-- ── Header ─────────────────────────────────────────────── -->
 <header class="cloud-header mb-4">
@@ -372,7 +392,7 @@
             </div>
         <?php else: ?>
             <?php foreach ($files as $file):
-                $mime     = $file['mime_type'] ?? '';
+                $mime     = cloudNormalizeMime($file['mime_type'] ?? null);
                 $icon     = $file['icon'] ?? 'fa-file';
                 $isAudio  = !empty($file['is_audio']);
                 $iconClass = 'file-icon-box';
@@ -383,11 +403,12 @@
                 elseif (str_contains($icon, 'word'))       $iconClass .= ' word';
                 elseif (str_contains($icon, 'excel'))      $iconClass .= ' excel';
                 elseif (str_contains($icon, 'powerpoint')) $iconClass .= ' pptx';
-                elseif (str_contains($icon, 'archive'))    $iconClass .= ' zip';
+                elseif (str_contains($icon, 'zipper'))     $iconClass .= ' zip';
             ?>
             <div class="file-item">
                 <div class="<?= $iconClass ?>">
-                    <i class="fas <?= h($icon) ?>"></i>
+                    <i class="fa-solid <?= h($icon) ?>" aria-hidden="true"></i>
+                    <span class="file-icon-fallback" aria-hidden="true"><?= h(cloudFileIconFallback($file['nome_originale'] ?? '', $mime)) ?></span>
                 </div>
                 <div class="file-body">
                     <div class="file-name"><?= h($file['nome_originale'] ?? '') ?></div>

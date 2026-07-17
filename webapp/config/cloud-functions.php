@@ -258,7 +258,8 @@ function cloudFormatSize(int $bytes): string
  */
 function cloudFileIcon(?string $mime): string
 {
-    if ($mime === null) {
+    $mime = cloudNormalizeMime($mime);
+    if ($mime === '') {
         return 'fa-file-lines';
     }
     if (str_starts_with($mime, 'audio/')) {
@@ -284,6 +285,50 @@ function cloudFileIcon(?string $mime): string
         $mime === 'text/plain'                                                                => 'fa-file-lines',
         default                                                                                => 'fa-file-lines',
     };
+}
+
+/**
+ * Normalizes MIME values coming from uploads/imports so icon matching stays stable.
+ */
+function cloudNormalizeMime(?string $mime): string
+{
+    $mime = trim((string) $mime);
+    return $mime === '' ? '' : strtolower($mime);
+}
+
+/**
+ * Returns whether a MIME type should use the public audio player.
+ */
+function cloudIsAudioMime(?string $mime): bool
+{
+    return in_array(cloudNormalizeMime($mime), CLOUD_AUDIO_MIMES, true);
+}
+
+/**
+ * Returns a short text fallback shown inside the file icon box when fonts fail.
+ */
+function cloudFileIconFallback(?string $fileName, ?string $mime = null): string
+{
+    $extension = preg_replace('/[^a-z0-9]+/i', '', (string) pathinfo((string) $fileName, PATHINFO_EXTENSION));
+    if ($extension !== '') {
+        return strtoupper(substr($extension, 0, 4));
+    }
+
+    $mime = cloudNormalizeMime($mime);
+    if ($mime === 'application/pdf') {
+        return 'PDF';
+    }
+    if (str_starts_with($mime, 'audio/')) {
+        return 'AUDIO';
+    }
+    if (str_starts_with($mime, 'video/')) {
+        return 'VIDEO';
+    }
+    if (str_starts_with($mime, 'image/')) {
+        return 'IMG';
+    }
+
+    return 'FILE';
 }
 
 // ── App name helper ───────────────────────────────────────────────────────
@@ -342,16 +387,20 @@ function cloudLezioniFuture(PDO $pdo, int $clienteId): array
         ];
     }
 
-    // Find most recent active purchase (numero_lezioni > 0)
+    // Prefer the purchase actually linked to upcoming scheduled lessons; when
+    // there is no linked future lesson yet, fall back to the latest active one.
     $stmt = $pdo->prepare(
-        'SELECT a.id, a.data_acquisto, a.stato_pagamento, p.nome AS pacchetto_nome
+        'SELECT a.id, a.data_acquisto, a.stato_pagamento, p.nome AS pacchetto_nome,
+                MAX(CASE WHEN pr.data >= CURDATE() AND pr.stato = ? THEN pr.data END) AS ultima_lezione_futura
          FROM acquisti a
          LEFT JOIN pacchetti p ON p.id = a.pacchetto_id
+         LEFT JOIN prenotazioni pr ON pr.acquisto_id = a.id AND pr.cliente_id = a.cliente_id
          WHERE a.cliente_id = ? AND a.numero_lezioni > 0
-         ORDER BY a.data_acquisto DESC
+         GROUP BY a.id, a.data_acquisto, a.stato_pagamento, p.nome
+         ORDER BY (ultima_lezione_futura IS NOT NULL) DESC, ultima_lezione_futura DESC, a.data_acquisto DESC, a.id DESC
          LIMIT 1'
     );
-    $stmt->execute([$clienteId]);
+    $stmt->execute(['Programmata', $clienteId]);
     $acquisto = $stmt->fetch(PDO::FETCH_ASSOC);
 
     $scadenzaPacchetto = null;
@@ -361,8 +410,11 @@ function cloudLezioniFuture(PDO $pdo, int $clienteId): array
 
     if ($acquisto) {
         $pacchettoNome = (string)($acquisto['pacchetto_nome'] ?? '');
-        $statoPagamento = trim((string)($acquisto['stato_pagamento'] ?? ''));
-        $pacchettoDaSaldare = in_array($statoPagamento, ['Non Pagato', 'Parziale'], true);
+        // Canonical payment states in EasyBooking are Pagato, Non Pagato,
+        // Parziale and In Attesa; imported/legacy values may vary only by case
+        // or extra whitespace, so normalize before checking "da saldare".
+        $statoPagamento = cloudNormalizePaymentStatus($acquisto['stato_pagamento'] ?? null);
+        $pacchettoDaSaldare = $statoPagamento !== '' && $statoPagamento !== 'pagato' && $statoPagamento !== 'rimborso';
         if (!empty($acquisto['data_acquisto'])) {
             $ts = strtotime((string)$acquisto['data_acquisto']);
             if ($ts !== false) {
@@ -373,7 +425,7 @@ function cloudLezioniFuture(PDO $pdo, int $clienteId): array
         }
         // Scadenza = MAX(data) of Programmata lessons linked to this purchase
         $stmt = $pdo->prepare(
-            'SELECT MAX(data) FROM prenotazioni WHERE acquisto_id = ? AND stato = ?'
+            'SELECT MAX(data) FROM prenotazioni WHERE acquisto_id = ? AND stato = ? AND data >= CURDATE()'
         );
         $stmt->execute([(int)$acquisto['id'], 'Programmata']);
         $maxData = $stmt->fetchColumn();
@@ -392,6 +444,21 @@ function cloudLezioniFuture(PDO $pdo, int $clienteId): array
         'data_acquisto_pacchetto' => $dataAcquistoPacchetto,
         'pacchetto_da_saldare' => $pacchettoDaSaldare,
     ];
+}
+
+/**
+ * Normalizes purchase payment status for comparisons.
+ */
+function cloudNormalizePaymentStatus(?string $status): string
+{
+    $status = preg_replace('/\s+/u', ' ', trim((string) $status));
+    if ($status === null || $status === '') {
+        return '';
+    }
+
+    return function_exists('mb_strtolower')
+        ? mb_strtolower($status, 'UTF-8')
+        : strtolower($status);
 }
 
 // ── Public share URL ──────────────────────────────────────────────────────
