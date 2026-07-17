@@ -290,6 +290,8 @@ function renderCloudPage(array $state = []): void
         'lezioni_future'      => [],
         'scadenza_pacchetto'  => null,
         'pacchetto_nome_attivo' => '',
+        'data_acquisto_pacchetto' => null,
+        'pacchetto_da_saldare' => false,
         'error_title'         => '',
         'error_message'       => '',
         'debug_details'       => '',
@@ -305,6 +307,8 @@ function renderCloudPage(array $state = []): void
     $lezioni_future      = $state['lezioni_future'];
     $scadenza_pacchetto  = $state['scadenza_pacchetto'];
     $pacchetto_nome_attivo = $state['pacchetto_nome_attivo'];
+    $data_acquisto_pacchetto = $state['data_acquisto_pacchetto'];
+    $pacchetto_da_saldare = (bool)$state['pacchetto_da_saldare'];
     $error_title         = $state['error_title'];
     $error_message       = $state['error_message'];
     $debug_details       = $state['debug_details'];
@@ -620,6 +624,8 @@ try {
         'lezioni_future'       => $lezioniData['lezioni'],
         'scadenza_pacchetto'   => $lezioniData['scadenza_pacchetto'],
         'pacchetto_nome_attivo' => $lezioniData['pacchetto_nome'],
+        'data_acquisto_pacchetto' => $lezioniData['data_acquisto_pacchetto'],
+        'pacchetto_da_saldare' => $lezioniData['pacchetto_da_saldare'],
     ]);
 } catch (PublicCloudBootstrapException $e) {
     $configuredPath = currentConfiguredWebappPathValue();
