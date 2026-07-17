@@ -176,6 +176,7 @@ if ($requestAction === 'save' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         setFlash('success', 'Preferenze notifiche salvate con successo.');
         redirect(notificationRedirectTarget($embedded));
     } catch (PDOException $e) {
+        error_log('notifiche.php save error: ' . $e->getMessage());
         setFlash('danger', 'Errore durante il salvataggio delle notifiche. Contatta il supporto se il problema persiste.');
         redirect(notificationRedirectTarget($embedded));
     }
