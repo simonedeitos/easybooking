@@ -443,8 +443,10 @@ $_downloadBase = h($_scriptDir . '/share/' . urlencode($hash) . '/download/');
                 </div>
                 <div class="file-actions">
                     <?php if ($f['is_audio']): ?>
-                        <button class="btn btn-sm btn-outline-success"
-                                onclick="playAudio(<?= (int)$f['id'] ?>, <?= json_encode($f['nome_originale']) ?>)">
+                        <button class="btn btn-sm btn-outline-success play-audio"
+                                type="button"
+                                data-file-id="<?= (int)$f['id'] ?>"
+                                data-file-name="<?= h($f['nome_originale']) ?>">
                             <i class="fas fa-waveform-lines me-1"></i>Ascolta
                         </button>
                     <?php endif; ?>
@@ -514,12 +516,14 @@ $_downloadBase = h($_scriptDir . '/share/' . urlencode($hash) . '/download/');
 (function () {
     'use strict';
 
-    const STREAM_BASE = <?= json_encode($_streamBase) ?>;
+    const STREAM_BASE  = <?= json_encode($_streamBase) ?>;
+    const playButtons  = document.querySelectorAll('.play-audio');
+    const modalEl      = document.getElementById('audioModal');
+    if (!modalEl) { return; }
 
     let ws = null;
     let modalInstance = null;
 
-    const modalEl    = document.getElementById('audioModal');
     const waveEl     = document.getElementById('waveform');
     const fallbackEl = document.getElementById('ws-fallback');
     const playBtn    = document.getElementById('ws-play');
@@ -539,30 +543,31 @@ $_downloadBase = h($_scriptDir . '/share/' . urlencode($hash) . '/download/');
         fallbackEl.pause();
         fallbackEl.src = '';
         fallbackEl.style.display = 'none';
-        waveEl.style.display = 'block';
-        waveEl.innerHTML = '';
-        playBtn.disabled = true;
-        playBtn.innerHTML = '<i class="fas fa-play"></i>';
-        curEl.textContent = '0:00';
-        durEl.textContent = '0:00';
+        waveEl.style.display     = 'block';
+        waveEl.innerHTML         = '';
+        playBtn.disabled         = true;
+        playBtn.style.display    = '';
+        playBtn.innerHTML        = '<i class="fas fa-play"></i>';
+        curEl.textContent        = '0:00';
+        durEl.textContent        = '0:00';
     }
 
     function showFallback(url) {
-        waveEl.style.display = 'none';
-        fallbackEl.style.display = 'block';
-        fallbackEl.src = url;
+        waveEl.style.display      = 'none';
+        fallbackEl.style.display  = 'block';
+        fallbackEl.src            = url;
         fallbackEl.load();
-        playBtn.style.display = 'none';
+        playBtn.style.display     = 'none';
     }
 
-    window.playAudio = function (fileId, fileName) {
+    function openPlayer(fileId, fileName) {
         titleEl.textContent = fileName;
         destroyWs();
-        playBtn.style.display = '';
 
         const url = STREAM_BASE + fileId;
 
         try {
+            if (typeof WaveSurfer === 'undefined') { throw new Error('WaveSurfer not loaded'); }
             ws = WaveSurfer.create({
                 container: waveEl,
                 waveColor: 'rgba(94,114,228,0.35)',
@@ -576,13 +581,16 @@ $_downloadBase = h($_scriptDir . '/share/' . urlencode($hash) . '/download/');
 
             ws.on('ready', () => {
                 durEl.textContent = fmt(ws.getDuration());
-                playBtn.disabled = false;
+                playBtn.disabled  = false;
                 ws.play();
             });
             ws.on('timeupdate', (t) => { curEl.textContent = fmt(t); });
             ws.on('play',  () => { playBtn.innerHTML = '<i class="fas fa-pause"></i>'; });
             ws.on('pause', () => { playBtn.innerHTML = '<i class="fas fa-play"></i>'; });
-            ws.on('finish',() => { playBtn.innerHTML = '<i class="fas fa-play"></i>'; curEl.textContent = fmt(ws.getDuration()); });
+            ws.on('finish',() => {
+                playBtn.innerHTML = '<i class="fas fa-play"></i>';
+                curEl.textContent = fmt(ws.getDuration());
+            });
             ws.on('error', () => { showFallback(url); });
         } catch (e) {
             showFallback(url);
@@ -592,7 +600,13 @@ $_downloadBase = h($_scriptDir . '/share/' . urlencode($hash) . '/download/');
             modalInstance = new bootstrap.Modal(modalEl);
         }
         modalInstance.show();
-    };
+    }
+
+    playButtons.forEach((btn) => {
+        btn.addEventListener('click', () => {
+            openPlayer(btn.dataset.fileId || '', btn.dataset.fileName || '');
+        });
+    });
 
     playBtn.addEventListener('click', () => { if (ws) ws.playPause(); });
 

@@ -59,6 +59,10 @@ define('CLOUD_AUDIO_MIMES', [
     'audio/flac', 'audio/x-flac', 'audio/ogg', 'audio/webm',
 ]);
 
+// Italian month abbreviations (1-indexed; index 0 is unused)
+define('CLOUD_MESI_IT', ['', 'gen', 'feb', 'mar', 'apr', 'mag', 'giu',
+                          'lug', 'ago', 'set', 'ott', 'nov', 'dic']);
+
 // ── Path helpers ──────────────────────────────────────────────────────────
 
 /**
@@ -283,10 +287,6 @@ function cloudFileIcon(?string $mime): string
 }
 
 // ── App name helper ───────────────────────────────────────────────────────
-
-/** Italian month abbreviations (1-indexed; index 0 is unused). */
-define('CLOUD_MESI_IT', ['', 'gen', 'feb', 'mar', 'apr', 'mag', 'giu',
-                          'lug', 'ago', 'set', 'ott', 'nov', 'dic']);
 
 /**
  * Returns the application name from system_config, falling back to 'EasyBooking'.
