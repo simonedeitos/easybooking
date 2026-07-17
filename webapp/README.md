@@ -129,6 +129,35 @@ EASYBOOKING_WEBAPP_PATH=/home/username/easybooking/webapp
 Il file `public_html/.env` serve solo a localizzare in modo esplicito `webapp/config/database.php`
 e `webapp/config/cloud-functions.php`; le credenziali del database restano nel file `webapp/.env`.
 
+### Deployment dominio principale + sottodominio app separati
+
+Scenario reale tipico:
+- app/pannello admin su `https://easybooking.vocefutura.it` (sottodominio)
+- link pubblici cliente `/share/[HASH]` su `https://vocefutura.it` (dominio principale)
+
+In questo caso vanno configurate **entrambe** queste variabili:
+
+1. Nel `.env` della webapp (lato sottodominio admin):
+
+```
+CLOUD_PUBLIC_BASE_URL=https://vocefutura.it
+```
+
+2. Nel `public_html/.env` del dominio principale (oppure via Apache/vhost `SetEnv`):
+
+```
+EASYBOOKING_WEBAPP_PATH=/percorso/assoluto/alla/webapp
+```
+
+Opzionale per diagnostica protetta (mai attiva di default):
+
+```
+EASYBOOKING_DEBUG_TOKEN=token-segreto-lungo
+```
+
+Con token configurato puoi ottenere il dettaglio tecnico su `index_cloud.php` passando
+`?debug_token=...` oppure l'header `X-EasyBooking-Debug-Token`.
+
 ### Opzione B – Valori di default in `config/database.php`
 
 I valori di fallback (usati se `.env` non è presente) si trovano nelle costanti PHP in `config/database.php`. Per ambienti di produzione si raccomanda di utilizzare sempre l'Opzione A.

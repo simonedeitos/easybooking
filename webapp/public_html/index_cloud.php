@@ -2,12 +2,16 @@
 /**
  * index_cloud.php – Public cloud access controller for deployments where
  * public_html/ is the document root and the EasyBooking webapp/ directory
- * lives elsewhere on disk (shared hosting / Hostinger-style setups).
+ * lives elsewhere on disk (shared hosting / Hostinger-style setups), including
+ * scenarios where main domain and app subdomain use fully separate document
+ * roots (and possibly separate hosting accounts).
  *
- * To avoid fragile path guessing, configure EASYBOOKING_WEBAPP_PATH with the
- * absolute path to the webapp/ directory. The recommended place is a local
- * public_html/.env file containing for example:
+ * In these setups configure EASYBOOKING_WEBAPP_PATH with the absolute path to
+ * the webapp/ directory. You can set it in a local public_html/.env file:
  * EASYBOOKING_WEBAPP_PATH=/home/username/easybooking/webapp
+ *
+ * Alternatively set it at server level (for example Apache/vhost):
+ * SetEnv EASYBOOKING_WEBAPP_PATH "/home/username/easybooking/webapp"
  */
 
 declare(strict_types=1);
@@ -23,12 +27,11 @@ function h($value): string
 
 function loadPublicCloudLocalConfig(string $envFile): void
 {
-    $configuredPath = getenv('EASYBOOKING_WEBAPP_PATH');
-    $hasConfiguredPath = $configuredPath !== false && trim((string) $configuredPath) !== '';
-    if (!is_file($envFile) || $hasConfiguredPath) {
+    if (!is_file($envFile)) {
         return;
     }
 
+    $supportedKeys = ['EASYBOOKING_WEBAPP_PATH', 'EASYBOOKING_DEBUG_TOKEN'];
     foreach (file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) ?: [] as $line) {
         $line = trim($line);
         if ($line === '' || $line[0] === '#' || strpos($line, '=') === false) {
@@ -36,7 +39,12 @@ function loadPublicCloudLocalConfig(string $envFile): void
         }
 
         [$key, $value] = array_map('trim', explode('=', $line, 2));
-        if ($key !== 'EASYBOOKING_WEBAPP_PATH' || $value === '') {
+        if (!in_array($key, $supportedKeys, true) || $value === '') {
+            continue;
+        }
+
+        $alreadyConfigured = getenv($key);
+        if ($alreadyConfigured !== false && trim((string) $alreadyConfigured) !== '') {
             continue;
         }
 
@@ -46,10 +54,9 @@ function loadPublicCloudLocalConfig(string $envFile): void
             $value = substr($value, 1, -1);
         }
 
-        putenv('EASYBOOKING_WEBAPP_PATH=' . $value);
-        $_ENV['EASYBOOKING_WEBAPP_PATH'] = $value;
-        $_SERVER['EASYBOOKING_WEBAPP_PATH'] = $value;
-        break;
+        putenv($key . '=' . $value);
+        $_ENV[$key] = $value;
+        $_SERVER[$key] = $value;
     }
 }
 
@@ -68,6 +75,107 @@ function normalizeDirectoryPath(string $path): ?string
     return rtrim($realPath, DIRECTORY_SEPARATOR);
 }
 
+class PublicCloudBootstrapException extends RuntimeException
+{
+    /** @var string[] */
+    private array $pathsTried;
+
+    /** @var array<int, array{source: string, value: string}> */
+    private array $configuredPathSources;
+
+    /**
+     * @param string[] $pathsTried
+     * @param array<int, array{source: string, value: string}> $configuredPathSources
+     */
+    public function __construct(
+        string $message,
+        array $pathsTried = [],
+        array $configuredPathSources = [],
+        ?Throwable $previous = null
+    ) {
+        parent::__construct($message, 0, $previous);
+        $this->pathsTried = $pathsTried;
+        $this->configuredPathSources = $configuredPathSources;
+    }
+
+    /** @return string[] */
+    public function getPathsTried(): array
+    {
+        return $this->pathsTried;
+    }
+
+    /** @return array<int, array{source: string, value: string}> */
+    public function getConfiguredPathSources(): array
+    {
+        return $this->configuredPathSources;
+    }
+}
+
+class PublicCloudDatabaseException extends RuntimeException
+{
+}
+
+function configuredDebugToken(): string
+{
+    $candidate = trim((string) (getenv('EASYBOOKING_DEBUG_TOKEN') ?: ''));
+    if ($candidate === '') {
+        $candidate = trim((string) ($_SERVER['EASYBOOKING_DEBUG_TOKEN'] ?? ''));
+    }
+    return $candidate;
+}
+
+function requestDebugToken(): string
+{
+    foreach ([
+        (string) ($_GET['debug_token'] ?? ''),
+        (string) ($_SERVER['HTTP_X_EASYBOOKING_DEBUG_TOKEN'] ?? ''),
+    ] as $candidate) {
+        $candidate = trim($candidate);
+        if ($candidate !== '') {
+            return $candidate;
+        }
+    }
+
+    return '';
+}
+
+function canShowDebugDetails(): bool
+{
+    $configured = configuredDebugToken();
+    $provided = requestDebugToken();
+    if ($configured === '' || $provided === '') {
+        return false;
+    }
+
+    return hash_equals($configured, $provided);
+}
+
+function currentConfiguredWebappPathValue(): string
+{
+    foreach ([
+        defined('EASYBOOKING_WEBAPP_PATH') ? (string) EASYBOOKING_WEBAPP_PATH : '',
+        (string) (getenv('EASYBOOKING_WEBAPP_PATH') ?: ''),
+        (string) ($_SERVER['EASYBOOKING_WEBAPP_PATH'] ?? ''),
+    ] as $candidate) {
+        $candidate = trim($candidate);
+        if ($candidate !== '') {
+            return $candidate;
+        }
+    }
+
+    return '';
+}
+
+function formatDebugDetails(Throwable $e): string
+{
+    return sprintf(
+        "%s\n%s:%d",
+        $e->getMessage(),
+        $e->getFile(),
+        $e->getLine()
+    );
+}
+
 function renderCloudPage(array $state = []): void
 {
     $state = array_merge([
@@ -79,6 +187,7 @@ function renderCloudPage(array $state = []): void
         'hash' => '',
         'error_title' => '',
         'error_message' => '',
+        'debug_details' => '',
     ], $state);
 
     $page_title = $state['page_title'];
@@ -89,6 +198,7 @@ function renderCloudPage(array $state = []): void
     $hash = $state['hash'];
     $error_title = $state['error_title'];
     $error_message = $state['error_message'];
+    $debug_details = $state['debug_details'];
 
     require __DIR__ . '/cloud-cliente-template.php';
     exit;
@@ -98,17 +208,24 @@ function resolveWebappBootstrap(): array
 {
     loadPublicCloudLocalConfig(__DIR__ . '/.env');
 
-    $explicitPath = '';
-    if (defined('EASYBOOKING_WEBAPP_PATH') && is_string(EASYBOOKING_WEBAPP_PATH)) {
-        $explicitPath = trim(EASYBOOKING_WEBAPP_PATH);
-    }
-    if ($explicitPath === '') {
-        $explicitPath = trim((string) (getenv('EASYBOOKING_WEBAPP_PATH') ?: ''));
+    $configuredPathSources = [];
+    foreach ([
+        ['value' => defined('EASYBOOKING_WEBAPP_PATH') && is_string(EASYBOOKING_WEBAPP_PATH) ? EASYBOOKING_WEBAPP_PATH : '', 'source' => 'EASYBOOKING_WEBAPP_PATH constant'],
+        ['value' => (string) (getenv('EASYBOOKING_WEBAPP_PATH') ?: ''), 'source' => 'getenv(EASYBOOKING_WEBAPP_PATH)'],
+        ['value' => (string) ($_SERVER['EASYBOOKING_WEBAPP_PATH'] ?? ''), 'source' => '$_SERVER[EASYBOOKING_WEBAPP_PATH]'],
+    ] as $configuredSource) {
+        $value = trim((string) $configuredSource['value']);
+        if ($value !== '') {
+            $configuredPathSources[] = ['source' => $configuredSource['source'], 'value' => $value];
+        }
     }
 
     $candidates = [];
-    if ($explicitPath !== '') {
-        $candidates[] = ['path' => $explicitPath, 'source' => 'EASYBOOKING_WEBAPP_PATH'];
+    foreach ($configuredPathSources as $configuredPathSource) {
+        $candidates[] = [
+            'path' => $configuredPathSource['value'],
+            'source' => $configuredPathSource['source'],
+        ];
     }
 
     foreach ([
@@ -150,9 +267,11 @@ function resolveWebappBootstrap(): array
         ];
     }
 
-    throw new RuntimeException(
+    throw new PublicCloudBootstrapException(
         'Unable to resolve the EasyBooking webapp path. Set EASYBOOKING_WEBAPP_PATH in public_html/.env. Paths tried: ' .
-        implode(', ', array_unique($pathsTried))
+        implode(', ', array_unique($pathsTried)),
+        array_values(array_unique($pathsTried)),
+        $configuredPathSources
     );
 }
 
@@ -233,7 +352,15 @@ try {
         session_start();
     }
 
-    $pdo = Database::getInstance();
+    try {
+        $pdo = Database::getInstance();
+    } catch (Throwable $dbError) {
+        throw new PublicCloudDatabaseException(
+            'Database connection failed after bootstrap resolution.',
+            0,
+            $dbError
+        );
+    }
 
     $stmt = $pdo->prepare(
         'SELECT id, nome, cognome, cloud_enabled, cloud_cartella
@@ -357,12 +484,51 @@ try {
         'total_size_human' => cloudFormatSize($totalSize),
         'hash' => $hash,
     ]);
-} catch (Throwable $e) {
-    error_log('Public cloud controller error: ' . $e->getMessage());
+} catch (PublicCloudBootstrapException $e) {
+    $configuredPath = currentConfiguredWebappPathValue();
+    $pathsTried = $e->getPathsTried();
+    $sources = $e->getConfiguredPathSources();
+    $sourceParts = [];
+    foreach ($sources as $source) {
+        $sourceParts[] = $source['source'] . '=' . $source['value'];
+    }
+
+    error_log(
+        'Public cloud configuration error (bootstrap path not resolved). ' .
+        'This is a missing/incorrect deployment configuration, not a transient service outage. ' .
+        'Current EASYBOOKING_WEBAPP_PATH=' . ($configuredPath !== '' ? $configuredPath : '[not set]') . '. ' .
+        'Configured sources: ' . (!empty($sourceParts) ? implode('; ', $sourceParts) : '[none]') . '. ' .
+        'Paths tried: ' . (!empty($pathsTried) ? implode(', ', $pathsTried) : '[none]') . '. ' .
+        'Fix: set EASYBOOKING_WEBAPP_PATH to the absolute webapp/ path in public_html/.env ' .
+        'or via Apache/vhost SetEnv EASYBOOKING_WEBAPP_PATH "/absolute/path/to/webapp".'
+    );
     http_response_code(500);
     renderCloudPage([
         'page_title' => 'Servizio temporaneamente non disponibile',
         'error_title' => 'Servizio temporaneamente non disponibile',
         'error_message' => 'Non è stato possibile aprire lo spazio cloud in questo momento. Riprova più tardi o contatta la scuola.',
+        'debug_details' => canShowDebugDetails() ? formatDebugDetails($e) : '',
+    ]);
+} catch (PublicCloudDatabaseException $e) {
+    $technicalError = $e->getPrevious() instanceof Throwable ? $e->getPrevious()->getMessage() : $e->getMessage();
+    error_log(
+        'Public cloud database connection error. Bootstrap resolved but database connection failed. ' .
+        'This is a database connectivity/credentials issue. Details: ' . $technicalError
+    );
+    http_response_code(500);
+    renderCloudPage([
+        'page_title' => 'Servizio temporaneamente non disponibile',
+        'error_title' => 'Servizio temporaneamente non disponibile',
+        'error_message' => 'Non è stato possibile aprire lo spazio cloud in questo momento. Riprova più tardi o contatta la scuola.',
+        'debug_details' => canShowDebugDetails() ? formatDebugDetails($e->getPrevious() instanceof Throwable ? $e->getPrevious() : $e) : '',
+    ]);
+} catch (Throwable $e) {
+    error_log('Public cloud controller unexpected error: ' . $e->getMessage());
+    http_response_code(500);
+    renderCloudPage([
+        'page_title' => 'Servizio temporaneamente non disponibile',
+        'error_title' => 'Servizio temporaneamente non disponibile',
+        'error_message' => 'Non è stato possibile aprire lo spazio cloud in questo momento. Riprova più tardi o contatta la scuola.',
+        'debug_details' => canShowDebugDetails() ? formatDebugDetails($e) : '',
     ]);
 }
