@@ -599,7 +599,7 @@ $_downloadBase = h($_scriptDir . '/share/' . urlencode($hash) . '/download/');
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body pt-2">
-                <div class="player-waveform-shell mb-2">
+                <div id="ws-waveform-shell" class="player-waveform-shell mb-2">
                     <div id="waveform"></div>
                     <div id="ws-dom-wave" class="dom-waveform" role="slider" aria-label="Forma d'onda audio" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
                         <div class="dom-waveform-track">
@@ -616,7 +616,7 @@ $_downloadBase = h($_scriptDir . '/share/' . urlencode($hash) . '/download/');
                     Il tuo browser non supporta l'audio HTML5.
                 </audio>
                 <!-- Controls row -->
-                <div class="player-controls">
+                <div id="ws-controls-row" class="player-controls">
                     <button id="ws-play" class="btn btn-sm btn-primary" disabled>
                         <i class="fas fa-play"></i>
                     </button>
@@ -626,6 +626,9 @@ $_downloadBase = h($_scriptDir . '/share/' . urlencode($hash) . '/download/');
                 </div>
             </div>
             <div class="modal-footer border-0 pt-0">
+                <a id="ws-download" href="#" class="btn btn-outline-primary btn-sm disabled" aria-disabled="true">
+                    <i class="fas fa-download me-1"></i>Scarica
+                </a>
                 <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Chiudi</button>
             </div>
         </div>
@@ -642,7 +645,8 @@ $_downloadBase = h($_scriptDir . '/share/' . urlencode($hash) . '/download/');
 (function () {
     'use strict';
 
-    const STREAM_BASE  = <?= json_encode($_streamBase) ?>;
+    const STREAM_BASE   = <?= json_encode($_streamBase) ?>;
+    const DOWNLOAD_BASE = <?= json_encode($_downloadBase) ?>;
     const playButtons  = document.querySelectorAll('.play-audio');
     const modalEl      = document.getElementById('audioModal');
     if (!modalEl) { return; }
@@ -650,17 +654,20 @@ $_downloadBase = h($_scriptDir . '/share/' . urlencode($hash) . '/download/');
     let ws = null;
     let modalInstance = null;
 
-    const waveEl     = document.getElementById('waveform');
-    const domWaveEl  = document.getElementById('ws-dom-wave');
-    const waveBackEl = document.getElementById('ws-wave-back');
-    const waveProgEl = document.getElementById('ws-wave-progress-bars');
-    const progressEl = document.getElementById('ws-wave-front');
-    const scrubberEl = document.getElementById('ws-scrubber');
-    const fallbackEl = document.getElementById('ws-fallback');
-    const playBtn    = document.getElementById('ws-play');
-    const curEl      = document.getElementById('ws-current');
-    const durEl      = document.getElementById('ws-duration');
-    const titleEl    = document.getElementById('ws-title');
+    const waveEl          = document.getElementById('waveform');
+    const waveformShellEl = document.getElementById('ws-waveform-shell');
+    const domWaveEl       = document.getElementById('ws-dom-wave');
+    const waveBackEl      = document.getElementById('ws-wave-back');
+    const waveProgEl      = document.getElementById('ws-wave-progress-bars');
+    const progressEl      = document.getElementById('ws-wave-front');
+    const scrubberEl      = document.getElementById('ws-scrubber');
+    const fallbackEl      = document.getElementById('ws-fallback');
+    const playBtn         = document.getElementById('ws-play');
+    const controlsRowEl   = document.getElementById('ws-controls-row');
+    const curEl           = document.getElementById('ws-current');
+    const durEl           = document.getElementById('ws-duration');
+    const titleEl         = document.getElementById('ws-title');
+    const downloadAnchor  = document.getElementById('ws-download');
     const DEFAULT_BAR_COUNT = 120;
     const DEFAULT_AMPLITUDE = 0.1;
     const WAVEFORM_SAMPLE_COUNT = 140;
@@ -680,7 +687,9 @@ $_downloadBase = h($_scriptDir . '/share/' . urlencode($hash) . '/download/');
         fallbackEl.pause();
         fallbackEl.src = '';
         fallbackEl.style.display = 'none';
+        waveformShellEl.style.display = '';
         domWaveEl.style.display  = 'block';
+        controlsRowEl.style.display  = '';
         waveEl.innerHTML         = '';
         waveBackEl.innerHTML     = '';
         waveProgEl.innerHTML     = '';
@@ -693,6 +702,11 @@ $_downloadBase = h($_scriptDir . '/share/' . urlencode($hash) . '/download/');
         playBtn.innerHTML        = '<i class="fas fa-play"></i>';
         curEl.textContent        = '0:00';
         durEl.textContent        = '0:00';
+        if (downloadAnchor) {
+            downloadAnchor.href = '#';
+            downloadAnchor.classList.add('disabled');
+            downloadAnchor.setAttribute('aria-disabled', 'true');
+        }
     }
 
     function setWaveProgress(ratio, currentSeconds) {
@@ -792,18 +806,26 @@ $_downloadBase = h($_scriptDir . '/share/' . urlencode($hash) . '/download/');
     }
 
     function showFallback(url) {
-        domWaveEl.style.display    = 'none';
-        fallbackEl.style.display  = 'block';
-        fallbackEl.src            = url;
+        waveformShellEl.style.display  = 'none';
+        domWaveEl.style.display        = 'none';
+        controlsRowEl.style.display    = 'none';
+        fallbackEl.style.display       = 'block';
+        fallbackEl.src                 = url;
         fallbackEl.load();
-        playBtn.style.display     = 'none';
     }
 
     function openPlayer(fileId, fileName) {
         titleEl.textContent = fileName;
         destroyWs();
 
-        const url = STREAM_BASE + fileId;
+        const url         = STREAM_BASE + fileId;
+        const downloadUrl = DOWNLOAD_BASE + fileId;
+
+        if (downloadAnchor) {
+            downloadAnchor.href = downloadUrl;
+            downloadAnchor.classList.remove('disabled');
+            downloadAnchor.removeAttribute('aria-disabled');
+        }
 
         try {
             if (typeof WaveSurfer === 'undefined') { throw new Error('WaveSurfer not loaded'); }
@@ -838,8 +860,12 @@ $_downloadBase = h($_scriptDir . '/share/' . urlencode($hash) . '/download/');
                 curEl.textContent = fmt(ws.getDuration());
                 setWaveProgress(1);
             });
-            ws.on('error', () => { showFallback(url); });
+            ws.on('error', (e) => {
+                console.error('WaveSurfer error loading audio:', e);
+                showFallback(url);
+            });
         } catch (e) {
+            console.error('WaveSurfer initialization failed:', e && e.message ? e.message : e);
             showFallback(url);
         }
 

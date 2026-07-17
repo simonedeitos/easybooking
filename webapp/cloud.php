@@ -120,6 +120,22 @@ require_once __DIR__ . '/includes/header.php';
                     Usa il pulsante qui sotto.
                 </div>
             <?php else: ?>
+                <div class="px-2 pt-2 pb-1">
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text bg-transparent border-end-0">
+                            <i class="fas fa-search text-muted" aria-hidden="true"></i>
+                        </span>
+                        <input type="text"
+                               id="cloud-client-search"
+                               class="form-control form-control-sm border-start-0 ps-0"
+                               placeholder="Cerca cliente..."
+                               autocomplete="off"
+                               aria-label="Cerca cliente">
+                    </div>
+                </div>
+                <div id="cloud-client-no-results" class="text-muted small text-center p-2" style="display:none;">
+                    Nessun cliente trovato.
+                </div>
                 <?php foreach ($clientsEnabled as $c): ?>
                 <div class="cloud-client-item"
                      data-client-id="<?= (int)$c['id'] ?>">
