@@ -40,7 +40,12 @@ function loadPublicCloudLocalConfig(string $envFile): void
             continue;
         }
 
-        $value = trim($value, " \t\n\r\0\x0B\"'");
+        $firstChar = substr($value, 0, 1);
+        $lastChar = substr($value, -1);
+        if (($firstChar === '"' || $firstChar === "'") && $firstChar === $lastChar) {
+            $value = substr($value, 1, -1);
+        }
+
         putenv('EASYBOOKING_WEBAPP_PATH=' . $value);
         $_ENV['EASYBOOKING_WEBAPP_PATH'] = $value;
         $_SERVER['EASYBOOKING_WEBAPP_PATH'] = $value;
@@ -65,7 +70,7 @@ function normalizeDirectoryPath(string $path): ?string
 
 function renderCloudPage(array $state = []): void
 {
-    $defaults = [
+    $state = array_merge([
         'page_title' => 'Cloud Storage',
         'cliente_nome' => '',
         'files' => [],
@@ -74,9 +79,16 @@ function renderCloudPage(array $state = []): void
         'hash' => '',
         'error_title' => '',
         'error_message' => '',
-    ];
+    ], $state);
 
-    extract(array_merge($defaults, $state), EXTR_SKIP);
+    $page_title = $state['page_title'];
+    $cliente_nome = $state['cliente_nome'];
+    $files = $state['files'];
+    $file_count = $state['file_count'];
+    $total_size_human = $state['total_size_human'];
+    $hash = $state['hash'];
+    $error_title = $state['error_title'];
+    $error_message = $state['error_message'];
 
     require __DIR__ . '/cloud-cliente-template.php';
     exit;
@@ -152,8 +164,11 @@ function sendCloudFile(string $filePath, string $mimeType, string $downloadName 
     header('X-Content-Type-Options: nosniff');
 
     if ($downloadName !== '') {
-        $safeName = preg_replace('/[\r\n"\\\\]/', '_', $downloadName) ?: 'download';
-        header('Content-Disposition: attachment; filename="' . $safeName . '"');
+        $fallbackName = preg_replace('/[^A-Za-z0-9._-]/u', '_', $downloadName) ?: 'download';
+        header(
+            "Content-Disposition: attachment; filename=\"{$fallbackName}\"; filename*=UTF-8''" .
+            rawurlencode($downloadName)
+        );
         header('Cache-Control: no-cache, must-revalidate');
         header('Expires: 0');
     } else {

@@ -249,15 +249,16 @@
             const downloadBtn = document.getElementById('downloadBtn');
             // Safe because index_cloud.php validates $hash as a 32-char hex token
             // before rendering this presentation-only template.
-            const streamBaseUrl = <?= json_encode('?hash=' . rawurlencode($hash) . '&action=get_file&file_id=', JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) ?>;
-            const downloadBaseUrl = <?= json_encode('?hash=' . rawurlencode($hash) . '&action=download&file_id=', JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) ?>;
+            const shareHash = <?= json_encode($hash, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) ?>;
+            const buildActionUrl = (action, fileId) =>
+                `?hash=${encodeURIComponent(shareHash)}&action=${encodeURIComponent(action)}&file_id=${fileId}`;
 
             playButtons.forEach((button) => {
                 button.addEventListener('click', () => {
                     const fileId = button.dataset.fileId || '';
                     audioModalTitle.textContent = button.dataset.fileName || 'Riproduzione audio';
-                    audioPlayer.src = streamBaseUrl + fileId;
-                    downloadBtn.href = downloadBaseUrl + fileId;
+                    audioPlayer.src = buildActionUrl('get_file', fileId);
+                    downloadBtn.href = buildActionUrl('download', fileId);
                     audioPlayer.load();
                     audioModal.show();
                 });
