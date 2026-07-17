@@ -259,7 +259,7 @@ function cloudFormatSize(int $bytes): string
 function cloudFileIcon(?string $mime): string
 {
     if ($mime === null) {
-        return 'fa-file';
+        return 'fa-file-lines';
     }
     if (str_starts_with($mime, 'audio/')) {
         return 'fa-file-audio';
@@ -279,10 +279,10 @@ function cloudFileIcon(?string $mime): string
         in_array($mime, ['application/vnd.ms-powerpoint',
             'application/vnd.openxmlformats-officedocument.presentationml.presentation'], true) => 'fa-file-powerpoint',
         in_array($mime, ['application/zip','application/x-zip-compressed',
-            'application/x-rar-compressed','application/x-7z-compressed'], true)             => 'fa-file-archive',
+            'application/x-rar-compressed','application/x-7z-compressed'], true)             => 'fa-file-zipper',
         $mime === 'text/csv'                                                                  => 'fa-file-csv',
-        $mime === 'text/plain'                                                                => 'fa-file-alt',
-        default                                                                                => 'fa-file',
+        $mime === 'text/plain'                                                                => 'fa-file-lines',
+        default                                                                                => 'fa-file-lines',
     };
 }
 
@@ -311,7 +311,7 @@ function cloudAppName(PDO $pdo): string
  * package expiry date (= date of the last scheduled lesson linked to the
  * most recent active purchase).
  *
- * @return array{lezioni: list<array<string,string>>, scadenza_pacchetto: string|null, pacchetto_nome: string}
+ * @return array{lezioni: list<array<string,string>>, scadenza_pacchetto: string|null, pacchetto_nome: string, data_acquisto_pacchetto: string|null, pacchetto_da_saldare: bool}
  */
 function cloudLezioniFuture(PDO $pdo, int $clienteId): array
 {
@@ -328,11 +328,13 @@ function cloudLezioniFuture(PDO $pdo, int $clienteId): array
     $lezioni = [];
     foreach ($rows as $r) {
         $ts = strtotime((string)$r['data']);
+        $meseIdx = (int)date('n', $ts);
+        $meseIt = CLOUD_MESI_IT[$meseIdx] ?? '';
         $lezioni[] = [
             'data'         => (string)$r['data'],
-            'data_human'   => date('d', $ts) . ' ' . CLOUD_MESI_IT[(int)date('n', $ts)] . ' ' . date('Y', $ts),
+            'data_human'   => date('d', $ts) . ' ' . $meseIt . ' ' . date('Y', $ts),
             'giorno'       => date('d', $ts),
-            'mese'         => strtoupper(CLOUD_MESI_IT[(int)date('n', $ts)]),
+            'mese'         => strtoupper($meseIt),
             'ora_inizio'   => substr((string)$r['ora_inizio'], 0, 5),
             'ora_fine'     => substr((string)$r['ora_fine'], 0, 5),
             'pacchetto'    => (string)($r['pacchetto_nome'] ?? ''),
@@ -342,7 +344,7 @@ function cloudLezioniFuture(PDO $pdo, int $clienteId): array
 
     // Find most recent active purchase (numero_lezioni > 0)
     $stmt = $pdo->prepare(
-        'SELECT a.id, p.nome AS pacchetto_nome
+        'SELECT a.id, a.data_acquisto, a.stato_pagamento, p.nome AS pacchetto_nome
          FROM acquisti a
          LEFT JOIN pacchetti p ON p.id = a.pacchetto_id
          WHERE a.cliente_id = ? AND a.numero_lezioni > 0
@@ -354,9 +356,21 @@ function cloudLezioniFuture(PDO $pdo, int $clienteId): array
 
     $scadenzaPacchetto = null;
     $pacchettoNome     = '';
+    $dataAcquistoPacchetto = null;
+    $pacchettoDaSaldare = false;
 
     if ($acquisto) {
         $pacchettoNome = (string)($acquisto['pacchetto_nome'] ?? '');
+        $statoPagamento = trim((string)($acquisto['stato_pagamento'] ?? ''));
+        $pacchettoDaSaldare = in_array($statoPagamento, ['Non Pagato', 'Parziale'], true);
+        if (!empty($acquisto['data_acquisto'])) {
+            $ts = strtotime((string)$acquisto['data_acquisto']);
+            if ($ts !== false) {
+                $meseIdx = (int)date('n', $ts);
+                $meseIt = CLOUD_MESI_IT[$meseIdx] ?? '';
+                $dataAcquistoPacchetto = date('d', $ts) . ' ' . $meseIt . ' ' . date('Y', $ts);
+            }
+        }
         // Scadenza = MAX(data) of Programmata lessons linked to this purchase
         $stmt = $pdo->prepare(
             'SELECT MAX(data) FROM prenotazioni WHERE acquisto_id = ? AND stato = ?'
@@ -365,7 +379,9 @@ function cloudLezioniFuture(PDO $pdo, int $clienteId): array
         $maxData = $stmt->fetchColumn();
         if ($maxData) {
             $ts = strtotime((string)$maxData);
-            $scadenzaPacchetto = date('d', $ts) . ' ' . CLOUD_MESI_IT[(int)date('n', $ts)] . ' ' . date('Y', $ts);
+            $meseIdx = (int)date('n', $ts);
+            $meseIt = CLOUD_MESI_IT[$meseIdx] ?? '';
+            $scadenzaPacchetto = date('d', $ts) . ' ' . $meseIt . ' ' . date('Y', $ts);
         }
     }
 
@@ -373,6 +389,8 @@ function cloudLezioniFuture(PDO $pdo, int $clienteId): array
         'lezioni'            => $lezioni,
         'scadenza_pacchetto' => $scadenzaPacchetto,
         'pacchetto_nome'     => $pacchettoNome,
+        'data_acquisto_pacchetto' => $dataAcquistoPacchetto,
+        'pacchetto_da_saldare' => $pacchettoDaSaldare,
     ];
 }
 

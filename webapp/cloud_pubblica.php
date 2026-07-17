@@ -34,7 +34,7 @@ if (!preg_match('/^[a-f0-9]{32}$/', $hash)) {
     $cliente  = null;
     $files    = [];
     $appName  = 'EasyBooking';
-    $lezioniData = ['lezioni' => [], 'scadenza_pacchetto' => null, 'pacchetto_nome' => ''];
+    $lezioniData = ['lezioni' => [], 'scadenza_pacchetto' => null, 'pacchetto_nome' => '', 'data_acquisto_pacchetto' => null, 'pacchetto_da_saldare' => false];
 } else {
     $pdo = Database::getInstance();
 
@@ -52,7 +52,7 @@ if (!preg_match('/^[a-f0-9]{32}$/', $hash)) {
         http_response_code(404);
         $errMsg  = 'Link non valido o scaduto.';
         $files   = [];
-        $lezioniData = ['lezioni' => [], 'scadenza_pacchetto' => null, 'pacchetto_nome' => ''];
+        $lezioniData = ['lezioni' => [], 'scadenza_pacchetto' => null, 'pacchetto_nome' => '', 'data_acquisto_pacchetto' => null, 'pacchetto_da_saldare' => false];
     } else {
         $errMsg = null;
 
@@ -267,6 +267,31 @@ $_downloadBase = h($_scriptDir . '/share/' . urlencode($hash) . '/download/');
             font-weight: 600;
             padding: 0.2rem 0.6rem;
         }
+        .badge-acquisto {
+            background: #e9ecef;
+            color: #495057;
+            border: 1px solid #d7dbe0;
+            border-radius: 0.5rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 0.2rem 0.6rem;
+        }
+        .badge-da-saldare {
+            background: #fde2e1;
+            color: #b42318;
+            border: 1px solid #f8c2bf;
+            border-radius: 0.5rem;
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 0.2rem 0.6rem;
+        }
+        .section-badges {
+            margin-left: auto;
+            display: flex;
+            gap: 0.4rem;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
         /* ── Files ──────────────────────────────────────────── */
         .file-item {
             display: flex;
@@ -283,6 +308,7 @@ $_downloadBase = h($_scriptDir . '/share/' . urlencode($hash) . '/download/');
             height: 2.6rem;
             border-radius: 0.5rem;
             background: #eef0fb;
+            border: 1px solid #dbe3f4;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -290,6 +316,7 @@ $_downloadBase = h($_scriptDir . '/share/' . urlencode($hash) . '/download/');
             flex-shrink: 0;
             color: var(--accent);
         }
+        .file-icon-box i { display: block; font-size: 1.18rem; line-height: 1; }
         .file-icon-box.audio { background: #e7f5ee; color: #198754; }
         .file-icon-box.video { background: #fceaea; color: #dc3545; }
         .file-icon-box.image { background: #fff0e6; color: #fd7e14; }
@@ -312,7 +339,70 @@ $_downloadBase = h($_scriptDir . '/share/' . urlencode($hash) . '/download/');
         }
         .file-actions { display: flex; gap: 0.4rem; flex-shrink: 0; flex-wrap: wrap; align-self: center; }
         /* ── Audio player modal ─────────────────────────────── */
-        #waveform { min-height: 80px; background: #f7f9fc; border-radius: 0.5rem; overflow: hidden; }
+        .player-waveform-shell {
+            position: relative;
+            min-height: 94px;
+            background: #f7f9fc;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.75rem;
+            padding: 0.85rem 1rem;
+        }
+        #waveform {
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            pointer-events: none;
+        }
+        .dom-waveform {
+            position: relative;
+            height: 64px;
+            cursor: pointer;
+            user-select: none;
+            touch-action: none;
+        }
+        .dom-waveform-track,
+        .dom-waveform-progress {
+            position: absolute;
+            inset: 0;
+            overflow: hidden;
+        }
+        .dom-waveform-progress { width: 0%; }
+        .dom-waveform-bars {
+            display: flex;
+            align-items: center;
+            gap: 3px;
+            height: 100%;
+        }
+        .dom-waveform-track .dom-waveform-bars .dom-waveform-bar { background: rgba(94,114,228,0.22); }
+        .dom-waveform-progress .dom-waveform-bars .dom-waveform-bar { background: #5e72e4; }
+        .dom-waveform-bar {
+            flex: 1 1 auto;
+            min-height: 8%;
+            border-radius: 999px;
+            transition: height 0.18s ease;
+        }
+        .dom-waveform-scrubber {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 0%;
+            width: 2px;
+            background: #5e72e4;
+            border-radius: 999px;
+            pointer-events: none;
+        }
+        .dom-waveform-scrubber::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 10px;
+            height: 10px;
+            border-radius: 999px;
+            transform: translate(-50%, -50%);
+            background: #5e72e4;
+            box-shadow: 0 0 0 3px #ffffff;
+        }
         .player-controls {
             display: flex;
             align-items: center;
@@ -366,9 +456,21 @@ $_downloadBase = h($_scriptDir . '/share/' . urlencode($hash) . '/download/');
     <div class="section-card">
         <div class="section-title">
             <i class="fas fa-calendar-alt"></i> Prossime lezioni
-            <?php if ($lezioniData['scadenza_pacchetto']): ?>
-                <span class="badge-scadenza ms-auto">
-                    <i class="fas fa-clock me-1"></i>Scadenza pacchetto: <?= h($lezioniData['scadenza_pacchetto']) ?>
+            <?php if ($lezioniData['scadenza_pacchetto'] !== null || $lezioniData['data_acquisto_pacchetto'] !== null || $lezioniData['pacchetto_da_saldare'] === true): ?>
+                <span class="section-badges">
+                    <?php if ($lezioniData['scadenza_pacchetto'] !== null): ?>
+                        <span class="badge-scadenza">
+                            <i class="fas fa-clock me-1"></i>Scadenza pacchetto: <?= h($lezioniData['scadenza_pacchetto']) ?>
+                        </span>
+                    <?php endif; ?>
+                    <?php if ($lezioniData['data_acquisto_pacchetto'] !== null): ?>
+                        <span class="badge-acquisto">
+                            <i class="fas fa-receipt me-1"></i>Pacchetto acquistato il: <?= h($lezioniData['data_acquisto_pacchetto']) ?>
+                        </span>
+                    <?php endif; ?>
+                    <?php if ($lezioniData['pacchetto_da_saldare'] === true): ?>
+                        <span class="badge-da-saldare">Pacchetto ancora da saldare</span>
+                    <?php endif; ?>
                 </span>
             <?php endif; ?>
         </div>
@@ -475,8 +577,18 @@ $_downloadBase = h($_scriptDir . '/share/' . urlencode($hash) . '/download/');
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body pt-2">
-                <!-- WaveSurfer container -->
-                <div id="waveform" class="mb-2"></div>
+                <div class="player-waveform-shell mb-2">
+                    <div id="waveform"></div>
+                    <div id="ws-dom-wave" class="dom-waveform" role="slider" aria-label="Forma d'onda audio" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                        <div class="dom-waveform-track">
+                            <div id="ws-wave-back" class="dom-waveform-bars"></div>
+                        </div>
+                        <div id="ws-wave-front" class="dom-waveform-progress">
+                            <div id="ws-wave-progress-bars" class="dom-waveform-bars"></div>
+                        </div>
+                        <div id="ws-scrubber" class="dom-waveform-scrubber"></div>
+                    </div>
+                </div>
                 <!-- Fallback native player (hidden by default) -->
                 <audio id="ws-fallback" controls class="w-100 mt-2" style="display:none; border-radius:6px;">
                     Il tuo browser non supporta l'audio HTML5.
@@ -489,14 +601,6 @@ $_downloadBase = h($_scriptDir . '/share/' . urlencode($hash) . '/download/');
                     <span class="time-display">
                         <span id="ws-current">0:00</span> / <span id="ws-duration">0:00</span>
                     </span>
-                    <select id="ws-speed" class="form-select form-select-sm ms-auto" style="width:auto;">
-                        <option value="0.5">0.5×</option>
-                        <option value="0.75">0.75×</option>
-                        <option value="1" selected>1×</option>
-                        <option value="1.25">1.25×</option>
-                        <option value="1.5">1.5×</option>
-                        <option value="2">2×</option>
-                    </select>
                 </div>
             </div>
             <div class="modal-footer border-0 pt-0">
@@ -525,12 +629,23 @@ $_downloadBase = h($_scriptDir . '/share/' . urlencode($hash) . '/download/');
     let modalInstance = null;
 
     const waveEl     = document.getElementById('waveform');
+    const domWaveEl  = document.getElementById('ws-dom-wave');
+    const waveBackEl = document.getElementById('ws-wave-back');
+    const waveProgEl = document.getElementById('ws-wave-progress-bars');
+    const progressEl = document.getElementById('ws-wave-front');
+    const scrubberEl = document.getElementById('ws-scrubber');
     const fallbackEl = document.getElementById('ws-fallback');
     const playBtn    = document.getElementById('ws-play');
     const curEl      = document.getElementById('ws-current');
     const durEl      = document.getElementById('ws-duration');
-    const speedEl    = document.getElementById('ws-speed');
     const titleEl    = document.getElementById('ws-title');
+    const DEFAULT_BAR_COUNT = 120;
+    const DEFAULT_AMPLITUDE = 0.1;
+    const WAVEFORM_SAMPLE_COUNT = 140;
+    const WAVEFORM_PRECISION = 10000;
+    const MIN_BAR_HEIGHT_PERCENT = 8;
+    const BAR_HEIGHT_RANGE_PERCENT = 86;
+    let isDragging   = false;
 
     function fmt(s) {
         const m = Math.floor(s / 60);
@@ -543,8 +658,14 @@ $_downloadBase = h($_scriptDir . '/share/' . urlencode($hash) . '/download/');
         fallbackEl.pause();
         fallbackEl.src = '';
         fallbackEl.style.display = 'none';
-        waveEl.style.display     = 'block';
+        domWaveEl.style.display  = 'block';
         waveEl.innerHTML         = '';
+        waveBackEl.innerHTML     = '';
+        waveProgEl.innerHTML     = '';
+        progressEl.style.width   = '0%';
+        scrubberEl.style.left    = '0%';
+        domWaveEl.setAttribute('aria-valuenow', '0');
+        domWaveEl.setAttribute('aria-valuetext', '0:00 / 0:00');
         playBtn.disabled         = true;
         playBtn.style.display    = '';
         playBtn.innerHTML        = '<i class="fas fa-play"></i>';
@@ -552,8 +673,104 @@ $_downloadBase = h($_scriptDir . '/share/' . urlencode($hash) . '/download/');
         durEl.textContent        = '0:00';
     }
 
+    function setWaveProgress(ratio, currentSeconds) {
+        const safeRatio = Math.max(0, Math.min(1, ratio || 0));
+        const pct = (safeRatio * 100).toFixed(2) + '%';
+        progressEl.style.width = pct;
+        scrubberEl.style.left = pct;
+        domWaveEl.setAttribute('aria-valuenow', String(Math.round(safeRatio * 100)));
+        const durationSeconds = ws ? ws.getDuration() : 0;
+        const current = typeof currentSeconds === 'number'
+            ? currentSeconds
+            : (durationSeconds > 0 ? durationSeconds * safeRatio : 0);
+        domWaveEl.setAttribute('aria-valuetext', fmt(current) + ' / ' + (durEl.textContent || '0:00'));
+    }
+
+    function makeWaveBars(samples) {
+        waveBackEl.innerHTML = '';
+        waveProgEl.innerHTML = '';
+
+        const source = samples.length ? samples : new Array(DEFAULT_BAR_COUNT).fill(DEFAULT_AMPLITUDE);
+        let min = source[0];
+        let max = source[0];
+        source.forEach((v) => {
+            const value = Math.abs(Number(v) || 0);
+            if (value < min) min = value;
+            if (value > max) max = value;
+        });
+        const range = Math.max(max - min, 0.000001);
+
+        source.forEach((value) => {
+            const amp = Math.abs(Number(value) || 0);
+            const normalized = ((amp - min) / range);
+            const height = MIN_BAR_HEIGHT_PERCENT + (normalized * BAR_HEIGHT_RANGE_PERCENT);
+            const backBar = document.createElement('span');
+            backBar.className = 'dom-waveform-bar';
+            backBar.style.height = height.toFixed(2) + '%';
+            const frontBar = backBar.cloneNode(true);
+            waveBackEl.appendChild(backBar);
+            waveProgEl.appendChild(frontBar);
+        });
+    }
+
+    async function getPCMFromWaveSurfer() {
+        if (!ws) return [];
+
+        try {
+            if (typeof ws.exportPCM === 'function') {
+                const pcm = await ws.exportPCM(WAVEFORM_SAMPLE_COUNT, WAVEFORM_PRECISION, true);
+                if (Array.isArray(pcm) && pcm.length) {
+                    return pcm.map((v) => Math.abs(Number(v) || 0));
+                }
+            }
+        } catch (e) {}
+
+        try {
+            if (typeof ws.exportPeaks === 'function') {
+                const peaks = ws.exportPeaks({ channels: 1, maxLength: WAVEFORM_SAMPLE_COUNT, precision: 1000 });
+                const values = Array.isArray(peaks) && Array.isArray(peaks[0]) ? peaks[0] : peaks;
+                if (Array.isArray(values) && values.length) {
+                    return values.map((v) => Math.abs(Number(v) || 0));
+                }
+            }
+        } catch (e) {}
+
+        try {
+            if (typeof ws.getDecodedData === 'function') {
+                const decoded = ws.getDecodedData();
+                if (decoded && typeof decoded.getChannelData === 'function') {
+                    const channel = decoded.getChannelData(0);
+                    const chunk = Math.max(1, Math.floor(channel.length / WAVEFORM_SAMPLE_COUNT));
+                    const peaks = [];
+                    for (let i = 0; i < channel.length; i += chunk) {
+                        let peak = 0;
+                        for (let j = 0; j < chunk && (i + j) < channel.length; j++) {
+                            const sample = Math.abs(channel[i + j] || 0);
+                            if (sample > peak) peak = sample;
+                        }
+                        peaks.push(peak);
+                    }
+                    return peaks;
+                }
+            }
+        } catch (e) {}
+
+        return [];
+    }
+
+    function seekByClientX(clientX) {
+        const rect = domWaveEl.getBoundingClientRect();
+        if (!rect.width) return;
+        const ratio = (clientX - rect.left) / rect.width;
+        const safeRatio = Math.max(0, Math.min(1, ratio));
+        setWaveProgress(safeRatio);
+        if (ws) {
+            ws.seekTo(safeRatio);
+        }
+    }
+
     function showFallback(url) {
-        waveEl.style.display      = 'none';
+        domWaveEl.style.display    = 'none';
         fallbackEl.style.display  = 'block';
         fallbackEl.src            = url;
         fallbackEl.load();
@@ -570,26 +787,34 @@ $_downloadBase = h($_scriptDir . '/share/' . urlencode($hash) . '/download/');
             if (typeof WaveSurfer === 'undefined') { throw new Error('WaveSurfer not loaded'); }
             ws = WaveSurfer.create({
                 container: waveEl,
-                waveColor: 'rgba(94,114,228,0.35)',
+                waveColor: 'rgba(94,114,228,0.22)',
                 progressColor: '#5e72e4',
                 cursorColor: '#5e72e4',
-                height: 72,
-                barWidth: 2,
-                barRadius: 2,
+                height: 64,
+                barWidth: 3,
+                barGap: 2,
+                barRadius: 8,
                 url: url,
             });
 
-            ws.on('ready', () => {
+            ws.on('ready', async () => {
                 durEl.textContent = fmt(ws.getDuration());
                 playBtn.disabled  = false;
+                makeWaveBars(await getPCMFromWaveSurfer());
+                setWaveProgress(0);
                 ws.play();
             });
-            ws.on('timeupdate', (t) => { curEl.textContent = fmt(t); });
+            ws.on('timeupdate', (t) => {
+                curEl.textContent = fmt(t);
+                const d = ws ? ws.getDuration() : 0;
+                setWaveProgress(d > 0 ? t / d : 0, t);
+            });
             ws.on('play',  () => { playBtn.innerHTML = '<i class="fas fa-pause"></i>'; });
             ws.on('pause', () => { playBtn.innerHTML = '<i class="fas fa-play"></i>'; });
             ws.on('finish',() => {
                 playBtn.innerHTML = '<i class="fas fa-play"></i>';
                 curEl.textContent = fmt(ws.getDuration());
+                setWaveProgress(1);
             });
             ws.on('error', () => { showFallback(url); });
         } catch (e) {
@@ -609,19 +834,23 @@ $_downloadBase = h($_scriptDir . '/share/' . urlencode($hash) . '/download/');
     });
 
     playBtn.addEventListener('click', () => { if (ws) ws.playPause(); });
-
-    speedEl.addEventListener('change', () => {
-        const rate = parseFloat(speedEl.value);
-        if (ws) ws.setPlaybackRate(rate);
-        if (fallbackEl.src) fallbackEl.playbackRate = rate;
+    domWaveEl.addEventListener('pointerdown', (event) => {
+        if (!ws) return;
+        isDragging = true;
+        seekByClientX(event.clientX);
+    });
+    domWaveEl.addEventListener('pointermove', (event) => {
+        if (!isDragging || !ws) return;
+        seekByClientX(event.clientX);
+    });
+    ['pointerup', 'pointercancel', 'pointerleave'].forEach((evtName) => {
+        domWaveEl.addEventListener(evtName, () => { isDragging = false; });
     });
 
     modalEl.addEventListener('hide.bs.modal', () => {
         destroyWs();
-        speedEl.value = '1';
     });
 })();
 </script>
 </body>
 </html>
-
