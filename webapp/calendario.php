@@ -524,7 +524,7 @@ require_once __DIR__ . '/includes/header.php';
                                 <div class="col-md-6">
                                     <label for="new-event-cliente-id" class="form-label">Cliente *</label>
                                     <select class="form-select" id="new-event-cliente-id" name="cliente_id" required>
-                                        <option value=""></option>
+                                        <option value="">Cerca cliente...</option>
                                         <?php foreach ($clients as $client): ?>
                                         <option value="<?= htmlspecialchars((string)$client['id']) ?>"><?= htmlspecialchars(trim((string)$client['cognome'] . ' ' . (string)$client['nome']) . ' (' . (string)$client['id'] . ')') ?></option>
                                         <?php endforeach; ?>
@@ -614,7 +614,7 @@ require_once __DIR__ . '/includes/header.php';
                                     </div>
                                     <div id="provino-cliente-existing-section">
                                         <select class="form-select" id="provino-cliente-id" name="cliente_id">
-                                            <option value=""></option>
+                                            <option value="">Cerca cliente...</option>
                                             <?php foreach ($clients as $client): ?>
                                             <option value="<?= htmlspecialchars((string)$client['id']) ?>"><?= htmlspecialchars(trim((string)$client['cognome'] . ' ' . (string)$client['nome']) . ' (' . (string)$client['id'] . ')') ?></option>
                                             <?php endforeach; ?>
@@ -763,7 +763,7 @@ document.addEventListener('DOMContentLoaded', () => {
         newEventForm.reset();
         document.getElementById('new-event-stato').value = 'Programmata';
         if (typeof window.$ !== 'undefined' && lezClienteSel) {
-            $(lezClienteSel).val('').trigger('change.select2');
+            $(lezClienteSel).val(null).trigger('change');
         }
         filterInsegnantiByStrumento(0, lezInsegnanteSel);
         filterStrumentiByInsegnante(0, lezStrumentoSel);
@@ -772,7 +772,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function resetProvinoForm() {
         newProvinoForm.reset();
         if (typeof window.$ !== 'undefined' && provClienteSel) {
-            $(provClienteSel).val('').trigger('change.select2');
+            $(provClienteSel).val(null).trigger('change');
         }
         document.getElementById('provino-cliente-existing-section').style.display = '';
         document.getElementById('provino-cliente-new-section').style.display      = 'none';

@@ -391,7 +391,7 @@ require_once __DIR__ . '/includes/header.php';
                         <div class="col-md-4">
                             <label for="purchase_cliente_id" class="form-label">Cliente *</label>
                             <select class="form-select" id="purchase_cliente_id" name="cliente_id" required>
-                                <option value=""></option>
+                                <option value="">Cerca cliente...</option>
                                 <?php foreach ($clients as $client): ?>
                                 <option value="<?= htmlspecialchars((string)$client['id']) ?>"><?= htmlspecialchars(trim((string)$client['cognome'] . ' ' . (string)$client['nome']) . ' (' . (string)$client['id'] . ')') ?></option>
                                 <?php endforeach; ?>
@@ -675,7 +675,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function resetPurchaseForm() {
         purchaseForm.reset();
         if (typeof window.$ !== 'undefined' && purchaseClientSelect) {
-            $(purchaseClientSelect).val('').trigger('change.select2');
+            $(purchaseClientSelect).val(null).trigger('change');
         }
         document.getElementById('purchase_id').value = '';
         document.getElementById('purchaseModalTitle').textContent = 'Nuovo Acquisto';
@@ -754,7 +754,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.getElementById('purchase_data_acquisto').value = purchase.data_acquisto || '';
                 document.getElementById('purchase_cliente_id').value = purchase.cliente_id || '';
                 if (typeof window.$ !== 'undefined' && purchaseClientSelect) {
-                    $(purchaseClientSelect).val(purchase.cliente_id || '').trigger('change.select2');
+                    $(purchaseClientSelect).val(purchase.cliente_id || '').trigger('change');
                 }
                 document.getElementById('purchase_pacchetto_id').value = purchase.pacchetto_id || '';
                 document.getElementById('purchase_importo_pagato').value = Number(purchase.importo_pagato || 0).toFixed(2);
