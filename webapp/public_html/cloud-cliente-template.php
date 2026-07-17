@@ -247,7 +247,8 @@
             const audioPlayer = document.getElementById('audioPlayer');
             const audioModalTitle = document.getElementById('audioModalTitle');
             const downloadBtn = document.getElementById('downloadBtn');
-            // The controller validates $hash before rendering this template.
+            // Safe because index_cloud.php validates $hash as a 32-char hex token
+            // before rendering this presentation-only template.
             const streamBaseUrl = <?= json_encode('?hash=' . rawurlencode($hash) . '&action=get_file&file_id=') ?>;
             const downloadBaseUrl = <?= json_encode('?hash=' . rawurlencode($hash) . '&action=download&file_id=') ?>;
 
