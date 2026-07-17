@@ -272,11 +272,108 @@ function cloudFileIcon(?string $mime): string
             'application/vnd.openxmlformats-officedocument.wordprocessingml.document'], true) => 'fa-file-word',
         in_array($mime, ['application/vnd.ms-excel',
             'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'], true)       => 'fa-file-excel',
+        in_array($mime, ['application/vnd.ms-powerpoint',
+            'application/vnd.openxmlformats-officedocument.presentationml.presentation'], true) => 'fa-file-powerpoint',
         in_array($mime, ['application/zip','application/x-zip-compressed',
             'application/x-rar-compressed','application/x-7z-compressed'], true)             => 'fa-file-archive',
-        in_array($mime, ['text/plain','text/csv'], true)                                      => 'fa-file-alt',
+        $mime === 'text/csv'                                                                  => 'fa-file-csv',
+        $mime === 'text/plain'                                                                => 'fa-file-alt',
         default                                                                                => 'fa-file',
     };
+}
+
+// ── App name helper ───────────────────────────────────────────────────────
+
+/**
+ * Returns the application name from system_config, falling back to 'EasyBooking'.
+ * Usable on public pages that only load cloud-functions.php (not functions.php).
+ */
+function cloudAppName(PDO $pdo): string
+{
+    try {
+        $stmt = $pdo->prepare("SELECT `value` FROM system_config WHERE `key` = 'app_name' LIMIT 1");
+        $stmt->execute();
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return ($row && $row['value'] !== '') ? (string)$row['value'] : 'EasyBooking';
+    } catch (Throwable) {
+        return 'EasyBooking';
+    }
+}
+
+// ── Future lessons helper ─────────────────────────────────────────────────
+
+/**
+ * Returns future scheduled lessons for a client together with the active
+ * package expiry date (= date of the last scheduled lesson linked to the
+ * most recent active purchase).
+ *
+ * @return array{lezioni: list<array<string,string>>, scadenza_pacchetto: string|null, pacchetto_nome: string}
+ */
+function cloudLezioniFuture(PDO $pdo, int $clienteId): array
+{
+    // Italian month abbreviations for date formatting
+    static $mesi = ['', 'gen', 'feb', 'mar', 'apr', 'mag', 'giu',
+                    'lug', 'ago', 'set', 'ott', 'nov', 'dic'];
+
+    // Future lessons with stato = 'Programmata'
+    $stmt = $pdo->prepare(
+        'SELECT data, ora_inizio, ora_fine, pacchetto_nome, strumento
+         FROM prenotazioni
+         WHERE cliente_id = ? AND data >= CURDATE() AND stato = ?
+         ORDER BY data ASC, ora_inizio ASC'
+    );
+    $stmt->execute([$clienteId, 'Programmata']);
+    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    $lezioni = [];
+    foreach ($rows as $r) {
+        $ts = strtotime((string)$r['data']);
+        $lezioni[] = [
+            'data'         => (string)$r['data'],
+            'data_human'   => date('d', $ts) . ' ' . $mesi[(int)date('n', $ts)] . ' ' . date('Y', $ts),
+            'giorno'       => date('d', $ts),
+            'mese'         => strtoupper($mesi[(int)date('n', $ts)]),
+            'ora_inizio'   => substr((string)$r['ora_inizio'], 0, 5),
+            'ora_fine'     => substr((string)$r['ora_fine'], 0, 5),
+            'pacchetto'    => (string)($r['pacchetto_nome'] ?? ''),
+            'strumento'    => (string)($r['strumento'] ?? ''),
+        ];
+    }
+
+    // Find most recent active purchase (numero_lezioni > 0)
+    $stmt = $pdo->prepare(
+        'SELECT a.id, p.nome AS pacchetto_nome
+         FROM acquisti a
+         LEFT JOIN pacchetti p ON p.id = a.pacchetto_id
+         WHERE a.cliente_id = ? AND a.numero_lezioni > 0
+         ORDER BY a.data_acquisto DESC
+         LIMIT 1'
+    );
+    $stmt->execute([$clienteId]);
+    $acquisto = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    $scadenzaPacchetto = null;
+    $pacchettoNome     = '';
+
+    if ($acquisto) {
+        $pacchettoNome = (string)($acquisto['pacchetto_nome'] ?? '');
+        // Scadenza = MAX(data) of Programmata lessons linked to this purchase
+        $stmt = $pdo->prepare(
+            'SELECT MAX(data) FROM prenotazioni WHERE acquisto_id = ? AND stato = ?'
+        );
+        $stmt->execute([(int)$acquisto['id'], 'Programmata']);
+        $maxData = $stmt->fetchColumn();
+        if ($maxData) {
+            $ts = strtotime((string)$maxData);
+            $scadenzaPacchetto = date('d', $ts) . ' ' . $mesi[(int)date('n', $ts)] . ' ' . date('Y', $ts);
+        }
+    }
+
+    return [
+        'lezioni'            => $lezioni,
+        'scadenza_pacchetto' => $scadenzaPacchetto,
+        'pacchetto_nome'     => $pacchettoNome,
+    ];
 }
 
 // ── Public share URL ──────────────────────────────────────────────────────

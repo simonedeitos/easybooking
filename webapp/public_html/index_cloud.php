@@ -280,26 +280,34 @@ function formatDebugDetails(Throwable $e): string
 function renderCloudPage(array $state = []): void
 {
     $state = array_merge([
-        'page_title' => 'Cloud Storage',
-        'cliente_nome' => '',
-        'files' => [],
-        'file_count' => 0,
-        'total_size_human' => '0 B',
-        'hash' => '',
-        'error_title' => '',
-        'error_message' => '',
-        'debug_details' => '',
+        'page_title'          => 'Cloud Page',
+        'app_name'            => 'EasyBooking',
+        'cliente_nome'        => '',
+        'files'               => [],
+        'file_count'          => 0,
+        'total_size_human'    => '0 B',
+        'hash'                => '',
+        'lezioni_future'      => [],
+        'scadenza_pacchetto'  => null,
+        'pacchetto_nome_attivo' => '',
+        'error_title'         => '',
+        'error_message'       => '',
+        'debug_details'       => '',
     ], $state);
 
-    $page_title = $state['page_title'];
-    $cliente_nome = $state['cliente_nome'];
-    $files = $state['files'];
-    $file_count = $state['file_count'];
-    $total_size_human = $state['total_size_human'];
-    $hash = $state['hash'];
-    $error_title = $state['error_title'];
-    $error_message = $state['error_message'];
-    $debug_details = $state['debug_details'];
+    $page_title          = $state['page_title'];
+    $app_name            = $state['app_name'];
+    $cliente_nome        = $state['cliente_nome'];
+    $files               = $state['files'];
+    $file_count          = $state['file_count'];
+    $total_size_human    = $state['total_size_human'];
+    $hash                = $state['hash'];
+    $lezioni_future      = $state['lezioni_future'];
+    $scadenza_pacchetto  = $state['scadenza_pacchetto'];
+    $pacchetto_nome_attivo = $state['pacchetto_nome_attivo'];
+    $error_title         = $state['error_title'];
+    $error_message       = $state['error_message'];
+    $debug_details       = $state['debug_details'];
 
     require __DIR__ . '/cloud-cliente-template.php';
     exit;
@@ -598,13 +606,20 @@ try {
     }
     unset($file);
 
+    $appName    = cloudAppName($pdo);
+    $lezioniData = cloudLezioniFuture($pdo, $clienteId);
+
     renderCloudPage([
-        'page_title' => 'Cloud Storage - ' . $clienteNome,
-        'cliente_nome' => $clienteNome,
-        'files' => $files,
-        'file_count' => count($files),
-        'total_size_human' => cloudFormatSize($totalSize),
-        'hash' => $hash,
+        'page_title'           => $appName . ' – ' . $clienteNome,
+        'app_name'             => $appName,
+        'cliente_nome'         => $clienteNome,
+        'files'                => $files,
+        'file_count'           => count($files),
+        'total_size_human'     => cloudFormatSize($totalSize),
+        'hash'                 => $hash,
+        'lezioni_future'       => $lezioniData['lezioni'],
+        'scadenza_pacchetto'   => $lezioniData['scadenza_pacchetto'],
+        'pacchetto_nome_attivo' => $lezioniData['pacchetto_nome'],
     ]);
 } catch (PublicCloudBootstrapException $e) {
     $configuredPath = currentConfiguredWebappPathValue();
