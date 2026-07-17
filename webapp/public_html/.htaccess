@@ -60,6 +60,13 @@ RewriteRule ^cloud_storage/ - [F,L]
     Deny from all
 </FilesMatch>
 
+# Blocca accesso diretto ai file di log (es. cloud-debug.log) via browser.
+# Il file rimane leggibile via File Manager o FTP ma non è esposto pubblicamente.
+<FilesMatch "\.log$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
 # ════════════════════════════════════════════════════════════
 # BLOCCA ACCESSO A /easybooking DAL DOMINIO PRINCIPALE
 # ════════════════════════════════════════════════════════════
@@ -94,5 +101,5 @@ RewriteRule . /index.php [L]
     Header set X-XSS-Protection "1; mode=block"
     Header set Referrer-Policy "strict-origin-when-cross-origin"
     # Cloud Storage - Allow inline content for audio player
-    Header set Content-Security-Policy "default-src 'self' https:; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://cdnjs.cloudflare.com; media-src 'self' data:;"
+    Header set Content-Security-Policy "default-src 'self' https:; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; font-src 'self' https://cdnjs.cloudflare.com; media-src 'self' data:;"
 </IfModule>

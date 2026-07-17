@@ -21,6 +21,7 @@ ini_set('log_errors', '1');
 ini_set('display_errors', '0');
 
 const PUBLIC_CLOUD_MIN_DEBUG_TOKEN_LENGTH = 32;
+const PUBLIC_CLOUD_DEBUG_LOG_MAX_BYTES = 1048576; // 1 MB size cap for cloud-debug.log
 
 function h($value): string
 {
@@ -33,7 +34,7 @@ function loadPublicCloudLocalConfig(string $envFile): void
         return;
     }
 
-    $supportedKeys = ['EASYBOOKING_WEBAPP_PATH', 'EASYBOOKING_DEBUG_TOKEN'];
+    $supportedKeys = ['EASYBOOKING_WEBAPP_PATH', 'EASYBOOKING_DEBUG_TOKEN', 'EASYBOOKING_SUBDOMAIN_FOLDER_NAME'];
     foreach (file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) ?: [] as $line) {
         $line = trim($line);
         if ($line === '' || $line[0] === '#' || strpos($line, '=') === false) {
@@ -183,6 +184,89 @@ function currentConfiguredWebappPathValue(): string
     return '';
 }
 
+/**
+ * Write a structured entry to cloud-debug.log in public_html/.
+ *
+ * The file is created/appended automatically; no configuration needed.
+ * It is protected from direct HTTP access via the .htaccess rule that
+ * returns 403 for *.log requests.  Read it via File Manager or FTP.
+ *
+ * IMPORTANT: this function must never write passwords or other secrets.
+ * Only DB_HOST, DB_NAME (not DB_PASS), EASYBOOKING_WEBAPP_PATH, and
+ * path-resolution details are included.
+ *
+ * Note: currentConfiguredWebappPathValue() is called below; it is defined
+ * above in this same file.
+ */
+function writeCloudDebugLog(string $errorType, Throwable $exception, array $pathsTried = [], array $extraContext = []): void
+{
+    $logFile = __DIR__ . '/cloud-debug.log';
+
+    // Rotate the log if it exceeds the 1 MB cap: keep the second half of the
+    // current content so recent entries are always preserved.
+    if (@is_file($logFile) && @filesize($logFile) > PUBLIC_CLOUD_DEBUG_LOG_MAX_BYTES) {
+        $content = @file_get_contents($logFile);
+        if ($content !== false && strlen($content) > PUBLIC_CLOUD_DEBUG_LOG_MAX_BYTES) {
+            $trimmed = substr($content, (int) (PUBLIC_CLOUD_DEBUG_LOG_MAX_BYTES / 2));
+            // Align to the next line boundary so we don't cut mid-line.
+            $nl = strpos($trimmed, "\n");
+            if ($nl !== false) {
+                $trimmed = substr($trimmed, $nl + 1);
+            }
+            @file_put_contents($logFile, "=== log rotated at " . date('Y-m-d H:i:s') . " ===\n" . $trimmed, LOCK_EX);
+        }
+    }
+
+    $entry  = "\n" . str_repeat('=', 60) . "\n";
+    $entry .= '[' . date('Y-m-d H:i:s') . '] ERROR TYPE: ' . $errorType . "\n";
+    $entry .= 'EXCEPTION CLASS: ' . get_class($exception) . "\n";
+    $entry .= 'MESSAGE: ' . $exception->getMessage() . "\n";
+    $entry .= 'FILE: ' . $exception->getFile() . ':' . $exception->getLine() . "\n";
+
+    $prev = $exception->getPrevious();
+    if ($prev !== null) {
+        $entry .= 'CAUSED BY: ' . get_class($prev) . ': ' . $prev->getMessage() . "\n";
+    }
+
+    // Paths that were attempted for resolving webapp/
+    if (!empty($pathsTried)) {
+        $entry .= "PATHS TRIED:\n";
+        foreach (array_values($pathsTried) as $i => $path) {
+            $status = @is_dir($path) ? '[dir exists - config missing?]' : '[not found]';
+            $entry .= '  ' . ($i + 1) . '. ' . $path . ' ' . $status . "\n";
+        }
+    }
+
+    // EASYBOOKING_WEBAPP_PATH (configured value, even if it didn't resolve)
+    $cfgPath = currentConfiguredWebappPathValue();
+    $entry .= 'EASYBOOKING_WEBAPP_PATH (configured): ' . ($cfgPath !== '' ? $cfgPath : '[not set]') . "\n";
+
+    // DB connection details - host and name only, NEVER the password
+    $dbHost = (string) (getenv('DB_HOST') ?: '');
+    $dbName = (string) (getenv('DB_NAME') ?: '');
+    if ($dbHost !== '' || $dbName !== '') {
+        $entry .= 'DB_HOST: ' . ($dbHost !== '' ? $dbHost : '[not set]') . "\n";
+        $entry .= 'DB_NAME: ' . ($dbName !== '' ? $dbName : '[not set]') . "\n";
+        // Explicitly note that DB_PASS is intentionally omitted
+        $entry .= "DB_PASS: [intentionally omitted from log]\n";
+    }
+
+    // Any extra diagnostic context provided by the caller
+    if (!empty($extraContext)) {
+        $entry .= "ADDITIONAL CONTEXT:\n";
+        foreach ($extraContext as $key => $value) {
+            $entry .= '  ' . $key . ': ' . $value . "\n";
+        }
+    }
+
+    $entry .= "HOW TO FIX: open this file (cloud-debug.log) via File Manager or FTP\n";
+    $entry .= "  in the public_html/ folder of your hosting account to read this log.\n";
+    $entry .= "  If EASYBOOKING_WEBAPP_PATH is [not set], create public_html/.env and add:\n";
+    $entry .= "  EASYBOOKING_WEBAPP_PATH=/absolute/path/to/your/webapp\n";
+
+    @file_put_contents($logFile, $entry, FILE_APPEND | LOCK_EX);
+}
+
 function formatDebugDetails(Throwable $e): string
 {
     return sprintf(
@@ -245,12 +329,33 @@ function resolveWebappBootstrap(): array
         ];
     }
 
-    foreach ([
+    $builtInFallbacks = [
         ['path' => dirname(__DIR__), 'source' => 'webapp/public_html sibling'],
         ['path' => dirname(__DIR__) . '/webapp', 'source' => 'parent/webapp fallback'],
         ['path' => dirname(dirname(__DIR__)) . '/webapp', 'source' => 'grandparent/webapp fallback'],
         ['path' => dirname(__DIR__) . '/easybooking/webapp', 'source' => 'hostinger easybooking/webapp fallback'],
-    ] as $fallbackCandidate) {
+    ];
+
+    // Hostinger / shared-hosting: if EASYBOOKING_SUBDOMAIN_FOLDER_NAME is set
+    // (e.g. "gest.vocefutura.it"), try the sibling-directory pattern:
+    //   /home/user/domains/gest.vocefutura.it/webapp
+    // which is typical when main domain and app subdomain share the same hosting
+    // account but have separate document-root folders placed side by side.
+    $subdomainFolderName = trim((string) (getenv('EASYBOOKING_SUBDOMAIN_FOLDER_NAME') ?: ''));
+    // Validate: allow only alphanumeric characters, dots, hyphens, and underscores
+    // to prevent any path traversal attempt.
+    if ($subdomainFolderName !== '' && preg_match('/^[A-Za-z0-9._-]+$/', $subdomainFolderName)) {
+        $builtInFallbacks[] = [
+            'path' => dirname(dirname(__DIR__)) . '/' . $subdomainFolderName . '/webapp',
+            'source' => 'EASYBOOKING_SUBDOMAIN_FOLDER_NAME sibling fallback',
+        ];
+        $builtInFallbacks[] = [
+            'path' => dirname(dirname(__DIR__)) . '/' . $subdomainFolderName,
+            'source' => 'EASYBOOKING_SUBDOMAIN_FOLDER_NAME sibling (no /webapp) fallback',
+        ];
+    }
+
+    foreach ($builtInFallbacks as $fallbackCandidate) {
         $candidates[] = $fallbackCandidate;
     }
 
@@ -519,6 +624,19 @@ try {
         'Fix: set EASYBOOKING_WEBAPP_PATH to the absolute webapp/ path in public_html/.env ' .
         'or via Apache/vhost SetEnv EASYBOOKING_WEBAPP_PATH "/absolute/path/to/webapp".'
     );
+
+    // Always write to cloud-debug.log — readable via File Manager/FTP without any token config
+    writeCloudDebugLog(
+        'BOOTSTRAP_PATH_NOT_RESOLVED',
+        $e,
+        $pathsTried,
+        [
+            'EASYBOOKING_WEBAPP_PATH (configured)' => $configuredPath !== '' ? $configuredPath : '[not set]',
+            'Configured sources' => !empty($sourceParts) ? implode('; ', $sourceParts) : '[none]',
+            'Action needed' => 'Set EASYBOOKING_WEBAPP_PATH in public_html/.env',
+        ]
+    );
+
     http_response_code(500);
     renderCloudPage([
         'page_title' => 'Servizio temporaneamente non disponibile',
@@ -535,6 +653,19 @@ try {
         'Public cloud database connection error. Bootstrap resolved but database connection failed. ' .
         'This is a database connectivity/credentials issue. Error type: ' . $errorType . ', code: ' . $errorCode . '.'
     );
+
+    // Always write to cloud-debug.log — readable via File Manager/FTP without any token config
+    writeCloudDebugLog(
+        'DATABASE_CONNECTION_FAILED',
+        $e,
+        [],
+        [
+            'Error type' => $errorType,
+            'Error code' => $errorCode,
+            'Hint' => 'Check DB_HOST and DB_NAME in webapp/.env (DB_PASS intentionally not logged)',
+        ]
+    );
+
     http_response_code(500);
     renderCloudPage([
         'page_title' => 'Servizio temporaneamente non disponibile',
@@ -544,6 +675,10 @@ try {
     ]);
 } catch (Throwable $e) {
     error_log('Public cloud controller unexpected error: ' . $e->getMessage());
+
+    // Always write to cloud-debug.log — readable via File Manager/FTP without any token config
+    writeCloudDebugLog('UNEXPECTED_ERROR', $e);
+
     http_response_code(500);
     renderCloudPage([
         'page_title' => 'Servizio temporaneamente non disponibile',
