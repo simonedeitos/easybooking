@@ -81,22 +81,42 @@
         }
         /* ── Lessons ────────────────────────────────────────── */
         .lesson-item {
-            padding: 0.75rem 1.25rem;
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+            padding: 0.85rem 1.25rem;
             border-bottom: 1px solid #edf2f7;
-            font-size: 0.9rem;
-            color: var(--text);
         }
         .lesson-item:last-child { border-bottom: none; }
-        .lesson-row {
-            display: flex;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 0 0.5rem;
+        .lesson-date-badge {
+            background: var(--accent);
+            color: #fff;
+            border-radius: 0.6rem;
+            text-align: center;
+            padding: 0.35rem 0.65rem;
+            min-width: 3.2rem;
+            flex-shrink: 0;
         }
-        .lesson-num  { color: var(--muted); font-size: 0.8rem; min-width: 2.8rem; }
-        .lesson-sep  { color: var(--muted); }
-        .lesson-time { font-weight: 700; }
-        .lesson-strumento { color: var(--muted); font-style: italic; }
+        .lesson-date-badge .day { font-size: 1.4rem; font-weight: 800; line-height: 1; display: block; }
+        .lesson-date-badge .month { font-size: 0.65rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
+        .lesson-item {
+    display: flex;
+    align-items: center;
+}
+
+.lesson-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+}
+
+.lesson-time {
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: var(--text);
+}
+        .lesson-meta { font-size: 0.8rem; color: var(--muted); margin-top: 0.15rem; }
         .badge-scadenza {
             background: #fff3cd;
             color: #856404;
@@ -353,7 +373,11 @@
         <?php else: ?>
             <?php foreach ($lezioni_future as $l): ?>
             <div class="lesson-item">
-                <div class="lesson-row">
+                <div class="lesson-date-badge">
+                    <span class="day"><?= h($l['giorno']) ?></span>
+                    <span class="month"><?= h($l['mese']) ?></span>
+                </div>
+                <div class="lesson-info">
                     <span class="lesson-num"><?= h($l['numero']) ?></span>
                     <span class="lesson-sep">&nbsp;|&nbsp;</span>
                     <span class="lesson-date"><?= h($l['data_full']) ?></span>
@@ -363,6 +387,7 @@
                         <span class="lesson-sep">&nbsp;|&nbsp;</span>
                         <span class="lesson-strumento"><i class="fas fa-music me-1"></i><?= h($l['strumento']) ?></span>
                     <?php endif; ?>
+                    
                 </div>
             </div>
             <?php endforeach; ?>
@@ -448,7 +473,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Chiudi"></button>
             </div>
             <div class="modal-body pt-2">
-                <div id="ws-waveform-shell" class="player-waveform-shell mb-2">
+                <div class="player-waveform-shell mb-2">
                     <div id="waveform"></div>
                     <div id="ws-dom-wave" class="dom-waveform" role="slider" aria-label="Forma d'onda audio" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
                         <div class="dom-waveform-track">
@@ -463,7 +488,7 @@
                 <audio id="ws-fallback" controls class="w-100 mt-2" style="display:none; border-radius:6px;">
                     Il tuo browser non supporta l'elemento audio.
                 </audio>
-                <div id="ws-controls-row" class="player-controls">
+                <div class="player-controls">
                     <button id="ws-play" class="btn btn-sm btn-primary" disabled>
                         <i class="fas fa-play"></i>
                     </button>
@@ -473,9 +498,6 @@
                 </div>
             </div>
             <div class="modal-footer border-0 pt-0">
-                <a id="ws-download" href="#" class="btn btn-outline-primary btn-sm disabled" aria-disabled="true">
-                    <i class="fas fa-download me-1"></i>Scarica
-                </a>
                 <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Chiudi</button>
             </div>
         </div>
@@ -503,20 +525,17 @@
         '&action=' + encodeURIComponent(action) +
         '&file_id=' + encodeURIComponent(fileId);
 
-    const waveEl          = document.getElementById('waveform');
-    const waveformShellEl = document.getElementById('ws-waveform-shell');
-    const domWaveEl       = document.getElementById('ws-dom-wave');
-    const waveBackEl      = document.getElementById('ws-wave-back');
-    const waveProgEl      = document.getElementById('ws-wave-progress-bars');
-    const progressEl      = document.getElementById('ws-wave-front');
-    const scrubberEl      = document.getElementById('ws-scrubber');
-    const fallbackEl      = document.getElementById('ws-fallback');
-    const playBtn         = document.getElementById('ws-play');
-    const controlsRowEl   = document.getElementById('ws-controls-row');
-    const curEl           = document.getElementById('ws-current');
-    const durEl           = document.getElementById('ws-duration');
-    const titleEl         = document.getElementById('ws-title');
-    const downloadAnchor  = document.getElementById('ws-download');
+    const waveEl     = document.getElementById('waveform');
+    const domWaveEl  = document.getElementById('ws-dom-wave');
+    const waveBackEl = document.getElementById('ws-wave-back');
+    const waveProgEl = document.getElementById('ws-wave-progress-bars');
+    const progressEl = document.getElementById('ws-wave-front');
+    const scrubberEl = document.getElementById('ws-scrubber');
+    const fallbackEl = document.getElementById('ws-fallback');
+    const playBtn    = document.getElementById('ws-play');
+    const curEl      = document.getElementById('ws-current');
+    const durEl      = document.getElementById('ws-duration');
+    const titleEl    = document.getElementById('ws-title');
     const DEFAULT_BAR_COUNT = 120;
     const DEFAULT_AMPLITUDE = 0.1;
     const WAVEFORM_SAMPLE_COUNT = 140;
@@ -539,9 +558,7 @@
         fallbackEl.pause();
         fallbackEl.src = '';
         fallbackEl.style.display = 'none';
-        waveformShellEl.style.display = '';
         domWaveEl.style.display  = 'block';
-        controlsRowEl.style.display  = '';
         waveEl.innerHTML         = '';
         waveBackEl.innerHTML     = '';
         waveProgEl.innerHTML     = '';
@@ -554,11 +571,6 @@
         playBtn.innerHTML        = '<i class="fas fa-play"></i>';
         curEl.textContent        = '0:00';
         durEl.textContent        = '0:00';
-        if (downloadAnchor) {
-            downloadAnchor.href = '#';
-            downloadAnchor.classList.add('disabled');
-            downloadAnchor.setAttribute('aria-disabled', 'true');
-        }
     }
 
     function setWaveProgress(ratio, currentSeconds) {
@@ -658,26 +670,18 @@
     }
 
     function showFallback(url) {
-        waveformShellEl.style.display  = 'none';
-        domWaveEl.style.display        = 'none';
-        controlsRowEl.style.display    = 'none';
-        fallbackEl.style.display       = 'block';
-        fallbackEl.src                 = url;
+        domWaveEl.style.display    = 'none';
+        fallbackEl.style.display  = 'block';
+        fallbackEl.src            = url;
         fallbackEl.load();
+        playBtn.style.display     = 'none';
     }
 
     function openPlayer(fileId, fileName) {
         titleEl.textContent = fileName;
         destroyWs();
 
-        const streamUrl   = buildUrl('get_file', fileId);
-        const downloadUrl = buildUrl('download', fileId);
-
-        if (downloadAnchor) {
-            downloadAnchor.href = downloadUrl;
-            downloadAnchor.classList.remove('disabled');
-            downloadAnchor.removeAttribute('aria-disabled');
-        }
+        const streamUrl = buildUrl('get_file', fileId);
 
         try {
             if (typeof WaveSurfer === 'undefined') { throw new Error('WaveSurfer not loaded'); }
@@ -712,12 +716,8 @@
                 curEl.textContent = fmt(ws.getDuration());
                 setWaveProgress(1);
             });
-            ws.on('error', (e) => {
-                console.error('WaveSurfer error loading audio:', e);
-                showFallback(streamUrl);
-            });
+            ws.on('error', () => { showFallback(streamUrl); });
         } catch (e) {
-            console.error('WaveSurfer initialization failed:', e && e.message ? e.message : e);
             showFallback(streamUrl);
         }
 
