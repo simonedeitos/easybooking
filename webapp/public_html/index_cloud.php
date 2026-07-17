@@ -40,8 +40,8 @@ function loadPublicCloudLocalConfig(string $envFile): void
             continue;
         }
 
-        $firstChar = substr($value, 0, 1);
-        $lastChar = substr($value, -1);
+        $firstChar = $value[0];
+        $lastChar = $value[strlen($value) - 1];
         if (($firstChar === '"' || $firstChar === "'") && $firstChar === $lastChar) {
             $value = substr($value, 1, -1);
         }
@@ -149,7 +149,8 @@ function resolveWebappBootstrap(): array
     }
 
     throw new RuntimeException(
-        'Impossibile risolvere il percorso di webapp/. Percorsi provati: ' . implode(', ', array_unique($pathsTried))
+        'Unable to resolve the EasyBooking webapp path. Set EASYBOOKING_WEBAPP_PATH in public_html/.env. Paths tried: ' .
+        implode(', ', array_unique($pathsTried))
     );
 }
 
@@ -164,6 +165,8 @@ function sendCloudFile(string $filePath, string $mimeType, string $downloadName 
     header('X-Content-Type-Options: nosniff');
 
     if ($downloadName !== '') {
+        // Keep the fallback ASCII name conservative for legacy user agents while
+        // sending the full UTF-8 filename via filename*= for modern browsers.
         $fallbackName = preg_replace('/[^A-Za-z0-9._-]/u', '_', $downloadName) ?: 'download';
         header(
             "Content-Disposition: attachment; filename=\"{$fallbackName}\"; filename*=UTF-8''" .
