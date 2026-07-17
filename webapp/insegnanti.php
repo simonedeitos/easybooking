@@ -261,7 +261,6 @@ require_once __DIR__ . '/includes/header.php';
             <table class="table datatable align-middle" id="insegnantiTable">
                 <thead>
                     <tr>
-                        <th>#ID</th>
                         <th>Nome Cognome</th>
                         <th>Email</th>
                         <th>Telefono</th>
@@ -273,7 +272,6 @@ require_once __DIR__ . '/includes/header.php';
                 <tbody>
                     <?php foreach ($teachers as $teacher): ?>
                     <tr>
-                        <td><?= htmlspecialchars((string)$teacher['id']) ?></td>
                         <td class="fw-semibold"><?= htmlspecialchars(trim((string)$teacher['nome'] . ' ' . (string)$teacher['cognome'])) ?></td>
                         <td><?= htmlspecialchars((string)($teacher['email'] ?: '—')) ?></td>
                         <td><?= htmlspecialchars((string)($teacher['telefono'] ?: '—')) ?></td>
