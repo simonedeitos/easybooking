@@ -62,6 +62,8 @@ define('CLOUD_AUDIO_MIMES', [
 // Italian month abbreviations (1-indexed; index 0 is unused)
 define('CLOUD_MESI_IT', ['', 'gen', 'feb', 'mar', 'apr', 'mag', 'giu',
                           'lug', 'ago', 'set', 'ott', 'nov', 'dic']);
+define('CLOUD_PAYMENT_STATUS_PAID', 'pagato');
+define('CLOUD_PAYMENT_STATUS_REFUND', 'rimborso');
 
 // ── Path helpers ──────────────────────────────────────────────────────────
 
@@ -309,9 +311,15 @@ function cloudIsAudioMime(?string $mime): bool
  */
 function cloudFileIconFallback(?string $fileName, ?string $mime = null): string
 {
-    $extension = preg_replace('/[^a-z0-9]+/i', '', (string) pathinfo((string) $fileName, PATHINFO_EXTENSION));
+    $extension = trim((string) pathinfo((string) $fileName, PATHINFO_EXTENSION));
     if ($extension !== '') {
-        return strtoupper(substr($extension, 0, 4));
+        $shortExtension = function_exists('mb_substr')
+            ? mb_substr($extension, 0, 4, 'UTF-8')
+            : substr($extension, 0, 4);
+
+        return function_exists('mb_strtoupper')
+            ? mb_strtoupper($shortExtension, 'UTF-8')
+            : strtoupper($shortExtension);
     }
 
     $mime = cloudNormalizeMime($mime);
@@ -415,7 +423,9 @@ function cloudLezioniFuture(PDO $pdo, int $clienteId): array
         // only by case or extra whitespace, so normalize before checking
         // "da saldare".
         $statoPagamento = cloudNormalizePaymentStatus($acquisto['stato_pagamento'] ?? null);
-        $pacchettoDaSaldare = $statoPagamento !== '' && $statoPagamento !== 'pagato' && $statoPagamento !== 'rimborso';
+        $pacchettoDaSaldare = $statoPagamento !== ''
+            && $statoPagamento !== CLOUD_PAYMENT_STATUS_PAID
+            && $statoPagamento !== CLOUD_PAYMENT_STATUS_REFUND;
         if (!empty($acquisto['data_acquisto'])) {
             $ts = strtotime((string)$acquisto['data_acquisto']);
             if ($ts !== false) {
