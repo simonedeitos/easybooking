@@ -62,6 +62,11 @@ define('CLOUD_AUDIO_MIMES', [
 // Italian month abbreviations (1-indexed; index 0 is unused)
 define('CLOUD_MESI_IT', ['', 'gen', 'feb', 'mar', 'apr', 'mag', 'giu',
                           'lug', 'ago', 'set', 'ott', 'nov', 'dic']);
+// Italian full month names (1-indexed; index 0 is unused)
+define('CLOUD_MESI_FULL_IT', ['', 'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
+                               'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre']);
+// Italian day-of-week names (0=Sunday … 6=Saturday, matching date('w'))
+define('CLOUD_GIORNI_IT', ['Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato']);
 define('CLOUD_PAYMENT_STATUS_PAID', 'pagato');
 define('CLOUD_PAYMENT_STATUS_REFUND', 'rimborso');
 
@@ -379,13 +384,20 @@ function cloudLezioniFuture(PDO $pdo, int $clienteId): array
     $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     $lezioni = [];
-    foreach ($rows as $r) {
+    $totale  = count($rows);
+    foreach ($rows as $idx => $r) {
         $ts = strtotime((string)$r['data']);
         $meseIdx = (int)date('n', $ts);
         $meseIt = CLOUD_MESI_IT[$meseIdx] ?? '';
+        $meseFull = CLOUD_MESI_FULL_IT[$meseIdx] ?? '';
+        $giornoIdx = (int)date('w', $ts);
+        $giornoNome = CLOUD_GIORNI_IT[$giornoIdx] ?? '';
         $lezioni[] = [
             'data'         => (string)$r['data'],
             'data_human'   => date('d', $ts) . ' ' . $meseIt . ' ' . date('Y', $ts),
+            'data_full'    => $giornoNome . ' ' . date('d', $ts) . ' ' . $meseFull . ' ' . date('Y', $ts),
+            'giorno_nome'  => $giornoNome,
+            'numero'       => ($idx + 1) . '/' . $totale,
             'giorno'       => date('d', $ts),
             'mese'         => strtoupper($meseIt),
             'ora_inizio'   => substr((string)$r['ora_inizio'], 0, 5),

@@ -81,27 +81,22 @@
         }
         /* ── Lessons ────────────────────────────────────────── */
         .lesson-item {
-            display: flex;
-            align-items: flex-start;
-            gap: 1rem;
-            padding: 0.85rem 1.25rem;
+            padding: 0.75rem 1.25rem;
             border-bottom: 1px solid #edf2f7;
+            font-size: 0.9rem;
+            color: var(--text);
         }
         .lesson-item:last-child { border-bottom: none; }
-        .lesson-date-badge {
-            background: var(--accent);
-            color: #fff;
-            border-radius: 0.6rem;
-            text-align: center;
-            padding: 0.35rem 0.65rem;
-            min-width: 3.2rem;
-            flex-shrink: 0;
+        .lesson-row {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 0 0.5rem;
         }
-        .lesson-date-badge .day { font-size: 1.4rem; font-weight: 800; line-height: 1; display: block; }
-        .lesson-date-badge .month { font-size: 0.65rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
-        .lesson-info { flex: 1; min-width: 0; }
-        .lesson-time { font-weight: 700; font-size: 0.95rem; color: var(--text); }
-        .lesson-meta { font-size: 0.8rem; color: var(--muted); margin-top: 0.15rem; }
+        .lesson-num  { color: var(--muted); font-size: 0.8rem; min-width: 2.8rem; }
+        .lesson-sep  { color: var(--muted); }
+        .lesson-time { font-weight: 700; }
+        .lesson-strumento { color: var(--muted); font-style: italic; }
         .badge-scadenza {
             background: #fff3cd;
             color: #856404;
@@ -358,22 +353,16 @@
         <?php else: ?>
             <?php foreach ($lezioni_future as $l): ?>
             <div class="lesson-item">
-                <div class="lesson-date-badge">
-                    <span class="day"><?= h($l['giorno']) ?></span>
-                    <span class="month"><?= h($l['mese']) ?></span>
-                </div>
-                <div class="lesson-info">
-                    <div class="lesson-time">
-                        <?= h($l['ora_inizio']) ?> – <?= h($l['ora_fine']) ?>
-                    </div>
-                    <div class="lesson-meta">
-                        <?php if ($l['pacchetto'] !== ''): ?>
-                            <i class="fas fa-box me-1"></i><?= h($l['pacchetto']) ?>
-                        <?php endif; ?>
-                        <?php if ($l['strumento'] !== ''): ?>
-                            <?= $l['pacchetto'] !== '' ? ' &middot; ' : '' ?><i class="fas fa-music me-1"></i><?= h($l['strumento']) ?>
-                        <?php endif; ?>
-                    </div>
+                <div class="lesson-row">
+                    <span class="lesson-num"><?= h($l['numero']) ?></span>
+                    <span class="lesson-sep">&nbsp;|&nbsp;</span>
+                    <span class="lesson-date"><?= h($l['data_full']) ?></span>
+                    <span class="lesson-sep">&nbsp;|&nbsp;</span>
+                    <span class="lesson-time"><?= h($l['ora_inizio']) ?> – <?= h($l['ora_fine']) ?></span>
+                    <?php if ($l['strumento'] !== ''): ?>
+                        <span class="lesson-sep">&nbsp;|&nbsp;</span>
+                        <span class="lesson-strumento"><i class="fas fa-music me-1"></i><?= h($l['strumento']) ?></span>
+                    <?php endif; ?>
                 </div>
             </div>
             <?php endforeach; ?>
