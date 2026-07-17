@@ -462,6 +462,7 @@ function cloudLezioniFuture(PDO $pdo, int $clienteId): array
  */
 function cloudNormalizePaymentStatus(?string $status): string
 {
+    // Collapse duplicated internal whitespace too (for example "Non  Pagato").
     $status = preg_replace('/\s+/u', ' ', trim((string) $status));
     if ($status === '') {
         return '';
