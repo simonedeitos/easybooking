@@ -386,7 +386,7 @@
             ?>
             <div class="file-item">
                 <div class="<?= $iconClass ?>">
-                    <i class="fa-regular <?= h($icon) ?>"></i>
+                    <i class="fas <?= h($icon) ?>"></i>
                 </div>
                 <div class="file-body">
                     <div class="file-name"><?= h($file['nome_originale'] ?? '') ?></div>

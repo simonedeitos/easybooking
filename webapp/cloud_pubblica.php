@@ -529,7 +529,7 @@ $_downloadBase = h($_scriptDir . '/share/' . urlencode($hash) . '/download/');
             ?>
             <div class="file-item">
                 <div class="<?= $iconClass ?>">
-                    <i class="fa-regular <?= h($f['icon']) ?>"></i>
+                    <i class="fas <?= h($f['icon']) ?>"></i>
                 </div>
                 <div class="file-body">
                     <div class="file-name"><?= h($f['nome_originale']) ?></div>
