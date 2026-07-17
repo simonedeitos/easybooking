@@ -241,7 +241,7 @@ require_once __DIR__ . '/includes/header.php';
         <h2 class="mb-1">Prenotazioni</h2>
         <p class="text-secondary mb-0">Gestisci lezioni, stati e aggiornamenti multipli.</p>
     </div>
-    <button type="button" class="btn btn-primary" id="newBookingBtn">
+    <button type="button" class="btn btn-primary" id="newBookingBtn" style="display:none;">
         <i class="fas fa-plus me-2"></i>Nuova Prenotazione
     </button>
 </div>
