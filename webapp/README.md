@@ -108,6 +108,27 @@ DB_PASS=la_tua_password
 
 Il file `.env` non deve mai essere committato nel repository (già aggiunto al `.gitignore`).
 
+### Deployment con `public_html/` separata (hosting condiviso / Hostinger)
+
+Se il dominio punta a `webapp/public_html/` invece che direttamente a `webapp/`, il file
+`webapp/public_html/index_cloud.php` gestisce i link pubblici `/share/[HASH]`.
+
+Per evitare che il controller debba "indovinare" la posizione dell'applicazione, crea un file
+locale `webapp/public_html/.env` con il percorso assoluto della cartella `webapp/`:
+
+```
+EASYBOOKING_WEBAPP_PATH=/percorso/assoluto/alla/tua/webapp
+```
+
+Esempio Hostinger-style:
+
+```
+EASYBOOKING_WEBAPP_PATH=/home/username/easybooking/webapp
+```
+
+Il file `public_html/.env` serve solo a localizzare in modo esplicito `webapp/config/database.php`
+e `webapp/config/cloud-functions.php`; le credenziali del database restano nel file `webapp/.env`.
+
 ### Opzione B – Valori di default in `config/database.php`
 
 I valori di fallback (usati se `.env` non è presente) si trovano nelle costanti PHP in `config/database.php`. Per ambienti di produzione si raccomanda di utilizzare sempre l'Opzione A.
