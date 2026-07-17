@@ -342,7 +342,7 @@ require_once __DIR__ . '/includes/header.php';
                     >
                         <td><input type="checkbox" class="booking-checkbox" value="<?= htmlspecialchars((string)$booking['id']) ?>"></td>
                         <td><?= htmlspecialchars((string)$booking['id']) ?></td>
-                        <td><?= htmlspecialchars(formatDate((string)$booking['data'])) ?></td>
+                        <td data-order="<?= htmlspecialchars((string)$booking['data']) ?>"><?= htmlspecialchars(formatDate((string)$booking['data'])) ?></td>
                         <td><?= htmlspecialchars(substr((string)$booking['ora_inizio'], 0, 5) . ' - ' . substr((string)$booking['ora_fine'], 0, 5)) ?></td>
                         <td><?= htmlspecialchars(trim((string)$booking['cliente_nome'] . ' ' . (string)$booking['cliente_cognome'])) ?></td>
                         <td><?= htmlspecialchars(trim((string)$booking['insegnante_nome'] . ' ' . (string)$booking['insegnante_cognome'])) ?></td>
