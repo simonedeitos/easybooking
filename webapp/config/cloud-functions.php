@@ -328,11 +328,13 @@ function cloudLezioniFuture(PDO $pdo, int $clienteId): array
     $lezioni = [];
     foreach ($rows as $r) {
         $ts = strtotime((string)$r['data']);
+        $meseIdx = (int)date('n', $ts);
+        $meseIt = CLOUD_MESI_IT[$meseIdx] ?? '';
         $lezioni[] = [
             'data'         => (string)$r['data'],
-            'data_human'   => date('d', $ts) . ' ' . CLOUD_MESI_IT[(int)date('n', $ts)] . ' ' . date('Y', $ts),
+            'data_human'   => date('d', $ts) . ' ' . $meseIt . ' ' . date('Y', $ts),
             'giorno'       => date('d', $ts),
-            'mese'         => strtoupper(CLOUD_MESI_IT[(int)date('n', $ts)]),
+            'mese'         => strtoupper($meseIt),
             'ora_inizio'   => substr((string)$r['ora_inizio'], 0, 5),
             'ora_fine'     => substr((string)$r['ora_fine'], 0, 5),
             'pacchetto'    => (string)($r['pacchetto_nome'] ?? ''),
@@ -364,7 +366,9 @@ function cloudLezioniFuture(PDO $pdo, int $clienteId): array
         if (!empty($acquisto['data_acquisto'])) {
             $ts = strtotime((string)$acquisto['data_acquisto']);
             if ($ts !== false) {
-                $dataAcquistoPacchetto = date('d', $ts) . ' ' . CLOUD_MESI_IT[(int)date('n', $ts)] . ' ' . date('Y', $ts);
+                $meseIdx = (int)date('n', $ts);
+                $meseIt = CLOUD_MESI_IT[$meseIdx] ?? '';
+                $dataAcquistoPacchetto = date('d', $ts) . ' ' . $meseIt . ' ' . date('Y', $ts);
             }
         }
         // Scadenza = MAX(data) of Programmata lessons linked to this purchase
@@ -375,7 +379,9 @@ function cloudLezioniFuture(PDO $pdo, int $clienteId): array
         $maxData = $stmt->fetchColumn();
         if ($maxData) {
             $ts = strtotime((string)$maxData);
-            $scadenzaPacchetto = date('d', $ts) . ' ' . CLOUD_MESI_IT[(int)date('n', $ts)] . ' ' . date('Y', $ts);
+            $meseIdx = (int)date('n', $ts);
+            $meseIt = CLOUD_MESI_IT[$meseIdx] ?? '';
+            $scadenzaPacchetto = date('d', $ts) . ' ' . $meseIt . ' ' . date('Y', $ts);
         }
     }
 
