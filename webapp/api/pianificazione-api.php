@@ -387,18 +387,20 @@ function generateLessonDates(
             if ($i > 0) {
                 switch ($frequenza) {
                     case 'Settimanale':
-                        // +7 days per iteration (matches exe behavior)
+                        // +7 days per iteration: one lesson per week on the same weekday
                         $current->modify('+7 days');
                         break;
                     case 'Bisettimanale':
-                        // +14 days per iteration (matches exe: ONE lesson every 14 days;
-                        // NOT "twice a week" — that is MultiGiornoSettimanale).
+                        // +14 days per iteration: ONE lesson every two weeks on the same weekday.
+                        // "Bisettimanale" here means fortnightly, NOT twice a week.
+                        // For 2+ lessons per week on different days, use MultiGiornoSettimanale.
                         $current->modify('+14 days');
                         break;
                     case 'Mensile':
-                        // +1 month: PHP's modify('+1 month') matches .NET AddMonths() for
-                        // most dates.  Edge case: Jan 31 + 1 month = Mar 2/3 on non-leap years
-                        // (PHP overflows), consistent with .NET.  No special normalization needed.
+                        // +1 month using PHP's DateTime::modify('+1 month').
+                        // PHP overflows short months the same way most calendar libraries do:
+                        // e.g. Jan 31 + 1 month → Mar 2 (or Mar 3 on leap years) because
+                        // February doesn't have 31 days.  No additional normalization is applied.
                         $current->modify('+1 month');
                         break;
                     default:

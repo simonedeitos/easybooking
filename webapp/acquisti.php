@@ -833,15 +833,18 @@ document.addEventListener('DOMContentLoaded', () => {
         for (const opt of sel.options) {
             if (opt.value === 'piu_libero') continue;
             if (!strumento) {
-                opt.style.display = '';
+                opt.dataset.hidden = '';
+                opt.style.display  = '';
                 continue;
             }
             const insStrumenti = (opt.dataset.strumenti || '').split(',').map(s => s.trim().toLowerCase());
-            opt.style.display = insStrumenti.includes(strumento.toLowerCase()) ? '' : 'none';
+            const matches = insStrumenti.includes(strumento.toLowerCase());
+            opt.dataset.hidden = matches ? '' : '1';
+            opt.style.display  = matches ? '' : 'none';
         }
-        // Reset to "più libero" if current selection is now hidden
+        // Reset to "più libero" if current selection is filtered out
         const selected = sel.selectedOptions[0];
-        if (selected && selected.style.display === 'none') {
+        if (selected && selected.dataset.hidden === '1') {
             sel.value = 'piu_libero';
         }
     }
@@ -893,7 +896,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const isMulti = freq === 'MultiGiornoSettimanale';
         const giorni = JSON.parse(params.giorni || '[]');
 
-        if (isMulti && giorni.length < 1) {
+        if (isMulti && giorni.length === 0) {
             container.innerHTML = '<div class="text-warning small"><i class="fas fa-exclamation-triangle me-1"></i>Seleziona almeno un giorno per la modalità multi-giorno.</div>';
             return;
         }
