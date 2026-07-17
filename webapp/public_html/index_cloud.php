@@ -112,12 +112,12 @@ function resolveWebappBootstrap(): array
     }
 
     foreach ([
-        dirname(__DIR__),
-        dirname(__DIR__) . '/webapp',
-        dirname(dirname(__DIR__)) . '/webapp',
-        dirname(__DIR__) . '/easybooking/webapp',
-    ] as $fallbackPath) {
-        $candidates[] = ['path' => $fallbackPath, 'source' => 'fallback'];
+        ['path' => dirname(__DIR__), 'source' => 'webapp/public_html sibling'],
+        ['path' => dirname(__DIR__) . '/webapp', 'source' => 'parent/webapp fallback'],
+        ['path' => dirname(dirname(__DIR__)) . '/webapp', 'source' => 'grandparent/webapp fallback'],
+        ['path' => dirname(__DIR__) . '/easybooking/webapp', 'source' => 'hostinger easybooking/webapp fallback'],
+    ] as $fallbackCandidate) {
+        $candidates[] = $fallbackCandidate;
     }
 
     $pathsTried = [];
@@ -135,11 +135,13 @@ function resolveWebappBootstrap(): array
             continue;
         }
 
-        error_log(sprintf(
-            'Public cloud bootstrap using webapp path "%s" (source: %s)',
-            $normalizedPath,
-            $candidate['source']
-        ));
+        if ($candidate['source'] !== 'webapp/public_html sibling') {
+            error_log(sprintf(
+                'Public cloud bootstrap using webapp path "%s" (source: %s)',
+                $normalizedPath,
+                $candidate['source']
+            ));
+        }
 
         return [
             'webapp_path' => $normalizedPath,
@@ -161,13 +163,13 @@ function sendCloudFile(string $filePath, string $mimeType, string $downloadName 
     }
 
     header('Content-Type: ' . $mimeType);
-    header('Content-Length: ' . filesize($filePath));
     header('X-Content-Type-Options: nosniff');
 
     if ($downloadName !== '') {
         // Keep the fallback ASCII name conservative for legacy user agents while
         // sending the full UTF-8 filename via filename*= for modern browsers.
         $fallbackName = preg_replace('/[^A-Za-z0-9._-]/u', '_', $downloadName) ?: 'download';
+        header('Content-Length: ' . filesize($filePath));
         header(
             "Content-Disposition: attachment; filename=\"{$fallbackName}\"; filename*=UTF-8''" .
             rawurlencode($downloadName)
@@ -203,6 +205,7 @@ function sendCloudFile(string $filePath, string $mimeType, string $downloadName 
         }
     }
 
+    header('Content-Length: ' . filesize($filePath));
     readfile($filePath);
     exit;
 }

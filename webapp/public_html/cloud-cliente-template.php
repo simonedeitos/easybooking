@@ -190,7 +190,7 @@
                                         </button>
                                         <?php endif; ?>
 
-                                        <a href="?hash=<?= rawurlencode($hash) ?>&amp;action=download&amp;file_id=<?= (int) $file['id'] ?>"
+                                        <a href="?hash=<?= h(rawurlencode($hash)) ?>&amp;action=download&amp;file_id=<?= (int) $file['id'] ?>"
                                            class="btn btn-sm btn-outline-primary">
                                             <i class="fas fa-download me-1"></i>Scarica
                                         </a>
@@ -211,7 +211,7 @@
         </footer>
     </div>
 
-    <div class="modal fade" id="audioModal" tabindex="-1" aria-hidden="true">
+    <div class="modal fade" id="audioModal" tabindex="-1" aria-hidden="true" data-share-hash="<?= h($hash) ?>">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
@@ -249,7 +249,7 @@
             const downloadBtn = document.getElementById('downloadBtn');
             // Safe because index_cloud.php validates $hash as a 32-char hex token
             // before rendering this presentation-only template.
-            const shareHash = <?= json_encode($hash, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) ?>;
+            const shareHash = audioModalEl.dataset.shareHash || '';
             const buildActionUrl = (action, fileId) =>
                 `?hash=${encodeURIComponent(shareHash)}&action=${encodeURIComponent(action)}&file_id=${fileId}`;
 
