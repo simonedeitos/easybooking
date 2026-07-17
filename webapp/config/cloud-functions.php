@@ -16,6 +16,9 @@ if (!defined('CLOUD_STORAGE_PATH')) {
 // https://yourdomain.com/easybooking).
 if (!defined('CLOUD_PUBLIC_BASE_URL')) {
     $envUrl = getenv('CLOUD_PUBLIC_BASE_URL');
+    if (($envUrl === false || $envUrl === '') && isset($_SERVER['CLOUD_PUBLIC_BASE_URL'])) {
+        $envUrl = (string) $_SERVER['CLOUD_PUBLIC_BASE_URL'];
+    }
     if ($envUrl !== false && $envUrl !== '') {
         define('CLOUD_PUBLIC_BASE_URL', rtrim($envUrl, '/'));
     }
@@ -286,6 +289,16 @@ function cloudPublicBaseUrl(): string
     if (defined('CLOUD_PUBLIC_BASE_URL')) {
         return rtrim(CLOUD_PUBLIC_BASE_URL, '/');
     }
+
+    static $fallbackWarningLogged = false;
+    if (!$fallbackWarningLogged) {
+        error_log(
+            'CLOUD_PUBLIC_BASE_URL is not configured explicitly. Falling back to current HTTP host auto-detection. ' .
+            'In split deployments (admin app on subdomain and public /share links on main domain), configure CLOUD_PUBLIC_BASE_URL in webapp/.env.'
+        );
+        $fallbackWarningLogged = true;
+    }
+
     $proto = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
     $host = 'localhost';
     foreach ([$_SERVER['SERVER_NAME'] ?? '', $_SERVER['HTTP_HOST'] ?? ''] as $candidateHost) {
@@ -300,6 +313,11 @@ function cloudPublicBaseUrl(): string
         $base = '';
     }
     return $proto . '://' . $host . $base;
+}
+
+function cloudHasExplicitPublicBaseUrlConfig(): bool
+{
+    return defined('CLOUD_PUBLIC_BASE_URL') && trim((string) CLOUD_PUBLIC_BASE_URL) !== '';
 }
 
 /**

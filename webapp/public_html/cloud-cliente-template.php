@@ -141,6 +141,12 @@
                     <i class="fas fa-circle-exclamation text-danger"></i>
                     <h5 class="mb-3"><?= h($error_title !== '' ? $error_title : 'Errore') ?></h5>
                     <p class="text-muted mb-0"><?= h($error_message) ?></p>
+                    <?php if (!empty($debug_details)): ?>
+                    <details class="mt-3 text-start">
+                        <summary class="small text-muted">Dettagli tecnici (debug)</summary>
+                        <pre class="mt-2 p-2 bg-light border rounded small mb-0"><?= h($debug_details) ?></pre>
+                    </details>
+                    <?php endif; ?>
                 </div>
                 <?php else: ?>
                 <h5 class="mb-4">

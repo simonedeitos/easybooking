@@ -60,6 +60,7 @@ $quotaClass  = $pctUsato >= 90 ? 'danger' : ($pctUsato >= 70 ? 'warning' : 'succ
 $pageBodyAttributes = [
     'data-cloud-public-base-url' => cloudPublicBaseUrl(),
 ];
+$cloudPublicBaseUrlExplicitlyConfigured = cloudHasExplicitPublicBaseUrlConfig();
 
 require_once __DIR__ . '/includes/header.php';
 ?>
@@ -90,6 +91,17 @@ require_once __DIR__ . '/includes/header.php';
         </div>
     </div>
 </div>
+
+<?php if (!$cloudPublicBaseUrlExplicitlyConfigured): ?>
+<div class="alert alert-warning d-flex align-items-start gap-2" role="alert">
+    <i class="fas fa-triangle-exclamation mt-1" aria-hidden="true"></i>
+    <div>
+        <strong>Attenzione:</strong> l'URL pubblico di base non è configurato esplicitamente
+        (<code>CLOUD_PUBLIC_BASE_URL</code>). I link generati potrebbero usare il dominio/sottodominio sbagliato.
+        Configura <code>CLOUD_PUBLIC_BASE_URL</code> nel file <code>webapp/.env</code>.
+    </div>
+</div>
+<?php endif; ?>
 
 <!-- ── Two-column cloud layout ───────────────────────────────────── -->
 <div class="cloud-layout">
