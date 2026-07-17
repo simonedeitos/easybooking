@@ -467,6 +467,35 @@
             .catch(() => showToast('Errore di rete.', 'danger'));
     }
 
+    // ── Client sidebar search/filter ─────────────────────────────────────
+
+    function bindClientSearch() {
+        const searchInput = document.getElementById('cloud-client-search');
+        const noResults   = document.getElementById('cloud-client-no-results');
+        if (!searchInput) return;
+
+        searchInput.addEventListener('input', () => {
+            const q = searchInput.value.toLowerCase().trim();
+            const items = document.querySelectorAll('#cloud-client-list .cloud-client-item');
+            let visibleCount = 0;
+
+            items.forEach(item => {
+                const btn  = item.querySelector('.cloud-client-btn');
+                const nome = (btn ? (btn.dataset.clientNome || btn.textContent || '') : '').toLowerCase();
+                if (!q || nome.includes(q)) {
+                    item.style.setProperty('display', '', '');
+                    visibleCount++;
+                } else {
+                    item.style.setProperty('display', 'none', 'important');
+                }
+            });
+
+            if (noResults) {
+                noResults.style.display = (items.length > 0 && visibleCount === 0) ? '' : 'none';
+            }
+        });
+    }
+
     // ── Create Cloud Modal ────────────────────────────────────────────────
 
     function bindCreateCloudModal() {
@@ -724,6 +753,7 @@
     document.addEventListener('DOMContentLoaded', () => {
         refreshStats();
         bindClientButtons();
+        bindClientSearch();
         initDropZone();
         bindAudioModalClose();
         bindCopyLinkBtn();
