@@ -313,16 +313,17 @@
             <i class="fas fa-calendar-alt"></i> Prossime lezioni
             <?php if ($scadenza_pacchetto !== null || $data_acquisto_pacchetto !== null || $pacchetto_da_saldare === true): ?>
                 <span class="section-badges">
-                    <?php if ($scadenza_pacchetto !== null): ?>
-                        <span class="badge-scadenza">
-                            <i class="fas fa-clock me-1"></i>Scadenza pacchetto: <?= h($scadenza_pacchetto) ?>
-                        </span>
-                    <?php endif; ?>
                     <?php if ($data_acquisto_pacchetto !== null): ?>
                         <span class="badge-acquisto">
                             <i class="fas fa-receipt me-1"></i>Pacchetto acquistato il: <?= h($data_acquisto_pacchetto) ?>
                         </span>
                     <?php endif; ?>
+                    <?php if ($scadenza_pacchetto !== null): ?>
+                        <span class="badge-scadenza">
+                            <i class="fas fa-clock me-1"></i>Scadenza pacchetto: <?= h($scadenza_pacchetto) ?>
+                        </span>
+                    <?php endif; ?>
+
                     <?php if ($pacchetto_da_saldare === true): ?>
                         <span class="badge-da-saldare">Pacchetto ancora da saldare</span>
                     <?php endif; ?>
