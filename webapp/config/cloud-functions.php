@@ -391,9 +391,18 @@ function cloudLezioniFuture(PDO $pdo, int $clienteId): array
     $lezioni = [];
     $totale  = count($rows);
     $lezioniSvolteByAcquisto = [];
+    $totaleLezioniByAcquisto = [];
     $futureOffsetByAcquisto  = [];
 
     if (!empty($rows)) {
+        $acquistoIds = [];
+        foreach ($rows as $row) {
+            $acquistoId = (int)($row['acquisto_id'] ?? 0);
+            if ($acquistoId > 0) {
+                $acquistoIds[$acquistoId] = true;
+            }
+        }
+
         $stmt = $pdo->prepare(
             'SELECT acquisto_id, COUNT(*) AS lezioni_svolte
              FROM prenotazioni
@@ -405,6 +414,24 @@ function cloudLezioniFuture(PDO $pdo, int $clienteId): array
             $acquistoId = (int)$row['acquisto_id'];
             if ($acquistoId > 0) {
                 $lezioniSvolteByAcquisto[$acquistoId] = (int)$row['lezioni_svolte'];
+            }
+        }
+
+        if (!empty($acquistoIds)) {
+            $idList = array_keys($acquistoIds);
+            $placeholders = implode(',', array_fill(0, count($idList), '?'));
+            $stmt = $pdo->prepare(
+                "SELECT acquisto_id, COUNT(*) AS totale_lezioni
+                 FROM prenotazioni
+                 WHERE acquisto_id IN ($placeholders)
+                 GROUP BY acquisto_id"
+            );
+            $stmt->execute($idList);
+            foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+                $acquistoId = (int)$row['acquisto_id'];
+                if ($acquistoId > 0) {
+                    $totaleLezioniByAcquisto[$acquistoId] = (int)$row['totale_lezioni'];
+                }
             }
         }
     }
@@ -421,6 +448,13 @@ function cloudLezioniFuture(PDO $pdo, int $clienteId): array
         $numeroLezione = ($idx + 1) . '/' . $totale;
         $acquistoId = (int)($r['acquisto_id'] ?? 0);
         $totaleLezioniPacchetto = (int)($r['totale_lezioni_pacchetto'] ?? 0);
+        // Total lessons fallback hierarchy for $totaleLezioniPacchetto:
+        // 1) value already selected by SQL: COALESCE(NULLIF(a.numero_lezioni, 0), pk.numero_lezioni, 0)
+        // 2) COUNT(prenotazioni) for the same acquisto_id (legacy/custom data)
+        // 3) N/M among currently returned future lessons only.
+        if ($acquistoId > 0 && $totaleLezioniPacchetto <= 0) {
+            $totaleLezioniPacchetto = (int)($totaleLezioniByAcquisto[$acquistoId] ?? 0);
+        }
         if ($acquistoId > 0 && $totaleLezioniPacchetto > 0) {
             $futureOffsetByAcquisto[$acquistoId] = ($futureOffsetByAcquisto[$acquistoId] ?? 0) + 1;
             $lezioniSvolte = $lezioniSvolteByAcquisto[$acquistoId] ?? 0;
