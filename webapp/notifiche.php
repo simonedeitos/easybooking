@@ -146,47 +146,57 @@ if ($requestAction === 'save' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             max(0, sanitizeInt(post('avviso_non_confermata_giorni'))),
         ];
 
+        $updateStmt = $pdo->prepare(
+            'UPDATE notifiche_config SET
+                email_notifiche = ?,
+                abilita_email = ?,
+                reminder_lezioni_enabled = ?,
+                reminder_lezioni_giorni_prima = ?,
+                reminder_lezioni_giorno_settimana = ?,
+                reminder_lezioni_ora = ?,
+                reminder_lezioni_giorni_futuri = ?,
+                report_settimanale_enabled = ?,
+                report_settimanale_giorno = ?,
+                report_settimanale_ora = ?,
+                report_settimanale_tipo = ?,
+                report_mensile_enabled = ?,
+                report_mensile_giorno_mese = ?,
+                report_mensile_ora = ?,
+                report_mensile_tipo = ?,
+                avviso_scadenza_enabled = ?,
+                avviso_scadenza_giorni = ?,
+                avviso_non_confermata_enabled = ?,
+                avviso_non_confermata_giorni = ?
+            WHERE user_id = ?'
+        );
+
         $checkStmt = $pdo->prepare('SELECT id FROM notifiche_config WHERE user_id = ? LIMIT 1');
         $checkStmt->execute([$userId]);
         $existingRow = $checkStmt->fetch();
 
         if ($existingRow) {
-            $stmt = $pdo->prepare(
-                'UPDATE notifiche_config SET
-                    email_notifiche = ?,
-                    abilita_email = ?,
-                    reminder_lezioni_enabled = ?,
-                    reminder_lezioni_giorni_prima = ?,
-                    reminder_lezioni_giorno_settimana = ?,
-                    reminder_lezioni_ora = ?,
-                    reminder_lezioni_giorni_futuri = ?,
-                    report_settimanale_enabled = ?,
-                    report_settimanale_giorno = ?,
-                    report_settimanale_ora = ?,
-                    report_settimanale_tipo = ?,
-                    report_mensile_enabled = ?,
-                    report_mensile_giorno_mese = ?,
-                    report_mensile_ora = ?,
-                    report_mensile_tipo = ?,
-                    avviso_scadenza_enabled = ?,
-                    avviso_scadenza_giorni = ?,
-                    avviso_non_confermata_enabled = ?,
-                    avviso_non_confermata_giorni = ?
-                WHERE user_id = ?'
-            );
-            $stmt->execute(array_merge($params, [$userId]));
+            $updateStmt->execute(array_merge($params, [$userId]));
         } else {
-            $stmt = $pdo->prepare(
-                'INSERT INTO notifiche_config (
-                    user_id, email_notifiche, abilita_email,
-                    reminder_lezioni_enabled, reminder_lezioni_giorni_prima, reminder_lezioni_giorno_settimana, reminder_lezioni_ora, reminder_lezioni_giorni_futuri,
-                    report_settimanale_enabled, report_settimanale_giorno, report_settimanale_ora, report_settimanale_tipo,
-                    report_mensile_enabled, report_mensile_giorno_mese, report_mensile_ora, report_mensile_tipo,
-                    avviso_scadenza_enabled, avviso_scadenza_giorni,
-                    avviso_non_confermata_enabled, avviso_non_confermata_giorni
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
-            );
-            $stmt->execute(array_merge([$userId], $params));
+            try {
+                $insertStmt = $pdo->prepare(
+                    'INSERT INTO notifiche_config (
+                        user_id, email_notifiche, abilita_email,
+                        reminder_lezioni_enabled, reminder_lezioni_giorni_prima, reminder_lezioni_giorno_settimana, reminder_lezioni_ora, reminder_lezioni_giorni_futuri,
+                        report_settimanale_enabled, report_settimanale_giorno, report_settimanale_ora, report_settimanale_tipo,
+                        report_mensile_enabled, report_mensile_giorno_mese, report_mensile_ora, report_mensile_tipo,
+                        avviso_scadenza_enabled, avviso_scadenza_giorni,
+                        avviso_non_confermata_enabled, avviso_non_confermata_giorni
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+                );
+                $insertStmt->execute(array_merge([$userId], $params));
+            } catch (PDOException $insertEx) {
+                // Race condition: another request inserted first; fall back to UPDATE
+                if ((string)$insertEx->getCode() === '23000') {
+                    $updateStmt->execute(array_merge($params, [$userId]));
+                } else {
+                    throw $insertEx;
+                }
+            }
         }
 
         setFlash('success', 'Preferenze notifiche salvate con successo.');
