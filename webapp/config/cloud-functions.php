@@ -402,9 +402,9 @@ function cloudLezioniFuture(PDO $pdo, int $clienteId): array
         );
         $stmt->execute([$clienteId, 'Svolta']);
         foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
-            $acquistoId = (int)($row['acquisto_id'] ?? 0);
+            $acquistoId = (int)$row['acquisto_id'];
             if ($acquistoId > 0) {
-                $lezioniSvolteByAcquisto[$acquistoId] = (int)($row['lezioni_svolte'] ?? 0);
+                $lezioniSvolteByAcquisto[$acquistoId] = (int)$row['lezioni_svolte'];
             }
         }
     }

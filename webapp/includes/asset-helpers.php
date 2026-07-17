@@ -16,13 +16,11 @@ $getAssetVersion = function(string $rel): string {
     $base       = $webappRoot !== false ? realpath($webappRoot . '/assets') : false;
     $abs        = $webappRoot !== false ? realpath($webappRoot . '/' . $rel)  : false;
     // Reject any path that escapes the assets/ directory.
-    $basePath = $base !== false ? rtrim($base, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR : false;
-    if (
-        $abs === false
-        || $base === false
-        || $basePath === false
-        || substr($abs, 0, strlen($basePath)) !== $basePath
-    ) {
+    if ($abs === false || $base === false) {
+        return '1';
+    }
+    $basePath = rtrim($base, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
+    if (substr($abs, 0, strlen($basePath)) !== $basePath) {
         return '1';
     }
     return (string)filemtime($abs);
