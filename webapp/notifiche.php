@@ -119,7 +119,7 @@ if ($requestAction === 'save' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             redirect(notificationRedirectTarget($embedded));
         }
 
-        $userId = (int)$user['id'];
+        $userId = isset($user['id']) && is_numeric($user['id']) ? (int)$user['id'] : 0;
         if ($userId <= 0) {
             throw new \RuntimeException('User ID non valido.');
         }
@@ -191,7 +191,7 @@ if ($requestAction === 'save' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                 $insertStmt->execute(array_merge([$userId], $params));
             } catch (PDOException $insertEx) {
                 // Race condition: another request inserted first; fall back to UPDATE
-                if ((string)$insertEx->getCode() === '23000') {
+                if (($insertEx->errorInfo[0] ?? '') === '23000') {
                     $updateStmt->execute(array_merge($params, [$userId]));
                 } else {
                     throw $insertEx;
@@ -201,7 +201,11 @@ if ($requestAction === 'save' && $_SERVER['REQUEST_METHOD'] === 'POST') {
 
         setFlash('success', 'Preferenze notifiche salvate con successo.');
         redirect(notificationRedirectTarget($embedded));
-    } catch (\Throwable $e) {
+    } catch (PDOException $e) {
+        error_log('notifiche.php save error [' . $e->getCode() . ']: ' . $e->getMessage());
+        setFlash('danger', 'Errore durante il salvataggio delle notifiche. Contatta il supporto se il problema persiste.');
+        redirect(notificationRedirectTarget($embedded));
+    } catch (\Exception $e) {
         error_log('notifiche.php save error [' . $e->getCode() . ']: ' . $e->getMessage());
         setFlash('danger', 'Errore durante il salvataggio delle notifiche. Contatta il supporto se il problema persiste.');
         redirect(notificationRedirectTarget($embedded));
