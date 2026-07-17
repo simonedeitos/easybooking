@@ -770,7 +770,9 @@
             bindDeleteCloudModal,
             bindCreateCloudModal,
         ].forEach(fn => {
-            const fnLabel = fn.name || '(unnamed function)';
+            const fnLabel = (typeof fn.name === 'string' && fn.name.length > 0)
+                ? fn.name
+                : 'unnamed function';
             try { fn(); } catch (e) { console.error(`[cloud.js] init error in ${fnLabel}:`, e); }
         });
     }

@@ -427,12 +427,13 @@ function cloudLezioniFuture(PDO $pdo, int $clienteId): array
             $progressivo = $lezioniSvolte + $futureOffsetByAcquisto[$acquistoId];
             // Keep the badge bounded even if historical data is inconsistent.
             if ($progressivo > $totaleLezioniPacchetto) {
-                error_log(
-                    'cloudLezioniFuture progression exceeds package total: acquisto_id=' . $acquistoId .
-                    ', cliente_id=' . $clienteId .
-                    ', progressivo=' . $progressivo .
-                    ', totale=' . $totaleLezioniPacchetto
-                );
+                error_log(sprintf(
+                    'cloudLezioniFuture progression exceeds package total: acquisto_id=%d, cliente_id=%d, progressivo=%d, totale=%d',
+                    $acquistoId,
+                    $clienteId,
+                    $progressivo,
+                    $totaleLezioniPacchetto
+                ));
             }
             $numeroLezione = min($progressivo, $totaleLezioniPacchetto) . '/' . $totaleLezioniPacchetto;
         }
