@@ -643,7 +643,7 @@ require_once __DIR__ . '/includes/header.php';
 <script>
 document.addEventListener('DOMContentLoaded', () => {
     const purchaseModalEl = document.getElementById('purchaseModal');
-    const purchaseModal = new bootstrap.Modal(purchaseModalEl);
+    const purchaseModal = bootstrap.Modal.getOrCreateInstance(purchaseModalEl);
     const purchaseForm = document.getElementById('purchaseForm');
     const purchaseClientSelect = document.getElementById('purchase_cliente_id');
     const packageSelect = document.getElementById('purchase_pacchetto_id');

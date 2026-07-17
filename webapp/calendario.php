@@ -732,7 +732,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return text.includes(term) ? data : null;
     }
 
-    function initClientSelect(selectEl) {
+    function initClientSelect(selectEl, dropdownParentEl) {
         if (!selectEl || typeof window.$ === 'undefined' || typeof $.fn.select2 === 'undefined') {
             return;
         }
@@ -741,7 +741,7 @@ document.addEventListener('DOMContentLoaded', () => {
             allowClear: true,
             theme: 'bootstrap-5',
             width: '100%',
-            dropdownParent: $(newEventModalEl),
+            dropdownParent: $(dropdownParentEl),
             matcher: caseInsensitiveSelectMatcher
         });
     }
@@ -900,7 +900,7 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 await submitWithConflictCheck(newEventForm, 'Errore durante il salvataggio.');
                 showToast('Lezione creata con successo.', 'success');
-                bootstrap.Modal.getOrCreateInstance(newEventModalEl).hide();
+                newEventModal.hide();
                 renderCalendar();
             } catch (error) {
                 showToast(error.message, 'danger');
@@ -909,7 +909,7 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 await submitProvinoForm();
                 showToast('Provino creato con successo.', 'success');
-                bootstrap.Modal.getOrCreateInstance(newEventModalEl).hide();
+                newEventModal.hide();
                 renderCalendar();
             } catch (error) {
                 showToast(error.message, 'danger');
@@ -998,8 +998,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // ── Init ──────────────────────────────────────────────────
-    initClientSelect(lezClienteSel);
-    initClientSelect(provClienteSel);
+    initClientSelect(lezClienteSel, newEventModalEl);
+    initClientSelect(provClienteSel, newEventModalEl);
     resetEventForm();
     resetNewEventForm();
     resetProvinoForm();
