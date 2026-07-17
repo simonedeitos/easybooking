@@ -399,12 +399,17 @@ function cloudLezioniFuture(PDO $pdo, int $clienteId): array
     // there is no linked future lesson yet, fall back to the latest active one.
     $stmt = $pdo->prepare(
         'SELECT a.id, a.data_acquisto, a.stato_pagamento, p.nome AS pacchetto_nome,
-                MAX(CASE WHEN pr.data >= CURDATE() AND pr.stato = ? THEN pr.data END) AS massima_data_futura
+                (
+                    SELECT MAX(pr.data)
+                    FROM prenotazioni pr
+                    WHERE pr.acquisto_id = a.id
+                      AND pr.cliente_id = a.cliente_id
+                      AND pr.data >= CURDATE()
+                      AND pr.stato = ?
+                ) AS massima_data_futura
          FROM acquisti a
          LEFT JOIN pacchetti p ON p.id = a.pacchetto_id
-         LEFT JOIN prenotazioni pr ON pr.acquisto_id = a.id AND pr.cliente_id = a.cliente_id
          WHERE a.cliente_id = ? AND a.numero_lezioni > 0
-         GROUP BY a.id, a.data_acquisto, a.stato_pagamento, p.nome
          ORDER BY (massima_data_futura IS NOT NULL) DESC, massima_data_futura DESC, a.data_acquisto DESC, a.id DESC
          LIMIT 1'
     );
@@ -466,9 +471,14 @@ function cloudLezioniFuture(PDO $pdo, int $clienteId): array
 function cloudNormalizePaymentStatus(?string $status): string
 {
     // Collapse duplicated internal whitespace too (for example "Non  Pagato").
-    $status = preg_replace('/\s+/', ' ', trim((string) $status));
+    $status = trim((string) $status);
     if ($status === '') {
         return '';
+    }
+
+    $status = str_replace(["\t", "\n", "\r", "\0", "\x0B"], ' ', $status);
+    while (str_contains($status, '  ')) {
+        $status = str_replace('  ', ' ', $status);
     }
 
     return function_exists('mb_strtolower')
