@@ -376,6 +376,8 @@ function cloudLezioniFuture(PDO $pdo, int $clienteId): array
     // Future lessons with stato = 'Programmata'
     $stmt = $pdo->prepare(
         'SELECT pr.data, pr.ora_inizio, pr.ora_fine, pr.pacchetto_nome, pr.strumento, pr.acquisto_id,
+                -- Prefer explicit lesson count saved on acquisto; if it is 0/legacy,
+                -- fall back to pacchetto.numero_lezioni, then default to 0.
                 COALESCE(NULLIF(a.numero_lezioni, 0), pk.numero_lezioni, 0) AS totale_lezioni_pacchetto
          FROM prenotazioni pr
          LEFT JOIN acquisti a ON a.id = pr.acquisto_id
@@ -415,7 +417,7 @@ function cloudLezioniFuture(PDO $pdo, int $clienteId): array
         $giornoIdx = (int)date('w', $ts);
         $giornoNome = CLOUD_GIORNI_IT[$giornoIdx] ?? '';
 
-        // Fallback for legacy/unstyled rows without a valid purchase link.
+        // Fallback for legacy/unlinked rows without a valid purchase link.
         $numeroLezione = ($idx + 1) . '/' . $totale;
         $acquistoId = (int)($r['acquisto_id'] ?? 0);
         $totaleLezioniPacchetto = (int)($r['totale_lezioni_pacchetto'] ?? 0);

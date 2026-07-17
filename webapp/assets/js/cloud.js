@@ -770,7 +770,8 @@
             bindDeleteCloudModal,
             bindCreateCloudModal,
         ].forEach(fn => {
-            try { fn(); } catch (e) { console.error(`[cloud.js] init error in ${fn.name}:`, e); }
+            const fnLabel = fn.name || 'anonymous-init';
+            try { fn(); } catch (e) { console.error(`[cloud.js] init error in ${fnLabel}:`, e); }
         });
     }
 
