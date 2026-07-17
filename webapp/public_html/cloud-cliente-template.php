@@ -147,6 +147,10 @@
                         <pre class="mt-2 p-2 bg-light border rounded small mb-0"><?= h($debug_details) ?></pre>
                     </details>
                     <?php endif; ?>
+                    <p class="small text-muted mt-3">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Riferimento tecnico: consultare il file <code>cloud-debug.log</code> nella cartella <code>public_html</code> per i dettagli (per l'amministratore del sito).
+                    </p>
                 </div>
                 <?php else: ?>
                 <h5 class="mb-4">
