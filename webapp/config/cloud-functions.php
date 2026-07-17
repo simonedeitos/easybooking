@@ -284,6 +284,10 @@ function cloudFileIcon(?string $mime): string
 
 // ── App name helper ───────────────────────────────────────────────────────
 
+/** Italian month abbreviations (1-indexed; index 0 is unused). */
+define('CLOUD_MESI_IT', ['', 'gen', 'feb', 'mar', 'apr', 'mag', 'giu',
+                          'lug', 'ago', 'set', 'ott', 'nov', 'dic']);
+
 /**
  * Returns the application name from system_config, falling back to 'EasyBooking'.
  * Usable on public pages that only load cloud-functions.php (not functions.php).
@@ -311,10 +315,6 @@ function cloudAppName(PDO $pdo): string
  */
 function cloudLezioniFuture(PDO $pdo, int $clienteId): array
 {
-    // Italian month abbreviations for date formatting
-    static $mesi = ['', 'gen', 'feb', 'mar', 'apr', 'mag', 'giu',
-                    'lug', 'ago', 'set', 'ott', 'nov', 'dic'];
-
     // Future lessons with stato = 'Programmata'
     $stmt = $pdo->prepare(
         'SELECT data, ora_inizio, ora_fine, pacchetto_nome, strumento
@@ -330,9 +330,9 @@ function cloudLezioniFuture(PDO $pdo, int $clienteId): array
         $ts = strtotime((string)$r['data']);
         $lezioni[] = [
             'data'         => (string)$r['data'],
-            'data_human'   => date('d', $ts) . ' ' . $mesi[(int)date('n', $ts)] . ' ' . date('Y', $ts),
+            'data_human'   => date('d', $ts) . ' ' . CLOUD_MESI_IT[(int)date('n', $ts)] . ' ' . date('Y', $ts),
             'giorno'       => date('d', $ts),
-            'mese'         => strtoupper($mesi[(int)date('n', $ts)]),
+            'mese'         => strtoupper(CLOUD_MESI_IT[(int)date('n', $ts)]),
             'ora_inizio'   => substr((string)$r['ora_inizio'], 0, 5),
             'ora_fine'     => substr((string)$r['ora_fine'], 0, 5),
             'pacchetto'    => (string)($r['pacchetto_nome'] ?? ''),
@@ -365,7 +365,7 @@ function cloudLezioniFuture(PDO $pdo, int $clienteId): array
         $maxData = $stmt->fetchColumn();
         if ($maxData) {
             $ts = strtotime((string)$maxData);
-            $scadenzaPacchetto = date('d', $ts) . ' ' . $mesi[(int)date('n', $ts)] . ' ' . date('Y', $ts);
+            $scadenzaPacchetto = date('d', $ts) . ' ' . CLOUD_MESI_IT[(int)date('n', $ts)] . ' ' . date('Y', $ts);
         }
     }
 

@@ -462,7 +462,7 @@ $_downloadBase = h($_scriptDir . '/share/' . urlencode($hash) . '/download/');
 </main>
 
 <!-- ── Audio player modal ───────────────────────────────────── -->
-<div class="modal fade" id="audioModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="audioModal" tabindex="-1" aria-labelledby="ws-title" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content">
             <div class="modal-header border-0 pb-0">
@@ -599,7 +599,7 @@ $_downloadBase = h($_scriptDir . '/share/' . urlencode($hash) . '/download/');
     speedEl.addEventListener('change', () => {
         const rate = parseFloat(speedEl.value);
         if (ws) ws.setPlaybackRate(rate);
-        if (!fallbackEl.paused) fallbackEl.playbackRate = rate;
+        if (fallbackEl.src) fallbackEl.playbackRate = rate;
     });
 
     modalEl.addEventListener('hide.bs.modal', () => {

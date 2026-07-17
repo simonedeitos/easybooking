@@ -323,7 +323,7 @@
 </main>
 
 <!-- ── Audio player modal ───────────────────────────────────── -->
-<div class="modal fade" id="audioModal" tabindex="-1" aria-hidden="true"
+<div class="modal fade" id="audioModal" tabindex="-1" aria-labelledby="ws-title" aria-hidden="true"
      data-share-hash="<?= h($hash) ?>">
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content">
