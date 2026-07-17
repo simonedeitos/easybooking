@@ -1,8 +1,9 @@
 <?php
 // asset-helpers.php – cache-busting helper for local asset files.
 //
-// Usage: require_once __DIR__ . '/includes/asset-helpers.php';
-//        <script src="assets/js/cloud.js?v=<?= $getAssetVersion('assets/js/cloud.js') ?>">
+// Usage example:
+// require_once __DIR__ . '/includes/asset-helpers.php';
+// then append ?v=<filemtime> to local assets, e.g. assets/js/cloud.js?v=1234567890
 //
 // Returns the file modification time (filemtime) as a version string so that
 // browsers and CDN/reverse-proxies always fetch the latest file after a

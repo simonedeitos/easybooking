@@ -728,6 +728,9 @@ canvas { max-width: 100%; }
     border-left: 3px solid transparent;
     transition: background var(--transition), border-left-color var(--transition);
 }
+.cloud-client-hidden {
+    display: none !important;
+}
 .cloud-client-item:hover {
     background: var(--accent-light);
 }

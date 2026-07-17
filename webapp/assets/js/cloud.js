@@ -476,9 +476,12 @@
     function bindClientSearch() {
         const searchInput = document.getElementById('cloud-client-search');
         const noResults   = document.getElementById('cloud-client-no-results');
-        if (!searchInput) return;
+        if (!searchInput) {
+            console.warn('[cloud.js] bindClientSearch: #cloud-client-search not found');
+            return;
+        }
 
-        searchInput.addEventListener('input', () => {
+        const applyClientFilter = () => {
             const q = searchInput.value.toLowerCase().trim();
             const items = document.querySelectorAll('#cloud-client-list .cloud-client-item');
             let visibleCount = 0;
@@ -486,20 +489,21 @@
             items.forEach(item => {
                 const btn  = item.querySelector('.cloud-client-btn');
                 const nome = (btn ? (btn.dataset.clientNome || btn.textContent || '') : '').toLowerCase();
-                if (!q || nome.includes(q)) {
-                    // Remove the inline style so the element's default display (flex) is restored
-                    item.style.removeProperty('display');
-                    visibleCount++;
-                } else {
-                    // Use !important so the hide overrides Bootstrap's d-flex/d-block utilities
-                    item.style.setProperty('display', 'none', 'important');
-                }
+                const isMatch = !q || nome.includes(q);
+                item.classList.toggle('cloud-client-hidden', !isMatch);
+                if (isMatch) visibleCount++;
             });
 
             if (noResults) {
                 noResults.style.display = (items.length > 0 && visibleCount === 0) ? '' : 'none';
             }
-        });
+            console.debug('[cloud.js] bindClientSearch: query/items/visible =', q, items.length, visibleCount);
+        };
+
+        console.debug('[cloud.js] bindClientSearch: found search input?', !!searchInput);
+        searchInput.addEventListener('input', applyClientFilter);
+        searchInput.addEventListener('keyup', applyClientFilter);
+        applyClientFilter();
     }
 
     // ── Create Cloud Modal ────────────────────────────────────────────────
