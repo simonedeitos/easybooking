@@ -1,5 +1,7 @@
 <?php
-// cloud_pubblica.php – Public cloud access page (no login required)
+// cloud_pubblica.php – Public cloud access page for deployments where webapp/
+// itself is the document root. For shared-hosting setups with a separate
+// public_html/ document root, use public_html/index_cloud.php instead.
 // Access via: /share/[HASH] (rewritten by .htaccess) or directly with ?hash=[HASH]
 
 declare(strict_types=1);
