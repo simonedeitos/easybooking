@@ -500,6 +500,12 @@
     const curEl      = document.getElementById('ws-current');
     const durEl      = document.getElementById('ws-duration');
     const titleEl    = document.getElementById('ws-title');
+    const DEFAULT_BAR_COUNT = 120;
+    const DEFAULT_AMPLITUDE = 0.1;
+    const WAVEFORM_SAMPLE_COUNT = 140;
+    const WAVEFORM_PRECISION = 10000;
+    const MIN_BAR_HEIGHT_PERCENT = 8;
+    const BAR_HEIGHT_RANGE_PERCENT = 86;
 
     let ws = null;
     let audioModal = null;
@@ -523,6 +529,7 @@
         progressEl.style.width   = '0%';
         scrubberEl.style.left    = '0%';
         domWaveEl.setAttribute('aria-valuenow', '0');
+        domWaveEl.setAttribute('aria-valuetext', '0:00 / 0:00');
         playBtn.disabled         = true;
         playBtn.style.display    = '';
         playBtn.innerHTML        = '<i class="fas fa-play"></i>';
@@ -530,19 +537,24 @@
         durEl.textContent        = '0:00';
     }
 
-    function setWaveProgress(ratio) {
+    function setWaveProgress(ratio, currentSeconds) {
         const safeRatio = Math.max(0, Math.min(1, ratio || 0));
         const pct = (safeRatio * 100).toFixed(2) + '%';
         progressEl.style.width = pct;
         scrubberEl.style.left = pct;
         domWaveEl.setAttribute('aria-valuenow', String(Math.round(safeRatio * 100)));
+        const durationSeconds = ws ? ws.getDuration() : 0;
+        const current = typeof currentSeconds === 'number'
+            ? currentSeconds
+            : (durationSeconds > 0 ? durationSeconds * safeRatio : 0);
+        domWaveEl.setAttribute('aria-valuetext', fmt(current) + ' / ' + (durEl.textContent || '0:00'));
     }
 
     function makeWaveBars(samples) {
         waveBackEl.innerHTML = '';
         waveProgEl.innerHTML = '';
 
-        const source = samples.length ? samples : new Array(120).fill(0.1);
+        const source = samples.length ? samples : new Array(DEFAULT_BAR_COUNT).fill(DEFAULT_AMPLITUDE);
         let min = source[0];
         let max = source[0];
         source.forEach((v) => {
@@ -555,7 +567,7 @@
         source.forEach((value) => {
             const amp = Math.abs(Number(value) || 0);
             const normalized = ((amp - min) / range);
-            const height = 8 + (normalized * 86);
+            const height = MIN_BAR_HEIGHT_PERCENT + (normalized * BAR_HEIGHT_RANGE_PERCENT);
             const backBar = document.createElement('span');
             backBar.className = 'dom-waveform-bar';
             backBar.style.height = height.toFixed(2) + '%';
@@ -570,7 +582,7 @@
 
         try {
             if (typeof ws.exportPCM === 'function') {
-                const pcm = await ws.exportPCM(140, 10000, true);
+                const pcm = await ws.exportPCM(WAVEFORM_SAMPLE_COUNT, WAVEFORM_PRECISION, true);
                 if (Array.isArray(pcm) && pcm.length) {
                     return pcm.map((v) => Math.abs(Number(v) || 0));
                 }
@@ -579,7 +591,7 @@
 
         try {
             if (typeof ws.exportPeaks === 'function') {
-                const peaks = ws.exportPeaks({ channels: 1, maxLength: 140, precision: 1000 });
+                const peaks = ws.exportPeaks({ channels: 1, maxLength: WAVEFORM_SAMPLE_COUNT, precision: 1000 });
                 const values = Array.isArray(peaks) && Array.isArray(peaks[0]) ? peaks[0] : peaks;
                 if (Array.isArray(values) && values.length) {
                     return values.map((v) => Math.abs(Number(v) || 0));
@@ -592,7 +604,7 @@
                 const decoded = ws.getDecodedData();
                 if (decoded && typeof decoded.getChannelData === 'function') {
                     const channel = decoded.getChannelData(0);
-                    const chunk = Math.max(1, Math.floor(channel.length / 140));
+                    const chunk = Math.max(1, Math.floor(channel.length / WAVEFORM_SAMPLE_COUNT));
                     const peaks = [];
                     for (let i = 0; i < channel.length; i += chunk) {
                         let peak = 0;
@@ -659,7 +671,7 @@
             ws.on('timeupdate', (t) => {
                 curEl.textContent = fmt(t);
                 const d = ws ? ws.getDuration() : 0;
-                setWaveProgress(d > 0 ? t / d : 0);
+                setWaveProgress(d > 0 ? t / d : 0, t);
             });
             ws.on('play',  () => { playBtn.innerHTML = '<i class="fas fa-pause"></i>'; });
             ws.on('pause', () => { playBtn.innerHTML = '<i class="fas fa-play"></i>'; });
