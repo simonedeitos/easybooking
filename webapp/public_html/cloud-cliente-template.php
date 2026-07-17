@@ -219,8 +219,8 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Chiudi"></button>
                 </div>
                 <div class="modal-body">
-                    <p id="audioModalTitle" class="fw-semibold text-center mb-3"></p>
-                    <audio controls class="w-100" id="audioPlayer" style="border-radius: 8px;">
+                    <p id="audioModalTitle" class="fw-semibold text-center mb-3" aria-live="polite"></p>
+                    <audio controls class="w-100" id="audioPlayer" aria-labelledby="audioModalTitle" style="border-radius: 8px;">
                         Il tuo browser non supporta l'elemento audio.
                     </audio>
                 </div>
@@ -249,8 +249,8 @@
             const downloadBtn = document.getElementById('downloadBtn');
             // Safe because index_cloud.php validates $hash as a 32-char hex token
             // before rendering this presentation-only template.
-            const streamBaseUrl = <?= json_encode('?hash=' . rawurlencode($hash) . '&action=get_file&file_id=') ?>;
-            const downloadBaseUrl = <?= json_encode('?hash=' . rawurlencode($hash) . '&action=download&file_id=') ?>;
+            const streamBaseUrl = <?= json_encode('?hash=' . rawurlencode($hash) . '&action=get_file&file_id=', JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) ?>;
+            const downloadBaseUrl = <?= json_encode('?hash=' . rawurlencode($hash) . '&action=download&file_id=', JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) ?>;
 
             playButtons.forEach((button) => {
                 button.addEventListener('click', () => {

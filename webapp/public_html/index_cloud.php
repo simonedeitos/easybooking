@@ -171,12 +171,16 @@ function sendCloudFile(string $filePath, string $mimeType, string $downloadName 
                 header('Content-Length: ' . ($end - $start + 1));
 
                 $fp = fopen($filePath, 'rb');
-                if ($fp !== false) {
-                    fseek($fp, $start);
-                    echo fread($fp, $end - $start + 1);
-                    fclose($fp);
+                if ($fp === false) {
+                    error_log('Public cloud stream open failed: ' . $filePath);
+                    http_response_code(500);
                     exit;
                 }
+
+                fseek($fp, $start);
+                echo fread($fp, $end - $start + 1);
+                fclose($fp);
+                exit;
             }
         }
     }
