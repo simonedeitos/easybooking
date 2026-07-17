@@ -448,8 +448,8 @@ function cloudLezioniFuture(PDO $pdo, int $clienteId): array
         $numeroLezione = ($idx + 1) . '/' . $totale;
         $acquistoId = (int)($r['acquisto_id'] ?? 0);
         $totaleLezioniPacchetto = (int)($r['totale_lezioni_pacchetto'] ?? 0);
-        // Total lessons fallback hierarchy:
-        // 1) acquisti.numero_lezioni (or pacchetti.numero_lezioni via JOIN)
+        // Total lessons fallback hierarchy for $totaleLezioniPacchetto:
+        // 1) value already selected by SQL: COALESCE(NULLIF(a.numero_lezioni, 0), pk.numero_lezioni, 0)
         // 2) COUNT(prenotazioni) for the same acquisto_id (legacy/custom data)
         // 3) N/M among currently returned future lessons only.
         if ($acquistoId > 0 && $totaleLezioniPacchetto <= 0) {

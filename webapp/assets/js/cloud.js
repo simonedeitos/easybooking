@@ -476,6 +476,7 @@
     function bindClientSearch() {
         const searchInput = document.getElementById('cloud-client-search');
         const noResults   = document.getElementById('cloud-client-no-results');
+        console.debug('[cloud.js] bindClientSearch: found search input?', !!searchInput);
         if (!searchInput) {
             console.warn('[cloud.js] bindClientSearch: #cloud-client-search not found');
             return;
@@ -500,8 +501,9 @@
             console.debug('[cloud.js] bindClientSearch: query/items/visible =', q, items.length, visibleCount);
         };
 
-        console.debug('[cloud.js] bindClientSearch: found search input?', !!searchInput);
         searchInput.addEventListener('input', applyClientFilter);
+        // Keep keyup as an additional safety net: some browser extensions/custom
+        // IME flows can miss input events in edge cases.
         searchInput.addEventListener('keyup', applyClientFilter);
         applyClientFilter();
     }
