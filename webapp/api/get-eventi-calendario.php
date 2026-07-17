@@ -59,11 +59,14 @@ try {
     $sql =
         'SELECT p.id, p.data, p.ora_inizio, p.ora_fine, p.stato, p.strumento, p.note,
                 p.cliente_id, p.insegnante_id, p.pacchetto_nome, p.acquisto_id,
+                p.tipo_evento, p.strumento_id,
                 COALESCE(c.nome, \'\') AS cliente_nome, COALESCE(c.cognome, \'\') AS cliente_cognome,
-                COALESCE(i.nome, \'\') AS insegnante_nome, COALESCE(i.cognome, \'\') AS insegnante_cognome
+                COALESCE(i.nome, \'\') AS insegnante_nome, COALESCE(i.cognome, \'\') AS insegnante_cognome,
+                COALESCE(s.nome, \'\') AS strumento_nome
          FROM prenotazioni p
          LEFT JOIN clienti c ON c.id = p.cliente_id
          LEFT JOIN insegnanti i ON i.id = p.insegnante_id
+         LEFT JOIN strumenti s ON s.id = p.strumento_id
          WHERE 1=1';
 
     $params = [];
@@ -95,8 +98,10 @@ try {
     foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
         $cliente    = decryptFullName($row['cliente_nome'], $row['cliente_cognome'], 'N/D');
         $insegnante = decryptFullName($row['insegnante_nome'], $row['insegnante_cognome'], 'N/D');
-        $strumento  = trim((string)($row['strumento'] ?? ''));
+        // Prefer the strumenti table name when a strumento_id FK is set
+        $strumento  = trim((string)($row['strumento_nome'] !== '' ? $row['strumento_nome'] : ($row['strumento'] ?? '')));
         $stato      = (string)$row['stato'];
+        $tipoEvento = (string)($row['tipo_evento'] ?? 'lezione');
         $title      = $cliente;
         if ($strumento !== '') {
             $title .= ' – ' . $strumento;
@@ -120,6 +125,8 @@ try {
                 'insegnante'    => $insegnante,
                 'insegnante_id' => $insegnanteId,
                 'strumento'     => $strumento,
+                'strumento_id'  => $row['strumento_id'] !== null ? (int)$row['strumento_id'] : null,
+                'tipo_evento'   => $tipoEvento,
                 'note'          => (string)($row['note'] ?? ''),
                 'cliente_id'    => (int)$row['cliente_id'],
                 'pacchetto_nome'=> (string)($row['pacchetto_nome'] ?? ''),

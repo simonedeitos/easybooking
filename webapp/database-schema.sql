@@ -134,15 +134,17 @@ CREATE TABLE IF NOT EXISTS `acquisti` (
     FOREIGN KEY (`pacchetto_id`) REFERENCES `pacchetti`(`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ── Prenotazioni (Bookings / Lessons) ─────────────────────
+-- ── Prenotazioni (Bookings / Lessons / Auditions) ─────────
 CREATE TABLE IF NOT EXISTS `prenotazioni` (
     `id`            INT UNSIGNED    NOT NULL AUTO_INCREMENT,
+    `tipo_evento`   ENUM('lezione','provino') NOT NULL DEFAULT 'lezione',
     `data`          DATE            NOT NULL,
     `ora_inizio`    TIME            NOT NULL,
     `ora_fine`      TIME            NOT NULL,
     `cliente_id`    INT UNSIGNED    NOT NULL,
     `insegnante_id` INT UNSIGNED    NOT NULL,
     `strumento`     VARCHAR(100)    DEFAULT NULL,
+    `strumento_id`  INT UNSIGNED    DEFAULT NULL,
     `stato`         ENUM('Programmata','Svolta','Assente','Rimandata','Riprogrammata') NOT NULL DEFAULT 'Programmata',
     `pacchetto_nome` VARCHAR(150)   DEFAULT NULL,
     `acquisto_id`   INT UNSIGNED    DEFAULT NULL,
@@ -153,9 +155,12 @@ CREATE TABLE IF NOT EXISTS `prenotazioni` (
     FOREIGN KEY (`cliente_id`)    REFERENCES `clienti`(`id`)    ON DELETE RESTRICT,
     FOREIGN KEY (`insegnante_id`) REFERENCES `insegnanti`(`id`) ON DELETE RESTRICT,
     FOREIGN KEY (`acquisto_id`)   REFERENCES `acquisti`(`id`)   ON DELETE SET NULL,
+    FOREIGN KEY (`strumento_id`)  REFERENCES `strumenti`(`id`)  ON DELETE SET NULL,
     INDEX `idx_data` (`data`),
     INDEX `idx_stato` (`stato`),
-    INDEX `idx_insegnante_data` (`insegnante_id`, `data`)
+    INDEX `idx_insegnante_data` (`insegnante_id`, `data`),
+    INDEX `idx_tipo_evento` (`tipo_evento`),
+    INDEX `idx_tipo_insegnante_data` (`tipo_evento`, `insegnante_id`, `data`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ── Impostazioni Generali ──────────────────────────────────
