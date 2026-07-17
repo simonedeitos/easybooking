@@ -294,12 +294,73 @@
         .empty-state i { font-size: 2.5rem; opacity: 0.35; display: block; margin-bottom: 0.75rem; }
         .error-state { text-align: center; padding: 3rem 1rem; }
         /* ── Footer ─────────────────────────────────────────── */
-        .cloud-footer {
-            text-align: center;
-            color: var(--muted);
-            font-size: 0.78rem;
-            padding: 2rem 0 1.5rem;
-        }
+        .cloud-footer.adv-footer {
+    margin-top: 40px;
+    padding: 28px 20px;
+    text-align: center;
+    border-top: 1px solid rgba(0,0,0,0.10);
+    background: rgba(255,255,255,0.65);
+    border-radius: 16px 16px 0 0;
+    color: #555;
+}
+
+.adv-icon {
+    font-size: 28px;
+    margin-bottom: 12px;
+    color: #666;
+}
+
+.adv-title {
+    display: block;
+    font-size: 1rem;
+    font-weight: 700;
+    color: #222;
+    margin-bottom: 12px;
+}
+
+.adv-text {
+    display: block;
+    max-width: 650px;
+    margin: 0 auto 18px;
+    font-size: .9rem;
+    line-height: 1.6;
+    color: #555;
+}
+
+.adv-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 20px;
+    border-radius: 25px;
+    background: #222;
+    color: #fff !important;
+    text-decoration: none;
+    font-size: .9rem;
+    font-weight: 600;
+    transition: opacity .2s ease;
+}
+
+.adv-button:hover {
+    opacity: .8;
+}
+
+.adv-security {
+    margin-top: 22px;
+    font-size: .8rem;
+    color: #777;
+}
+.custom-adv-description {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    color: #555 !important;
+    font-size: 0.9rem;
+    line-height: 1.6;
+    width: 100%;
+    max-width: none;
+    margin: 0 auto 18px;
+}
         @media (max-width: 576px) {
             .cloud-header .client-name { font-size: 1.6rem; }
             .file-actions { flex-direction: column; }
@@ -310,11 +371,15 @@
 <body>
 <!-- public-cloud: badge-payment-normalized + file-icon-fallback -->
 
-<!-- ── Header ─────────────────────────────────────────────── -->
 <header class="cloud-header mb-4">
     <div class="container text-center" style="max-width:800px; position:relative; z-index:1;">
-        <div class="app-brand"><i class="fas fa-cloud me-1"></i><?= h($app_name) ?></div>
-        <div class="page-label">Cloud Page</div>
+        <div class="app-brand" style="color:#fff;">
+            <i class="fas fa-cloud me-1"></i><?= h($app_name) ?>
+        </div>
+
+        <div class="page-label" style="color:#fff;">
+            Cloud Page
+        </div>
         <?php if ($cliente_nome !== ''): ?>
             <div class="client-name"><?= h($cliente_nome) ?></div>
         <?php endif; ?>
@@ -507,8 +572,29 @@
     </div>
 </div>
 
-<footer class="cloud-footer">
-    <i class="fas fa-lock me-1"></i>Accesso protetto e privato
+
+
+<footer class="cloud-footer adv-footer">
+    
+        <div class="adv-security">
+        <i class="fas fa-lock"></i>Accesso protetto e privato
+    </div><br>
+
+    <div class="adv-title">
+        💻 Software & webapp personalizzati per attività e professionisti!
+    </div>
+
+    <p class="custom-adv-description">
+        Questo gestionale è stato realizzato su misura per <?= h($app_name) ?>.<br>
+        Trasforma le tue idee in un software semplice e funzionale: posso aiutarti a creare lo strumento giusto per il tuo lavoro.
+    </p>
+
+    <a href="mailto:info@simonedeitos.it" class="adv-button">
+        <i class="fas fa-envelope"></i>Contattami 
+    </a>
+
+
+
 </footer>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
