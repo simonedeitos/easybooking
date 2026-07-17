@@ -244,17 +244,9 @@ require_once __DIR__ . '/includes/header.php';
                             <label for="indirizzo" class="form-label">Indirizzo</label>
                             <textarea class="form-control" id="indirizzo" name="indirizzo" rows="2"></textarea>
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-md-12">
                             <label for="codice_fiscale" class="form-label">Codice Fiscale</label>
                             <input type="text" class="form-control" id="codice_fiscale" name="codice_fiscale">
-                        </div>
-                        <div class="col-md-6">
-                            <label for="mega_cartella_pubblica" class="form-label">MEGA Cartella Pubblica</label>
-                            <input type="url" class="form-control" id="mega_cartella_pubblica" name="mega_cartella_pubblica">
-                        </div>
-                        <div class="col-12">
-                            <label for="mega_cartella_locale" class="form-label">MEGA Cartella Locale</label>
-                            <input type="text" class="form-control" id="mega_cartella_locale" name="mega_cartella_locale">
                         </div>
                         <div class="col-12">
                             <label for="note" class="form-label">Note</label>
@@ -394,8 +386,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.getElementById('indirizzo').value = client.indirizzo || '';
                 document.getElementById('codice_fiscale').value = client.codice_fiscale || '';
                 document.getElementById('note').value = client.note || '';
-                document.getElementById('mega_cartella_pubblica').value = client.mega_cartella_pubblica || '';
-                document.getElementById('mega_cartella_locale').value = client.mega_cartella_locale || '';
+
                 clientModal.show();
             } catch (e) {
                 showToast('Errore nel caricamento del cliente.', 'danger');
