@@ -411,8 +411,9 @@ function cloudLezioniFuture(PDO $pdo, int $clienteId): array
     if ($acquisto) {
         $pacchettoNome = (string)($acquisto['pacchetto_nome'] ?? '');
         // Canonical payment states in EasyBooking are Pagato, Non Pagato,
-        // Parziale and In Attesa; imported/legacy values may vary only by case
-        // or extra whitespace, so normalize before checking "da saldare".
+        // Parziale, In Attesa and Rimborso; imported/legacy values may vary
+        // only by case or extra whitespace, so normalize before checking
+        // "da saldare".
         $statoPagamento = cloudNormalizePaymentStatus($acquisto['stato_pagamento'] ?? null);
         $pacchettoDaSaldare = $statoPagamento !== '' && $statoPagamento !== 'pagato' && $statoPagamento !== 'rimborso';
         if (!empty($acquisto['data_acquisto'])) {
@@ -452,7 +453,7 @@ function cloudLezioniFuture(PDO $pdo, int $clienteId): array
 function cloudNormalizePaymentStatus(?string $status): string
 {
     $status = preg_replace('/\s+/u', ' ', trim((string) $status));
-    if ($status === null || $status === '') {
+    if ($status === '') {
         return '';
     }
 
