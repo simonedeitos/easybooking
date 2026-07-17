@@ -277,7 +277,7 @@
 
 <!-- ── Header ─────────────────────────────────────────────── -->
 <header class="cloud-header mb-4">
-    <div class="container" style="max-width:800px; position:relative; z-index:1;">
+    <div class="container text-center" style="max-width:800px; position:relative; z-index:1;">
         <div class="app-brand"><i class="fas fa-cloud me-1"></i><?= h($app_name) ?></div>
         <div class="page-label">Cloud Page</div>
         <?php if ($cliente_nome !== ''): ?>
