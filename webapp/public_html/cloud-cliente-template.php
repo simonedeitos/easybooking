@@ -247,6 +247,7 @@
             const audioPlayer = document.getElementById('audioPlayer');
             const audioModalTitle = document.getElementById('audioModalTitle');
             const downloadBtn = document.getElementById('downloadBtn');
+            // The controller validates $hash before rendering this template.
             const streamBaseUrl = <?= json_encode('?hash=' . rawurlencode($hash) . '&action=get_file&file_id=') ?>;
             const downloadBaseUrl = <?= json_encode('?hash=' . rawurlencode($hash) . '&action=download&file_id=') ?>;
 
@@ -254,8 +255,8 @@
                 button.addEventListener('click', () => {
                     const fileId = button.dataset.fileId || '';
                     audioModalTitle.textContent = button.dataset.fileName || 'Riproduzione audio';
-                    audioPlayer.src = streamBaseUrl + encodeURIComponent(fileId);
-                    downloadBtn.href = downloadBaseUrl + encodeURIComponent(fileId);
+                    audioPlayer.src = streamBaseUrl + fileId;
+                    downloadBtn.href = downloadBaseUrl + fileId;
                     audioPlayer.load();
                     audioModal.show();
                 });

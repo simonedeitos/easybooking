@@ -23,7 +23,8 @@ function h($value): string
 
 function loadPublicCloudLocalConfig(string $envFile): void
 {
-    if (!is_file($envFile) || getenv('EASYBOOKING_WEBAPP_PATH') !== false) {
+    $configuredPath = getenv('EASYBOOKING_WEBAPP_PATH');
+    if (!is_file($envFile) || ($configuredPath !== false && trim((string) $configuredPath) !== '')) {
         return;
     }
 
