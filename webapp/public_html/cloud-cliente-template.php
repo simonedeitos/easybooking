@@ -295,76 +295,124 @@
         .error-state { text-align: center; padding: 3rem 1rem; }
         /* ── Footer ─────────────────────────────────────────── */
         .cloud-footer.adv-footer {
-    margin-top: 40px;
-    padding: 28px 20px;
-    text-align: center;
-    border-top: 1px solid rgba(0,0,0,0.10);
-    background: rgba(255,255,255,0.65);
-    border-radius: 16px 16px 0 0;
-    color: #555;
-}
+            margin-top: 40px;
+            padding: 0;
+            border-top: 1px solid rgba(0,0,0,0.10);
+            background: rgba(255,255,255,0.65);
+            border-radius: 16px;
+            overflow: hidden;
+        }
 
-.adv-icon {
-    font-size: 28px;
-    margin-bottom: 12px;
-    color: #666;
-}
+        .adv-card-toggle {
+            cursor: pointer;
+            user-select: none;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            padding: 16px 20px;
+            border-bottom: 1px solid rgba(0,0,0,0.08);
+            transition: background 0.2s ease;
+        }
 
-.adv-title {
-    display: block;
-    font-size: 1rem;
-    font-weight: 700;
-    color: #222;
-    margin-bottom: 12px;
-}
+        .adv-card-toggle:hover {
+            background: rgba(0,0,0,0.02);
+        }
 
-.adv-text {
-    display: block;
-    max-width: 650px;
-    margin: 0 auto 18px;
-    font-size: .9rem;
-    line-height: 1.6;
-    color: #555;
-}
+        .adv-toggle-top {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+        }
 
-.adv-button {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 9px 20px;
-    border-radius: 25px;
-    background: #222;
-    color: #fff !important;
-    text-decoration: none;
-    font-size: .9rem;
-    font-weight: 600;
-    transition: opacity .2s ease;
-}
+        .adv-icon {
+            font-size: 24px;
+            flex-shrink: 0;
+            color: #666;
+        }
 
-.adv-button:hover {
-    opacity: .8;
-}
+        .adv-security {
+            font-size: 0.8rem;
+            color: #777;
+            flex-shrink: 0;
+        }
 
-.adv-security {
-    margin-top: 22px;
-    font-size: .8rem;
-    color: #777;
-}
-.custom-adv-description {
-    display: block !important;
-    visibility: visible !important;
-    opacity: 1 !important;
-    color: #555 !important;
-    font-size: 0.9rem;
-    line-height: 1.6;
-    width: 100%;
-    max-width: none;
-    margin: 0 auto 18px;
-}
+        .adv-title-toggle {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #222;
+            margin: 0;
+            flex-shrink: 0;
+        }
+
+        .adv-toggle-arrow {
+            font-size: 18px;
+            flex-shrink: 0;
+            color: #888;
+            transition: transform 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .adv-card-toggle.collapsed .adv-toggle-arrow {
+            transform: rotate(0deg);
+        }
+
+        .adv-card-toggle:not(.collapsed) .adv-toggle-arrow {
+            transform: rotate(180deg);
+        }
+
+        .adv-expandable-content {
+            display: none;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .adv-expandable-content.show {
+            display: block !important;
+        }
+
+        .adv-description-text {
+            margin: 0 0 18px 0;
+            font-size: 0.9rem;
+            line-height: 1.6;
+            color: #555;
+        }
+
+        .adv-contact-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 9px 20px;
+            border-radius: 25px;
+            background: #222;
+            color: #fff !important;
+            text-decoration: none;
+            font-size: .9rem;
+            font-weight: 600;
+            transition: opacity .2s ease;
+        }
+
+        .adv-contact-button:hover {
+            opacity: .8;
+        }
+
         @media (max-width: 576px) {
             .cloud-header .client-name { font-size: 1.6rem; }
             .file-actions { flex-direction: column; }
             .file-actions .btn { width: 100%; }
+            .adv-card-toggle {
+                padding: 14px 16px;
+            }
+            .adv-expandable-content {
+                padding: 16px;
+            }
+            .adv-title-toggle {
+                font-size: 0.9rem;
+            }
         }
     </style>
 </head>
@@ -378,7 +426,7 @@
         </div>
 
         <div class="page-label" style="color:#fff;">
-            Cloud Page
+            Cloud Page | Accesso Privato
         </div>
         <?php if ($cliente_nome !== ''): ?>
             <div class="client-name"><?= h($cliente_nome) ?></div>
@@ -575,26 +623,24 @@
 
 
 <footer class="cloud-footer adv-footer">
-    
-        <div class="adv-security">
-        <i class="fas fa-lock"></i>Accesso protetto e privato
-    </div><br>
+    <div class="adv-card-toggle collapsed" id="advCardToggle">
 
-    <div class="adv-title">
-        💻 Software & webapp personalizzati per attività e professionisti!
+        <div class="adv-title-toggle">💻 Software e Webapp personalizzati per attività e professionisti!</div>
+        <div class="adv-toggle-arrow">
+            <i class="fas fa-chevron-down"></i>
+        </div>
     </div>
 
-    <p class="custom-adv-description">
-        Questo gestionale è stato realizzato su misura per <?= h($app_name) ?>.<br>
-        Trasforma le tue idee in un software semplice e funzionale: posso aiutarti a creare lo strumento giusto per il tuo lavoro.
-    </p>
+    <div class="adv-expandable-content" id="advExpandableContent">
+        <p class="adv-description-text">
+            Questo gestionale è stato realizzato su misura per <?= h($app_name) ?>.<br>
+            Trasforma le tue idee in un software semplice e funzionale: posso aiutarti a creare lo strumento giusto per il tuo lavoro!
+        </p>
 
-    <a href="mailto:info@simonedeitos.it" class="adv-button">
-        <i class="fas fa-envelope"></i>Contattami 
-    </a>
-
-
-
+        <a href="mailto:info@simonedeitos.it" class="adv-contact-button">
+            <i class="fas fa-envelope"></i>Contattami Senza Impegno
+        </a>
+    </div>
 </footer>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
@@ -860,6 +906,19 @@
         destroyWs();
     });
 })();
+
+// Collapsible footer card
+document.addEventListener('DOMContentLoaded', function() {
+    const toggle = document.getElementById('advCardToggle');
+    const content = document.getElementById('advExpandableContent');
+
+    if (toggle && content) {
+        toggle.addEventListener('click', function() {
+            toggle.classList.toggle('collapsed');
+            content.classList.toggle('show');
+        });
+    }
+});
 </script>
 </body>
 </html>
