@@ -419,7 +419,7 @@ require_once __DIR__ . '/includes/header.php';
         <div class="modal-content">
             <form id="eventForm" method="post" action="calendario.php">
                 <div class="modal-header">
-                    <h5 class="modal-title">Modifica Evento <span id="event-tipo-badge" class="badge bg-primary ms-2">Lezione</span></h5>
+                    <h5 class="modal-title"><span id="event-tipo-text">Modifica Evento</span> <span id="event-tipo-badge" class="badge bg-primary ms-2">Lezione</span></h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Chiudi"></button>
                 </div>
                 <div class="modal-body">
@@ -576,20 +576,20 @@ require_once __DIR__ . '/includes/header.php';
                             <input type="hidden" name="tipo_evento" value="provino">
                             <div class="row g-3">
                                 <div class="col-md-4">
-                                    <label for="provino-data" class="form-label">Data</label>
-                                    <input type="date" class="form-control" id="provino-data" name="data">
+                                    <label for="provino-data" class="form-label">Data *</label>
+                                    <input type="date" class="form-control" id="provino-data" name="data" required>
                                 </div>
                                 <div class="col-md-4">
-                                    <label for="provino-ora-inizio" class="form-label">Ora inizio</label>
-                                    <input type="time" class="form-control" id="provino-ora-inizio" name="ora_inizio">
+                                    <label for="provino-ora-inizio" class="form-label">Ora inizio *</label>
+                                    <input type="time" class="form-control" id="provino-ora-inizio" name="ora_inizio" required>
                                 </div>
                                 <div class="col-md-4">
-                                    <label for="provino-ora-fine" class="form-label">Ora fine</label>
-                                    <input type="time" class="form-control" id="provino-ora-fine" name="ora_fine">
+                                    <label for="provino-ora-fine" class="form-label">Ora fine *</label>
+                                    <input type="time" class="form-control" id="provino-ora-fine" name="ora_fine" required>
                                 </div>
                                 <div class="col-md-6">
                                     <label for="provino-strumento-id" class="form-label">Strumento *</label>
-                                    <select class="form-select" id="provino-strumento-id" name="strumento_id">
+                                    <select class="form-select" id="provino-strumento-id" name="strumento_id" required>
                                         <option value="">Seleziona strumento</option>
                                         <?php foreach ($instruments as $instr): ?>
                                         <option value="<?= htmlspecialchars((string)$instr['id']) ?>"><?= htmlspecialchars((string)$instr['nome']) ?></option>
@@ -598,7 +598,7 @@ require_once __DIR__ . '/includes/header.php';
                                 </div>
                                 <div class="col-md-6">
                                     <label for="provino-insegnante-id" class="form-label">Insegnante *</label>
-                                    <select class="form-select" id="provino-insegnante-id" name="insegnante_id">
+                                    <select class="form-select" id="provino-insegnante-id" name="insegnante_id" required>
                                         <option value="">Seleziona insegnante</option>
                                         <?php foreach ($teachers as $teacher): ?>
                                         <option value="<?= htmlspecialchars((string)$teacher['id']) ?>"><?= htmlspecialchars(trim((string)$teacher['nome'] . ' ' . (string)$teacher['cognome'])) ?></option>
@@ -677,15 +677,13 @@ const IS_RELATIONS = <?= json_encode(array_map(static fn(array $r): array => [
  */
 function filterInsegnantiByStrumento(strumentoId, insegnantesSel) {
     if (!strumentoId || IS_RELATIONS.length === 0) {
-        Array.from(insegnantesSel.options).forEach(o => { o.hidden = false; o.disabled = false; });
+        Array.from(insegnantesSel.options).forEach(o => { o.disabled = false; });
         return;
     }
     const allowed = IS_RELATIONS.filter(r => r.s === strumentoId).map(r => r.i);
     Array.from(insegnantesSel.options).forEach(o => {
         if (!o.value) return;
-        const ok = allowed.includes(parseInt(o.value, 10));
-        o.hidden = !ok;
-        o.disabled = !ok;
+        o.disabled = !allowed.includes(parseInt(o.value, 10));
     });
     if (insegnantesSel.value && !allowed.includes(parseInt(insegnantesSel.value, 10))) {
         insegnantesSel.value = '';
@@ -698,15 +696,13 @@ function filterInsegnantiByStrumento(strumentoId, insegnantesSel) {
  */
 function filterStrumentiByInsegnante(insegnanteId, strumentiSel) {
     if (!insegnanteId || IS_RELATIONS.length === 0) {
-        Array.from(strumentiSel.options).forEach(o => { o.hidden = false; o.disabled = false; });
+        Array.from(strumentiSel.options).forEach(o => { o.disabled = false; });
         return;
     }
     const allowed = IS_RELATIONS.filter(r => r.i === insegnanteId).map(r => r.s);
     Array.from(strumentiSel.options).forEach(o => {
         if (!o.value) return;
-        const ok = allowed.includes(parseInt(o.value, 10));
-        o.hidden = !ok;
-        o.disabled = !ok;
+        o.disabled = !allowed.includes(parseInt(o.value, 10));
     });
     if (strumentiSel.value && !allowed.includes(parseInt(strumentiSel.value, 10))) {
         strumentiSel.value = '';
@@ -929,13 +925,17 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('event-cliente-label').value    = props.cliente || '';
         document.getElementById('event-insegnante-label').value = props.insegnante || '';
         document.getElementById('event-strumento-label').value  = props.strumento || '';
+        const tipo = props.tipo_evento || 'lezione';
         const tipoBadge = document.getElementById('event-tipo-badge');
         if (tipoBadge) {
-            const tipo = props.tipo_evento || 'lezione';
             tipoBadge.textContent = tipo === 'provino' ? 'Provino' : 'Lezione';
             tipoBadge.className   = tipo === 'provino'
                 ? 'badge bg-warning text-dark ms-2'
                 : 'badge bg-primary ms-2';
+        }
+        const tipoText = document.getElementById('event-tipo-text');
+        if (tipoText) {
+            tipoText.textContent = tipo === 'provino' ? 'Modifica Provino' : 'Modifica Lezione';
         }
     });
 

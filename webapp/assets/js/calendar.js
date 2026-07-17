@@ -213,18 +213,6 @@ function openEventModal(event) {
     modal.querySelector('#event-stato').value       = props.stato || 'Programmata';
     modal.querySelector('#event-note').value        = props.note || '';
 
-    const titleEl = modal.querySelector('.modal-title');
-    if (titleEl) {
-        const tipo = props.tipo_evento === 'provino' ? 'Provino' : 'Lezione';
-        // Keep the badge span intact; update only the text node before it
-        const firstChild = titleEl.firstChild;
-        if (firstChild && firstChild.nodeType === Node.TEXT_NODE) {
-            firstChild.textContent = `Modifica ${tipo} `;
-        } else {
-            titleEl.textContent = `Modifica ${tipo}`;
-        }
-    }
-
     m.show();
 }
 
