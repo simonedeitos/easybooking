@@ -625,7 +625,7 @@
 <footer class="cloud-footer adv-footer">
     <div class="adv-card-toggle collapsed" id="advCardToggle">
 
-        <div class="adv-title-toggle">💻 Software e Webapp personalizzati per attività e professionisti!</div>
+        <div class="adv-title-toggle">💻 Software e Webapp personalizzati per attività e professionisti. Clicca qui e scopri di piu!</div>
         <div class="adv-toggle-arrow">
             <i class="fas fa-chevron-down"></i>
         </div>
