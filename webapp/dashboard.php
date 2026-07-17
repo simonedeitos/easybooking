@@ -281,13 +281,20 @@ require_once __DIR__ . '/includes/header.php';
                         $telefonoDigits = dashboardWhatsAppNumber($package['telefono'] ?? null);
                         $pacchettoNome  = (string)($package['pacchetto_nome'] ?: 'Pacchetto sconosciuto');
                         $lezioniRim     = (string)$package['lezioni_rimanenti'];
-                        $waMsg          = 'Ciao ' . $clienteNome . ', il tuo pacchetto ' . $pacchettoNome . ' è quasi esaurito (' . $lezioniRim . ' lezioni rimanenti). [messaggio automatico]';
+                        $lezioniSvolte  = (string)$package['lezioni_svolte'];
+                        $lezioniAcq     = (string)$package['lezioni_acquistate'];
+                        $waMsg          = "[messaggio automatico]\n\n" .
+                                          "Ciao {$clienteNome}, \n" .
+                                          "il tuo pacchetto {$pacchettoNome} è quasi esaurito. \n" .
+                                          "Per continuare, puoi acquistare un nuovo pacchetto.\n" .
+                                          "Grazie!";
                     ?>
-                    <div class="rounded-3 border p-3 package-alert-item">
-                        <div class="d-flex justify-content-between align-items-start gap-3">
-                            <div>
-                                <div class="fw-semibold"><?= htmlspecialchars($clienteNome) ?></div>
-                                <div class="text-secondary small"><?= htmlspecialchars($pacchettoNome) ?></div>
+                    <div class="rounded-3 border py-2 px-3 package-alert-item">
+                        <div class="d-flex justify-content-between align-items-center gap-2 flex-wrap">
+                            <div class="fw-semibold text-break">
+                                <?= htmlspecialchars($clienteNome) ?>
+                                <span class="text-secondary fw-normal"> | </span>
+                                <span class="text-secondary fw-normal"><?= htmlspecialchars($pacchettoNome) ?></span>
                             </div>
                             <div class="d-flex align-items-center gap-2">
                                 <?php if ($telefonoDigits !== ''): ?>
@@ -297,13 +304,9 @@ require_once __DIR__ . '/includes/header.php';
                                 </a>
                                 <?php endif; ?>
                                 <span class="badge bg-warning text-dark">
-                                    <?= htmlspecialchars($lezioniRim) ?> rim.
+                                    <?= htmlspecialchars($lezioniSvolte) ?>/<?= htmlspecialchars($lezioniAcq) ?> | <?= htmlspecialchars($lezioniRim) ?> rim.
                                 </span>
                             </div>
-                        </div>
-                        <div class="small text-secondary mt-2">
-                            Svolte: <?= htmlspecialchars((string)$package['lezioni_svolte']) ?> /
-                            <?= htmlspecialchars((string)$package['lezioni_acquistate']) ?>
                         </div>
                     </div>
                     <?php endforeach; ?>
