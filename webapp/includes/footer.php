@@ -19,9 +19,11 @@
 <?php if (basename($_SERVER['PHP_SELF'], '.php') === 'calendario'): ?>
 <!-- FullCalendar -->
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
-<script src="assets/js/calendar.js"></script>
+<!-- Cache-busting version keeps browsers from serving a stale calendar.js after deployments -->
+<script src="assets/js/calendar.js?v=<?= $getAssetVersion('assets/js/calendar.js') ?>"></script>
 <?php endif; ?>
 <!-- Main JS -->
-<script src="assets/js/main.js"></script>
+<!-- Cache-busting version keeps browsers from serving a stale main.js after deployments -->
+<script src="assets/js/main.js?v=<?= $getAssetVersion('assets/js/main.js') ?>"></script>
 </body>
 </html>

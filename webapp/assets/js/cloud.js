@@ -1,6 +1,10 @@
 /**
  * cloud.js – Frontend logic for Cloud Storage management page
  * Dependencies: Bootstrap 5, Font Awesome 6
+ *
+ * NOTE: cloud.php loads this script with a ?v=<filemtime> cache-busting parameter
+ * so that browsers and CDN/reverse-proxies always fetch the latest version after
+ * a deployment.  Do NOT remove the version query string from the <script> tag.
  */
 
 (function () {
@@ -752,16 +756,33 @@
 
     // ── Init ──────────────────────────────────────────────────────────────
 
-    document.addEventListener('DOMContentLoaded', () => {
-        refreshStats();
-        bindClientButtons();
-        bindClientSearch();
-        initDropZone();
-        bindAudioModalClose();
-        bindCopyLinkBtn();
-        bindSettingsBtn();
-        bindDeleteCloudModal();
-        bindCreateCloudModal();
-    });
+    function init() {
+        // Wrap each bind call individually so one failing function does not
+        // prevent the others from running (defensive initialisation).
+        [
+            refreshStats,
+            bindClientButtons,
+            bindClientSearch,       // live client-filter – requires cache-busted cloud.js
+            initDropZone,
+            bindAudioModalClose,
+            bindCopyLinkBtn,
+            bindSettingsBtn,
+            bindDeleteCloudModal,
+            bindCreateCloudModal,
+        ].forEach(fn => {
+            const fnLabel = fn.name || 'unnamed function';
+            try { fn(); } catch (e) { console.error(`[cloud.js] init error in ${fnLabel}:`, e); }
+        });
+    }
+
+    // Guard against the script being executed after DOMContentLoaded has already
+    // fired (e.g. when the browser serves the file from cache with defer/async, or
+    // when it is injected dynamically).  In those cases readyState is no longer
+    // 'loading', so we must call init() directly instead of waiting for the event.
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
 
 })();
