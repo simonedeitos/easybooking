@@ -278,13 +278,14 @@ require_once __DIR__ . '/includes/header.php';
                 <div class="list-group list-group-flush gap-3">
                     <?php foreach ($expiringPackages as $package):
                         $clienteNome    = dashboardDecryptName($package['nome'], $package['cognome']);
+                        $clienteSoloNome = dashboardDecryptName($package['nome'], '') ;
                         $telefonoDigits = dashboardWhatsAppNumber($package['telefono'] ?? null);
                         $pacchettoNome  = (string)($package['pacchetto_nome'] ?: 'Pacchetto sconosciuto');
                         $lezioniRim     = (string)$package['lezioni_rimanenti'];
                         $lezioniSvolte  = (string)$package['lezioni_svolte'];
                         $lezioniAcq     = (string)$package['lezioni_acquistate'];
                         $waMsg          = "[messaggio automatico]\n\n" .
-                                          "Ciao {$clienteNome}, \n" .
+                                          "Ciao {$clienteSoloNome}, \n" .
                                           "il tuo pacchetto {$pacchettoNome} è quasi esaurito. \n" .
                                           "Per continuare, puoi acquistare un nuovo pacchetto.\n" .
                                           "Grazie!";
