@@ -102,7 +102,7 @@ if (!$__isCli) {
     header('Content-Type: text/plain; charset=utf-8');
 }
 
-validateCronEnvironment($__isCli === false);
+validateCronEnvironment(!$__isCli);
 cronLog('Avvio mark-lessons-done.php');
 
 try {
