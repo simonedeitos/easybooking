@@ -135,6 +135,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 throw new RuntimeException('User ID non valido.');
             }
 
+            error_log('[notifiche.php] Preparazione statement INSERT/UPDATE per user_id=' . $userId);
+
             $stmt = $pdo->prepare(
                 'INSERT INTO notifiche_config (
                     user_id, email_notifiche, abilita_email,
@@ -165,7 +167,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     avviso_non_confermata_enabled = VALUES(avviso_non_confermata_enabled),
                     avviso_non_confermata_giorni = VALUES(avviso_non_confermata_giorni)'
             );
-            $stmt->execute([
+
+            error_log('[notifiche.php] Statement preparato correttamente');
+
+            $bindParams = [
                 $userId,
                 $email !== '' ? $email : null,
                 $abilitaEmail,
@@ -186,12 +191,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 max(0, sanitizeInt(post('avviso_scadenza_giorni'))),
                 notificationFlag('avviso_non_confermata_enabled'),
                 max(0, sanitizeInt(post('avviso_non_confermata_giorni'))),
-            ]);
+            ];
+
+            error_log('[notifiche.php] Parametri bind: ' . json_encode($bindParams));
+
+            $stmt->execute($bindParams);
+
+            error_log('[notifiche.php] Query eseguita con successo');
 
             setFlash('success', 'Preferenze notifiche salvate con successo.');
             redirect(notificationRedirectTarget($embedded));
+        } catch (PDOException $e) {
+            error_log('[notifiche.php] PDOException [' . $e->getCode() . ']: ' . $e->getMessage());
+            error_log('[notifiche.php] SQLSTATE: ' . $e->errorInfo[0] ?? 'N/A');
+            error_log('[notifiche.php] Driver Code: ' . $e->errorInfo[1] ?? 'N/A');
+            error_log('[notifiche.php] Driver Message: ' . $e->errorInfo[2] ?? 'N/A');
+            error_log('[notifiche.php] Query: ' . ($stmt->queryString ?? 'N/A'));
+            
+            $errorMsg = 'Errore durante il salvataggio delle notifiche. ';
+            if (!empty($e->errorInfo[2])) {
+                $errorMsg .= 'Dettagli: ' . $e->errorInfo[2];
+            }
+            setFlash('danger', $errorMsg);
+            redirect(notificationRedirectTarget($embedded));
         } catch (Throwable $e) {
-            error_log('notifiche.php save error [' . $e->getCode() . ']: ' . $e->getMessage());
+            error_log('[notifiche.php] Throwable [' . get_class($e) . '] [' . $e->getCode() . ']: ' . $e->getMessage());
+            error_log('[notifiche.php] Stack trace: ' . $e->getTraceAsString());
+            
             setFlash('danger', 'Errore durante il salvataggio delle notifiche. Contatta il supporto se il problema persiste.');
             redirect(notificationRedirectTarget($embedded));
         }
@@ -204,70 +230,81 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             redirect(notificationRedirectTarget($embedded));
         }
 
-        $smtpEnabled = notificationFlag('smtp_enabled');
-        $smtpHost = notificationCleanText(post('smtp_host'));
-        $smtpPort = sanitizeInt(post('smtp_port'));
-        $smtpUsername = notificationCleanText(post('smtp_username'));
-        $smtpPassword = (string)post('smtp_password');
-        $smtpEncryption = post('smtp_encryption');
-        $smtpSenderEmail = notificationCleanText(post('smtp_sender_email'));
-        $smtpSenderName = notificationCleanText(post('smtp_sender_name'));
-
-        if ($smtpEnabled === 1 && $smtpHost === '') {
-            setFlash('danger', 'Se SMTP è abilitato devi specificare l\'host.');
-            redirect(notificationRedirectTarget($embedded));
-        }
-        if ($smtpEnabled === 1 && !notificationInRange($smtpPort, 1, 65535)) {
-            setFlash('danger', 'La porta SMTP deve essere compresa tra 1 e 65535.');
-            redirect(notificationRedirectTarget($embedded));
-        }
-        if (!in_array($smtpEncryption, ['', 'tls', 'ssl'], true)) {
-            setFlash('danger', 'Tipo di cifratura SMTP non valido.');
-            redirect(notificationRedirectTarget($embedded));
-        }
-        if ($smtpSenderEmail !== '' && !notificationValidEmail($smtpSenderEmail)) {
-            setFlash('danger', 'Email mittente SMTP non valida.');
-            redirect(notificationRedirectTarget($embedded));
-        }
-
-        if ($smtpEnabled !== 1) {
-            $passwordToStore = '';
-        } elseif ($smtpPassword !== '') {
-            $passwordToStore = encodeSmtpSecret($smtpPassword);
-        } else {
-            $passwordToStore = getStoredSmtpPasswordRaw($pdo);
-        }
-
-        $stmt = $pdo->prepare(
-            'INSERT INTO system_config (`key`, `value`) VALUES (?, ?)
-             ON DUPLICATE KEY UPDATE `value` = VALUES(`value`), updated_at = CURRENT_TIMESTAMP'
-        );
-
-        $pairs = [
-            'smtp_enabled' => (string)$smtpEnabled,
-            'smtp_host' => $smtpHost,
-            'smtp_port' => (string)($smtpPort > 0 ? $smtpPort : 587),
-            'smtp_username' => $smtpUsername,
-            'smtp_password' => $passwordToStore,
-            'smtp_encryption' => $smtpEncryption,
-            'smtp_sender_email' => $smtpSenderEmail,
-            'smtp_sender_name' => $smtpSenderName !== '' ? $smtpSenderName : 'EasyBooking',
-        ];
-        $pdo->beginTransaction();
         try {
-            foreach ($pairs as $key => $value) {
-                $stmt->execute([$key, $value]);
-            }
-            $pdo->commit();
-        } catch (Throwable $e) {
-            if ($pdo->inTransaction()) {
-                $pdo->rollBack();
-            }
-            throw $e;
-        }
+            $smtpEnabled = notificationFlag('smtp_enabled');
+            $smtpHost = notificationCleanText(post('smtp_host'));
+            $smtpPort = sanitizeInt(post('smtp_port'));
+            $smtpUsername = notificationCleanText(post('smtp_username'));
+            $smtpPassword = (string)post('smtp_password');
+            $smtpEncryption = post('smtp_encryption');
+            $smtpSenderEmail = notificationCleanText(post('smtp_sender_email'));
+            $smtpSenderName = notificationCleanText(post('smtp_sender_name'));
 
-        setFlash('success', 'Configurazione SMTP salvata.');
-        redirect(notificationRedirectTarget($embedded));
+            if ($smtpEnabled === 1 && $smtpHost === '') {
+                setFlash('danger', 'Se SMTP è abilitato devi specificare l\'host.');
+                redirect(notificationRedirectTarget($embedded));
+            }
+            if ($smtpEnabled === 1 && !notificationInRange($smtpPort, 1, 65535)) {
+                setFlash('danger', 'La porta SMTP deve essere compresa tra 1 e 65535.');
+                redirect(notificationRedirectTarget($embedded));
+            }
+            if (!in_array($smtpEncryption, ['', 'tls', 'ssl'], true)) {
+                setFlash('danger', 'Tipo di cifratura SMTP non valido.');
+                redirect(notificationRedirectTarget($embedded));
+            }
+            if ($smtpSenderEmail !== '' && !notificationValidEmail($smtpSenderEmail)) {
+                setFlash('danger', 'Email mittente SMTP non valida.');
+                redirect(notificationRedirectTarget($embedded));
+            }
+
+            if ($smtpEnabled !== 1) {
+                $passwordToStore = '';
+            } elseif ($smtpPassword !== '') {
+                $passwordToStore = encodeSmtpSecret($smtpPassword);
+            } else {
+                $passwordToStore = getStoredSmtpPasswordRaw($pdo);
+            }
+
+            error_log('[notifiche.php SMTP] Preparazione salvataggio: enabled=' . $smtpEnabled . ', host=' . $smtpHost . ', port=' . $smtpPort);
+
+            $stmt = $pdo->prepare(
+                'INSERT INTO system_config (`key`, `value`) VALUES (?, ?)
+                 ON DUPLICATE KEY UPDATE `value` = VALUES(`value`), updated_at = CURRENT_TIMESTAMP'
+            );
+
+            $pairs = [
+                'smtp_enabled' => (string)$smtpEnabled,
+                'smtp_host' => $smtpHost,
+                'smtp_port' => (string)($smtpPort > 0 ? $smtpPort : 587),
+                'smtp_username' => $smtpUsername,
+                'smtp_password' => $passwordToStore,
+                'smtp_encryption' => $smtpEncryption,
+                'smtp_sender_email' => $smtpSenderEmail,
+                'smtp_sender_name' => $smtpSenderName !== '' ? $smtpSenderName : 'EasyBooking',
+            ];
+            $pdo->beginTransaction();
+            try {
+                foreach ($pairs as $key => $value) {
+                    error_log('[notifiche.php SMTP] Salvataggio key=' . $key);
+                    $stmt->execute([$key, $value]);
+                }
+                $pdo->commit();
+                error_log('[notifiche.php SMTP] Transazione completata con successo');
+            } catch (Throwable $e) {
+                if ($pdo->inTransaction()) {
+                    $pdo->rollBack();
+                }
+                error_log('[notifiche.php SMTP] Errore durante transazione: ' . $e->getMessage());
+                throw $e;
+            }
+
+            setFlash('success', 'Configurazione SMTP salvata.');
+            redirect(notificationRedirectTarget($embedded));
+        } catch (Throwable $e) {
+            error_log('[notifiche.php SMTP] Throwable [' . get_class($e) . ']: ' . $e->getMessage());
+            setFlash('danger', 'Errore durante il salvataggio SMTP. Contatta il supporto se il problema persiste.');
+            redirect(notificationRedirectTarget($embedded));
+        }
     }
 
     if ($requestAction === 'test_smtp') {
@@ -306,17 +343,25 @@ $config = [
 $pageError = '';
 
 try {
+    error_log('[notifiche.php] Tentativo di caricamento notifiche_config per user_id=' . (int)$user['id']);
+    
     $stmt = $pdo->prepare('SELECT * FROM notifiche_config WHERE user_id = ? LIMIT 1');
     $stmt->execute([(int)$user['id']]);
     $row = $stmt->fetch();
+    
     if ($row) {
+        error_log('[notifiche.php] Configurazione trovata per user_id=' . (int)$user['id']);
         $config = array_merge($config, $row);
         if (empty($config['email_notifiche'])) {
             $config['email_notifiche'] = (string)($user['email'] ?? '');
         }
+    } else {
+        error_log('[notifiche.php] Nessuna configurazione trovata per user_id=' . (int)$user['id'] . ', usando defaults');
     }
 } catch (PDOException $e) {
-    $pageError = 'Impossibile caricare la configurazione notifiche.';
+    error_log('[notifiche.php] PDOException nel caricamento config: ' . $e->getMessage());
+    error_log('[notifiche.php] SQLSTATE: ' . $e->errorInfo[0] ?? 'N/A');
+    $pageError = 'Impossibile caricare la configurazione notifiche. Dettagli: ' . ($e->errorInfo[2] ?? $e->getMessage());
 }
 
 $dayOptions = notificationDayMap();
