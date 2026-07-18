@@ -1,4 +1,12 @@
 <?php
+
+try {
+    $tz = 'Europe/Rome';
+    date_default_timezone_set($tz);
+} catch (Exception $e) {
+    // ignore
+}
+
 // Load optional .env file (if present, takes precedence over defaults below)
 $_envFile = dirname(__DIR__) . '/.env';
 if (is_file($_envFile)) {
