@@ -226,40 +226,53 @@ function getSmtpConfig(?PDO $pdo = null): array
         return $defaults;
     }
 
-    function encodeSmtpSecret(string $plain): string
-    {
-        if ($plain === '') {
-            return '';
-        }
-        if (!function_exists('encryptField')) {
-            return $plain;
-        }
-        $encrypted = encryptField($plain);
-        if ($encrypted === '') {
-            return $plain;
-        }
-        return 'enc:' . $encrypted;
-    }
-
-    function decodeSmtpSecret(string $stored): string
-    {
-        if ($stored === '') {
-            return '';
-        }
-        if (!str_starts_with($stored, 'enc:')) {
-            return $stored;
-        }
-        $payload = substr($stored, 4);
-        if ($payload === '') {
-            return '';
-        }
-        if (!function_exists('decryptField')) {
-            return $payload;
-        }
-        return decryptField($payload);
-    }
-
     return $defaults;
+}
+
+function encodeSmtpSecret(string $plain): string
+{
+    if ($plain === '') {
+        return '';
+    }
+    if (!function_exists('encryptField')) {
+        return $plain;
+    }
+    $encrypted = encryptField($plain);
+    if ($encrypted === '') {
+        return $plain;
+    }
+    return 'enc:' . $encrypted;
+}
+
+function decodeSmtpSecret(string $stored): string
+{
+    if ($stored === '') {
+        return '';
+    }
+    if (!str_starts_with($stored, 'enc:')) {
+        return $stored;
+    }
+    $payload = substr($stored, 4);
+    if ($payload === '') {
+        return '';
+    }
+    if (!function_exists('decryptField')) {
+        return $payload;
+    }
+    return decryptField($payload);
+}
+
+function getStoredSmtpPasswordRaw(?PDO $pdo = null): string
+{
+    try {
+        $pdo = $pdo instanceof PDO ? $pdo : Database::getInstance();
+        $stmt = $pdo->prepare("SELECT `value` FROM system_config WHERE `key` = 'smtp_password' LIMIT 1");
+        $stmt->execute();
+        $value = $stmt->fetchColumn();
+        return is_string($value) ? $value : '';
+    } catch (Throwable) {
+        return '';
+    }
 }
 
 function ensureNotificationLogsTable(PDO $pdo): void

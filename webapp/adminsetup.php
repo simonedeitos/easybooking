@@ -1324,8 +1324,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         break;
                     }
 
-                    $smtpCurrent = getSmtpConfig();
-                    $smtpPasswordToStore = $smtpPassword !== '' ? encodeSmtpSecret($smtpPassword) : encodeSmtpSecret((string)$smtpCurrent['password']);
+                    $smtpPasswordToStore = $smtpPassword !== '' ? encodeSmtpSecret($smtpPassword) : getStoredSmtpPasswordRaw();
 
                     try {
                         $pdo = currentPdo();

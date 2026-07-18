@@ -134,13 +134,10 @@ function markNotificationSent(PDO $pdo, int $userId, string $tipo, string $rifer
     }
 }
 
-function hasNotificationBeenSent(PDO $pdo, int $userId, string $tipo, string $riferimento): bool
+function unmarkNotificationSent(PDO $pdo, int $userId, string $tipo, string $riferimento): void
 {
-    $stmt = $pdo->prepare(
-        'SELECT id FROM notifiche_log WHERE user_id = ? AND tipo = ? AND riferimento = ? LIMIT 1'
-    );
+    $stmt = $pdo->prepare('DELETE FROM notifiche_log WHERE user_id = ? AND tipo = ? AND riferimento = ?');
     $stmt->execute([$userId, $tipo, $riferimento]);
-    return (bool)$stmt->fetch();
 }
 
 function sendLoggedNotification(
@@ -252,7 +249,7 @@ function processReminderLezioni(PDO $pdo, array $user, array $config, array $smt
     }
 
     $riferimento = $now->format('Y-m-d');
-    if (hasNotificationBeenSent($pdo, (int)$user['id'], 'reminder_lezioni', $riferimento)) {
+    if (!markNotificationSent($pdo, (int)$user['id'], 'reminder_lezioni', $riferimento)) {
         return;
     }
 
@@ -303,9 +300,9 @@ function processReminderLezioni(PDO $pdo, array $user, array $config, array $smt
         $body
     );
     if ($sent) {
-        markNotificationSent($pdo, (int)$user['id'], 'reminder_lezioni', $riferimento);
         cronLog("Promemoria lezioni inviato a utente #{$user['id']} (" . count($lezioni) . ' lezioni)');
     } else {
+        unmarkNotificationSent($pdo, (int)$user['id'], 'reminder_lezioni', $riferimento);
         cronLog("Invio promemoria lezioni fallito per utente #{$user['id']}");
     }
 }
@@ -376,7 +373,7 @@ function processReportSettimanale(PDO $pdo, array $user, array $config, array $s
     }
 
     $riferimento = $now->format('o-\WW'); // anno-settimana ISO
-    if (hasNotificationBeenSent($pdo, (int)$user['id'], 'report_settimanale', $riferimento)) {
+    if (!markNotificationSent($pdo, (int)$user['id'], 'report_settimanale', $riferimento)) {
         return;
     }
 
@@ -399,9 +396,9 @@ function processReportSettimanale(PDO $pdo, array $user, array $config, array $s
         $body
     );
     if ($sent) {
-        markNotificationSent($pdo, (int)$user['id'], 'report_settimanale', $riferimento);
         cronLog("Report settimanale ({$tipo}) inviato a utente #{$user['id']}");
     } else {
+        unmarkNotificationSent($pdo, (int)$user['id'], 'report_settimanale', $riferimento);
         cronLog("Invio report settimanale ({$tipo}) fallito per utente #{$user['id']}");
     }
 }
@@ -427,7 +424,7 @@ function processReportMensile(PDO $pdo, array $user, array $config, array $smtpC
     }
 
     $riferimento = $now->format('Y-m');
-    if (hasNotificationBeenSent($pdo, (int)$user['id'], 'report_mensile', $riferimento)) {
+    if (!markNotificationSent($pdo, (int)$user['id'], 'report_mensile', $riferimento)) {
         return;
     }
 
@@ -450,9 +447,9 @@ function processReportMensile(PDO $pdo, array $user, array $config, array $smtpC
         $body
     );
     if ($sent) {
-        markNotificationSent($pdo, (int)$user['id'], 'report_mensile', $riferimento);
         cronLog("Report mensile ({$tipo}) inviato a utente #{$user['id']}");
     } else {
+        unmarkNotificationSent($pdo, (int)$user['id'], 'report_mensile', $riferimento);
         cronLog("Invio report mensile ({$tipo}) fallito per utente #{$user['id']}");
     }
 }
@@ -485,7 +482,7 @@ function processAvvisoScadenzaPacchetti(PDO $pdo, array $user, array $config, ar
     }
 
     $riferimento = $now->format('Y-m-d-H');
-    if (hasNotificationBeenSent($pdo, (int)$user['id'], 'avviso_scadenza', $riferimento)) {
+    if (!markNotificationSent($pdo, (int)$user['id'], 'avviso_scadenza', $riferimento)) {
         return;
     }
 
@@ -511,9 +508,9 @@ function processAvvisoScadenzaPacchetti(PDO $pdo, array $user, array $config, ar
         $body
     );
     if ($sent) {
-        markNotificationSent($pdo, (int)$user['id'], 'avviso_scadenza', $riferimento);
         cronLog("Avviso scadenza pacchetti inviato a utente #{$user['id']} (" . count($pacchetti) . ' pacchetti)');
     } else {
+        unmarkNotificationSent($pdo, (int)$user['id'], 'avviso_scadenza', $riferimento);
         cronLog("Invio avviso scadenza pacchetti fallito per utente #{$user['id']}");
     }
 }
@@ -547,7 +544,7 @@ function processAvvisoLezioniNonConfermate(PDO $pdo, array $user, array $config,
     }
 
     $riferimento = $now->format('Y-m-d-H');
-    if (hasNotificationBeenSent($pdo, (int)$user['id'], 'avviso_non_confermata', $riferimento)) {
+    if (!markNotificationSent($pdo, (int)$user['id'], 'avviso_non_confermata', $riferimento)) {
         return;
     }
 
@@ -574,9 +571,9 @@ function processAvvisoLezioniNonConfermate(PDO $pdo, array $user, array $config,
         $body
     );
     if ($sent) {
-        markNotificationSent($pdo, (int)$user['id'], 'avviso_non_confermata', $riferimento);
         cronLog("Avviso lezioni non confermate inviato a utente #{$user['id']} (" . count($lezioni) . ' lezioni)');
     } else {
+        unmarkNotificationSent($pdo, (int)$user['id'], 'avviso_non_confermata', $riferimento);
         cronLog("Invio avviso lezioni non confermate fallito per utente #{$user['id']}");
     }
 }
