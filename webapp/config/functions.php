@@ -420,8 +420,38 @@ function testSmtpConnection(?array $smtpConfig = null): array
     return ['success' => true, 'message' => 'Connessione SMTP riuscita verso ' . $host . ':' . $port . '.'];
 }
 
+function getSystemConfigValue(string $key, string $default = ''): string
+{
+    try {
+        $pdo = Database::getInstance();
+        $stmt = $pdo->prepare('SELECT `value` FROM system_config WHERE `key` = ? LIMIT 1');
+        $stmt->execute([$key]);
+        $value = $stmt->fetchColumn();
+        return is_string($value) ? $value : $default;
+    } catch (Throwable) {
+        return $default;
+    }
+}
+
+function buildHtmlEmail(string $templateName, array $templateData = []): array
+{
+    require_once dirname(__DIR__) . '/includes/email-builder.php';
+    return emailTemplateBuilder($templateName, $templateData);
+}
+
 // ─── EMAIL HELPER ──────────────────────────────────────────────────────────
-function sendEmail(string $to, string $subject, string $body, string $from = '', ?string &$errorMessage = null): bool {
+function sendEmail(string $to, string $subject, mixed $body, string $from = '', ?string &$errorMessage = null): bool {
+    $to = trim((string)(preg_replace('/[\r\n\x00]+/', '', $to) ?? ''));
+    $subject = trim((string)(preg_replace('/[\r\n\x00]+/', '', $subject) ?? ''));
+    if (!filter_var($to, FILTER_VALIDATE_EMAIL)) {
+        $errorMessage = 'Destinatario email non valido.';
+        return false;
+    }
+    if ($subject === '') {
+        $errorMessage = 'Oggetto email mancante.';
+        return false;
+    }
+
     $smtp = getSmtpConfig();
     if (!empty($smtp['enabled']) && !empty($smtp['host']) && !empty($smtp['port'])) {
         @ini_set('SMTP', (string)$smtp['host']);
@@ -455,10 +485,45 @@ function sendEmail(string $to, string $subject, string $body, string $from = '',
 
     $safeSenderName = $senderName !== '' ? $senderName : 'EasyBooking';
     $safeSenderName = preg_replace('/[\r\n\x00]+/', '', $safeSenderName) ?? 'EasyBooking';
+    $htmlBody = is_array($body) ? trim((string)($body['html'] ?? '')) : trim((string)$body);
+    $textBody = is_array($body) ? trim((string)($body['text'] ?? '')) : '';
+    if ($textBody === '') {
+        $textBody = html_entity_decode(strip_tags($htmlBody), ENT_QUOTES, 'UTF-8');
+    }
+    if ($htmlBody === '' && $textBody === '') {
+        $errorMessage = 'Corpo email vuoto.';
+        return false;
+    }
+
     $headers  = "MIME-Version: 1.0\r\n";
-    $headers .= "Content-type: text/html; charset=UTF-8\r\n";
     $headers .= "From: {$safeSenderName} <{$from}>\r\n";
     $headers .= "Reply-To: {$from}\r\n";
+    $message = '';
+    if ($htmlBody !== '' && $textBody !== '') {
+        $boundary = 'easybooking-' . bin2hex(random_bytes(12));
+        $headers .= "Content-Type: multipart/alternative; boundary=\"{$boundary}\"\r\n";
+        $message = "--{$boundary}\r\n"
+            . "Content-Type: text/plain; charset=UTF-8\r\n"
+            . "Content-Transfer-Encoding: quoted-printable\r\n\r\n"
+            . quoted_printable_encode($textBody) . "\r\n"
+            . "--{$boundary}\r\n"
+            . "Content-Type: text/html; charset=UTF-8\r\n"
+            . "Content-Transfer-Encoding: quoted-printable\r\n\r\n"
+            . quoted_printable_encode($htmlBody) . "\r\n"
+            . "--{$boundary}--";
+    } elseif ($htmlBody !== '') {
+        $headers .= "Content-Type: text/html; charset=UTF-8\r\n";
+        $headers .= "Content-Transfer-Encoding: quoted-printable\r\n";
+        $message = quoted_printable_encode($htmlBody);
+    } else {
+        $headers .= "Content-Type: text/plain; charset=UTF-8\r\n";
+        $headers .= "Content-Transfer-Encoding: quoted-printable\r\n";
+        $message = quoted_printable_encode($textBody);
+    }
+
+    $encodedSubject = function_exists('mb_encode_mimeheader')
+        ? mb_encode_mimeheader($subject, 'UTF-8')
+        : $subject;
 
     $lastError = '';
     set_error_handler(static function (int $severity, string $message) use (&$lastError): bool {
@@ -466,7 +531,7 @@ function sendEmail(string $to, string $subject, string $body, string $from = '',
         return false;
     });
     try {
-        $result = mail($to, $subject, $body, $headers);
+        $result = mail($to, $encodedSubject, $message, $headers);
     } finally {
         restore_error_handler();
     }

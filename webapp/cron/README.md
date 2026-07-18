@@ -24,7 +24,7 @@ Accedi al pannello Hostinger → **Hosting** → **Cron Jobs** e aggiungi i segu
 */5 * * * *   php /home/utente/public_html/webapp/cron/send-notifications.php >> /home/utente/public_html/webapp/cron/send-notifications.log 2>&1
 ```
 
-**Cosa fa:** Lo script verifica ogni ora se è il momento giusto per inviare le notifiche configurate da ogni utente:
+**Cosa fa:** Lo script verifica ad ogni esecuzione se è il momento giusto per inviare le notifiche configurate da ogni utente. Il controllo sull'orario è tollerante di 60 secondi, così l'invio funziona anche se il cron parte con un leggero ritardo.
 
 | Tipo | Quando viene inviata |
 |---|---|
@@ -35,6 +35,22 @@ Accedi al pannello Hostinger → **Hosting** → **Cron Jobs** e aggiungi i segu
 | **Avviso lezioni non confermate** | Ogni esecuzione del cron (verifica lezioni non confermate entro N giorni) |
 
 > **Nota:** Le notifiche vengono inviate solo se l'utente ha abilitato le email in *Impostazioni → Notifiche*.
+
+### Modalità test / anteprima HTML
+
+Per generare le email senza inviarle davvero puoi usare la modalità test:
+
+```bash
+php /home/utente/public_html/webapp/cron/email-test-mode.php
+```
+
+Oppure via browser/HTTP:
+
+```text
+https://tuo-dominio.it/webapp/cron/send-notifications.php?cron_token=<CRON_SECRET>&test_mode=1
+```
+
+In test mode lo script **non invia email**, ma salva l'HTML generato in una cartella temporanea del server e registra il percorso nei log.
 
 ---
 
