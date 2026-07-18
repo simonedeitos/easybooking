@@ -349,12 +349,7 @@ try {
 
 require_once __DIR__ . '/includes/header.php';
 ?>
-<div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
-    <div>
-        <h2 class="mb-1">Calendario</h2>
-        <p class="text-secondary mb-0">Pianifica lezioni, spostamenti e modifiche rapide dal calendario.</p>
-    </div>
-</div>
+
 
 <?php if ($pageError !== ''): ?>
 <div class="alert alert-warning">
