@@ -161,24 +161,260 @@ function italianDayName(string $dayKey): string {
     };
 }
 
+function getSmtpConfig(?PDO $pdo = null): array
+{
+    $defaults = [
+        'enabled' => false,
+        'host' => '',
+        'port' => 587,
+        'username' => '',
+        'password' => '',
+        'encryption' => 'tls',
+        'sender_email' => '',
+        'sender_name' => 'EasyBooking',
+    ];
+
+    try {
+        $pdo = $pdo instanceof PDO ? $pdo : Database::getInstance();
+        $keys = [
+            'smtp_enabled',
+            'smtp_host',
+            'smtp_port',
+            'smtp_username',
+            'smtp_password',
+            'smtp_encryption',
+            'smtp_sender_email',
+            'smtp_sender_name',
+        ];
+        $placeholders = implode(',', array_fill(0, count($keys), '?'));
+        $stmt = $pdo->prepare("SELECT `key`, `value` FROM system_config WHERE `key` IN ($placeholders)");
+        $stmt->execute($keys);
+        foreach ($stmt->fetchAll() as $row) {
+            $key = (string)($row['key'] ?? '');
+            $value = trim((string)($row['value'] ?? ''));
+            switch ($key) {
+                case 'smtp_enabled':
+                    $defaults['enabled'] = $value === '1';
+                    break;
+                case 'smtp_host':
+                    $defaults['host'] = $value;
+                    break;
+                case 'smtp_port':
+                    $port = (int)$value;
+                    if ($port > 0 && $port <= 65535) {
+                        $defaults['port'] = $port;
+                    }
+                    break;
+                case 'smtp_username':
+                    $defaults['username'] = $value;
+                    break;
+                case 'smtp_password':
+                    $defaults['password'] = $value;
+                    break;
+                case 'smtp_encryption':
+                    $defaults['encryption'] = in_array($value, ['', 'tls', 'ssl'], true) ? $value : 'tls';
+                    break;
+                case 'smtp_sender_email':
+                    $defaults['sender_email'] = $value;
+                    break;
+                case 'smtp_sender_name':
+                    $defaults['sender_name'] = $value !== '' ? $value : 'EasyBooking';
+                    break;
+            }
+        }
+    } catch (Throwable) {
+        return $defaults;
+    }
+
+    return $defaults;
+}
+
+function ensureNotificationLogsTable(PDO $pdo): void
+{
+    $pdo->exec(
+        "CREATE TABLE IF NOT EXISTS `notification_logs` (
+            `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+            `notification_type` VARCHAR(50) NOT NULL,
+            `recipient_email` VARCHAR(255) NOT NULL,
+            `recipient_name` VARCHAR(255) DEFAULT NULL,
+            `subject` VARCHAR(255) DEFAULT NULL,
+            `sent_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            `status` ENUM('success','failed','pending') NOT NULL DEFAULT 'pending',
+            `error_message` TEXT DEFAULT NULL,
+            `mail_server_used` VARCHAR(100) DEFAULT NULL,
+            `retry_count` INT UNSIGNED NOT NULL DEFAULT 0,
+            PRIMARY KEY (`id`),
+            INDEX `idx_notification_logs_sent_at` (`sent_at`),
+            INDEX `idx_notification_logs_status` (`status`),
+            INDEX `idx_notification_logs_type` (`notification_type`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    );
+}
+
+function logNotification(array $data): bool
+{
+    try {
+        $pdo = Database::getInstance();
+        ensureNotificationLogsTable($pdo);
+        $stmt = $pdo->prepare(
+            'INSERT INTO notification_logs
+                (notification_type, recipient_email, recipient_name, subject, sent_at, status, error_message, mail_server_used, retry_count)
+             VALUES
+                (:notification_type, :recipient_email, :recipient_name, :subject, :sent_at, :status, :error_message, :mail_server_used, :retry_count)'
+        );
+        $stmt->execute([
+            ':notification_type' => (string)($data['notification_type'] ?? 'unknown'),
+            ':recipient_email' => (string)($data['recipient_email'] ?? ''),
+            ':recipient_name' => ($data['recipient_name'] ?? null) !== null ? (string)$data['recipient_name'] : null,
+            ':subject' => ($data['subject'] ?? null) !== null ? (string)$data['subject'] : null,
+            ':sent_at' => (string)($data['sent_at'] ?? date('Y-m-d H:i:s')),
+            ':status' => in_array(($data['status'] ?? ''), ['success', 'failed', 'pending'], true) ? (string)$data['status'] : 'pending',
+            ':error_message' => ($data['error_message'] ?? null) !== null ? (string)$data['error_message'] : null,
+            ':mail_server_used' => ($data['mail_server_used'] ?? null) !== null ? (string)$data['mail_server_used'] : null,
+            ':retry_count' => max(0, (int)($data['retry_count'] ?? 0)),
+        ]);
+        return true;
+    } catch (Throwable $e) {
+        error_log('logNotification error: ' . $e->getMessage());
+        return false;
+    }
+}
+
+function getNotificationLogs(int $limit = 50, int $offset = 0, array $filters = []): array
+{
+    $limit = max(1, min(200, $limit));
+    $offset = max(0, $offset);
+
+    try {
+        $pdo = Database::getInstance();
+        ensureNotificationLogsTable($pdo);
+
+        $where = [];
+        $params = [];
+
+        if (!empty($filters['status']) && in_array($filters['status'], ['success', 'failed', 'pending'], true)) {
+            $where[] = 'status = ?';
+            $params[] = $filters['status'];
+        }
+        if (!empty($filters['notification_type'])) {
+            $where[] = 'notification_type = ?';
+            $params[] = (string)$filters['notification_type'];
+        }
+        if (!empty($filters['date_from'])) {
+            $where[] = 'DATE(sent_at) >= ?';
+            $params[] = (string)$filters['date_from'];
+        }
+        if (!empty($filters['date_to'])) {
+            $where[] = 'DATE(sent_at) <= ?';
+            $params[] = (string)$filters['date_to'];
+        }
+
+        $whereSql = $where ? (' WHERE ' . implode(' AND ', $where)) : '';
+        $countStmt = $pdo->prepare('SELECT COUNT(*) FROM notification_logs' . $whereSql);
+        $countStmt->execute($params);
+        $total = (int)$countStmt->fetchColumn();
+
+        $rowsStmt = $pdo->prepare(
+            'SELECT id, notification_type, recipient_email, recipient_name, subject, sent_at, status, error_message, mail_server_used, retry_count
+             FROM notification_logs' . $whereSql . '
+             ORDER BY sent_at DESC, id DESC
+             LIMIT ' . (int)$limit . ' OFFSET ' . (int)$offset
+        );
+        $rowsStmt->execute($params);
+
+        return [
+            'total' => $total,
+            'rows' => $rowsStmt->fetchAll(),
+        ];
+    } catch (Throwable $e) {
+        error_log('getNotificationLogs error: ' . $e->getMessage());
+        return [
+            'total' => 0,
+            'rows' => [],
+        ];
+    }
+}
+
+function testSmtpConnection(?array $smtpConfig = null): array
+{
+    $smtp = $smtpConfig ?? getSmtpConfig();
+    if (empty($smtp['enabled'])) {
+        return ['success' => true, 'message' => 'SMTP disabilitato: verrà usata la configurazione PHP mail predefinita.'];
+    }
+
+    $host = trim((string)($smtp['host'] ?? ''));
+    $port = (int)($smtp['port'] ?? 0);
+    $encryption = (string)($smtp['encryption'] ?? '');
+
+    if ($host === '' || $port <= 0 || $port > 65535) {
+        return ['success' => false, 'message' => 'Host/porta SMTP non validi.'];
+    }
+
+    $target = $encryption === 'ssl' ? ('ssl://' . $host) : $host;
+    $errno = 0;
+    $errstr = '';
+    $socket = @fsockopen($target, $port, $errno, $errstr, 5);
+    if (!is_resource($socket)) {
+        return ['success' => false, 'message' => 'Connessione SMTP fallita: ' . ($errstr !== '' ? $errstr : ('errore #' . $errno))];
+    }
+    @fclose($socket);
+
+    return ['success' => true, 'message' => 'Connessione SMTP riuscita verso ' . $host . ':' . $port . '.'];
+}
+
 // ─── EMAIL HELPER ──────────────────────────────────────────────────────────
-function sendEmail(string $to, string $subject, string $body, string $from = ''): bool {
-    if (empty($from)) {
-        try {
-            $pdo  = Database::getInstance();
-            $stmt = $pdo->prepare("SELECT `value` FROM system_config WHERE `key` = 'app_email' LIMIT 1");
-            $stmt->execute();
-            $row = $stmt->fetch();
-            $from = $row ? $row['value'] : 'noreply@easybooking.local';
-        } catch (Exception) {
-            $from = 'noreply@easybooking.local';
+function sendEmail(string $to, string $subject, string $body, string $from = '', ?string &$errorMessage = null): bool {
+    $smtp = getSmtpConfig();
+    if (!empty($smtp['enabled']) && !empty($smtp['host']) && !empty($smtp['port'])) {
+        @ini_set('SMTP', (string)$smtp['host']);
+        @ini_set('smtp_port', (string)$smtp['port']);
+    }
+
+    $senderName = trim((string)($smtp['sender_name'] ?? 'EasyBooking'));
+    $smtpSenderEmail = trim((string)($smtp['sender_email'] ?? ''));
+
+    if ($from === '') {
+        if ($smtpSenderEmail !== '' && filter_var($smtpSenderEmail, FILTER_VALIDATE_EMAIL)) {
+            $from = $smtpSenderEmail;
+        } else {
+            try {
+                $pdo  = Database::getInstance();
+                $stmt = $pdo->prepare("SELECT `value` FROM system_config WHERE `key` = 'app_email' LIMIT 1");
+                $stmt->execute();
+                $row = $stmt->fetch();
+                $from = $row ? $row['value'] : 'noreply@easybooking.local';
+            } catch (Exception) {
+                $from = 'noreply@easybooking.local';
+            }
         }
     }
+
+    if (!filter_var($from, FILTER_VALIDATE_EMAIL)) {
+        $from = 'noreply@easybooking.local';
+    }
+
+    @ini_set('sendmail_from', $from);
+
+    $safeSenderName = str_replace(["\r", "\n"], '', $senderName !== '' ? $senderName : 'EasyBooking');
     $headers  = "MIME-Version: 1.0\r\n";
     $headers .= "Content-type: text/html; charset=UTF-8\r\n";
-    $headers .= "From: EasyBooking <{$from}>\r\n";
+    $headers .= "From: {$safeSenderName} <{$from}>\r\n";
     $headers .= "Reply-To: {$from}\r\n";
-    return mail($to, $subject, $body, $headers);
+
+    $lastError = '';
+    set_error_handler(static function (int $severity, string $message) use (&$lastError): bool {
+        $lastError = $message;
+        return true;
+    });
+    try {
+        $result = mail($to, $subject, $body, $headers);
+    } finally {
+        restore_error_handler();
+    }
+    if (!$result) {
+        $errorMessage = $lastError !== '' ? $lastError : 'mail() ha restituito false';
+    }
+    return $result;
 }
 
 // ─── MISC ──────────────────────────────────────────────────────────────────

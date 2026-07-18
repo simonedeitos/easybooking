@@ -33,7 +33,15 @@ INSERT IGNORE INTO `system_config` (`key`, `value`) VALUES
     ('app_name',             'EasyBooking'),
     ('app_email',            'noreply@easybooking.local'),
     ('encryption_key',       ''),
-    ('setup_complete',       '0');
+    ('setup_complete',       '0'),
+    ('smtp_enabled',         '0'),
+    ('smtp_host',            ''),
+    ('smtp_port',            '587'),
+    ('smtp_username',        ''),
+    ('smtp_password',        ''),
+    ('smtp_encryption',      'tls'),
+    ('smtp_sender_email',    ''),
+    ('smtp_sender_name',     'EasyBooking');
 
 -- ── Strumenti (Musical Instruments) ───────────────────────
 CREATE TABLE IF NOT EXISTS `strumenti` (
@@ -215,6 +223,24 @@ CREATE TABLE IF NOT EXISTS `notifiche_config` (
     PRIMARY KEY (`id`),
     KEY `idx_user_id` (`user_id`),
     FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ── Notification Delivery Logs ───────────────────────────────
+CREATE TABLE IF NOT EXISTS `notification_logs` (
+    `id`                    BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `notification_type`     VARCHAR(50)     NOT NULL,
+    `recipient_email`       VARCHAR(255)    NOT NULL,
+    `recipient_name`        VARCHAR(255)    DEFAULT NULL,
+    `subject`               VARCHAR(255)    DEFAULT NULL,
+    `sent_at`               DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `status`                ENUM('success','failed','pending') NOT NULL DEFAULT 'pending',
+    `error_message`         TEXT            DEFAULT NULL,
+    `mail_server_used`      VARCHAR(100)    DEFAULT NULL,
+    `retry_count`           INT UNSIGNED    NOT NULL DEFAULT 0,
+    PRIMARY KEY (`id`),
+    INDEX `idx_notification_logs_sent_at` (`sent_at`),
+    INDEX `idx_notification_logs_status` (`status`),
+    INDEX `idx_notification_logs_type` (`notification_type`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ── Tariffe di Coppia ──────────────────────────────────────

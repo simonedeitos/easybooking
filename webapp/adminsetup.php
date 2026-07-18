@@ -61,7 +61,7 @@ function cleanEmailAddress(mixed $value): ?string
 
 function normalizeTab(string $tab): string
 {
-    $allowed = ['setup', 'verify', 'import', 'reset', 'key'];
+    $allowed = ['setup', 'verify', 'import', 'reset', 'key', 'smtp'];
     return in_array($tab, $allowed, true) ? $tab : 'setup';
 }
 
@@ -169,6 +169,7 @@ function expectedTables(): array
         'prenotazioni',
         'impostazioni_generali',
         'notifiche_config',
+        'notification_logs',
         'tariffe_coppia',
         'cloud_file',
         'cloud_stats',
@@ -1294,6 +1295,95 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     redirect(adminSetupUrl('setup'));
                     break;
 
+                case 'save_smtp':
+                    verifyCsrf();
+                    $activeTab = 'smtp';
+                    $smtpEnabled = isset($_POST['smtp_enabled']) ? '1' : '0';
+                    $smtpHost = cleanText(post('smtp_host'), 255);
+                    $smtpPort = sanitizeInt(post('smtp_port'));
+                    $smtpUsername = cleanText(post('smtp_username'), 255);
+                    $smtpPassword = (string)post('smtp_password');
+                    $smtpEncryption = cleanText(post('smtp_encryption'), 10);
+                    $smtpSenderEmail = cleanText(post('smtp_sender_email'), 255);
+                    $smtpSenderName = cleanText(post('smtp_sender_name'), 255);
+
+                    if ($smtpEnabled === '1' && $smtpHost === '') {
+                        $errorMessage = 'Inserisci host SMTP quando SMTP è abilitato.';
+                        break;
+                    }
+                    if ($smtpEnabled === '1' && ($smtpPort < 1 || $smtpPort > 65535)) {
+                        $errorMessage = 'Porta SMTP non valida.';
+                        break;
+                    }
+                    if (!in_array($smtpEncryption, ['', 'tls', 'ssl'], true)) {
+                        $errorMessage = 'Protocollo SMTP non valido.';
+                        break;
+                    }
+                    if ($smtpSenderEmail !== '' && !filter_var($smtpSenderEmail, FILTER_VALIDATE_EMAIL)) {
+                        $errorMessage = 'Email mittente SMTP non valida.';
+                        break;
+                    }
+
+                    $smtpCurrent = getSmtpConfig();
+                    $smtpPasswordToStore = $smtpPassword !== '' ? $smtpPassword : (string)$smtpCurrent['password'];
+
+                    try {
+                        $pdo = currentPdo();
+                        if (!$pdo instanceof PDO) {
+                            $errorMessage = 'Connessione al database non disponibile.';
+                            break;
+                        }
+
+                        $pairs = [
+                            'smtp_enabled' => $smtpEnabled,
+                            'smtp_host' => $smtpHost,
+                            'smtp_port' => (string)($smtpPort > 0 ? $smtpPort : 587),
+                            'smtp_username' => $smtpUsername,
+                            'smtp_password' => $smtpPasswordToStore,
+                            'smtp_encryption' => $smtpEncryption,
+                            'smtp_sender_email' => $smtpSenderEmail,
+                            'smtp_sender_name' => $smtpSenderName !== '' ? $smtpSenderName : 'EasyBooking',
+                        ];
+                        $stmt = $pdo->prepare(
+                            'INSERT INTO system_config (`key`, `value`) VALUES (?, ?)
+                             ON DUPLICATE KEY UPDATE `value` = VALUES(`value`), updated_at = CURRENT_TIMESTAMP'
+                        );
+                        foreach ($pairs as $key => $value) {
+                            $stmt->execute([$key, $value]);
+                        }
+                        setFlash('success', 'Configurazione SMTP salvata.');
+                        redirect(adminSetupUrl('smtp'));
+                    } catch (Throwable $exception) {
+                        $errorMessage = 'Errore durante il salvataggio SMTP: ' . $exception->getMessage();
+                    }
+                    break;
+
+                case 'send_test_smtp_email':
+                    verifyCsrf();
+                    $activeTab = 'smtp';
+                    $targetEmail = cleanEmailAddress(post('test_email'));
+                    if ($targetEmail === null) {
+                        $errorMessage = 'Inserisci una email valida per il test.';
+                        break;
+                    }
+
+                    $smtpTest = testSmtpConnection(getSmtpConfig());
+                    if (empty($smtpTest['success'])) {
+                        $errorMessage = (string)($smtpTest['message'] ?? 'Connessione SMTP non riuscita.');
+                        break;
+                    }
+
+                    $mailError = '';
+                    $body = '<p>Test SMTP da EasyBooking adminsetup.</p><p>Invio eseguito il ' . h(date('d/m/Y H:i:s')) . '.</p>';
+                    if (!sendEmail($targetEmail, 'Test SMTP EasyBooking', $body, '', $mailError)) {
+                        $errorMessage = 'Invio email di test fallito: ' . ($mailError !== '' ? $mailError : 'errore sconosciuto');
+                        break;
+                    }
+
+                    setFlash('success', 'Email di test inviata a ' . $targetEmail . '.');
+                    redirect(adminSetupUrl('smtp'));
+                    break;
+
                 case 'reset_data':
                     verifyCsrf();
                     $activeTab = 'reset';
@@ -1352,6 +1442,7 @@ foreach (expectedTables() as $table) {
 
 $currentEncryptionKeyBase64 = fetchStoredEncryptionKeyBase64();
 $currentEncryptionKeyHex = fetchStoredEncryptionKeyHex();
+$smtpConfig = getSmtpConfig();
 $flashHtml = renderFlashMessages();
 ?>
 <!DOCTYPE html>
@@ -1702,6 +1793,11 @@ $flashHtml = renderFlashMessages();
                         <i class="fa-solid fa-key me-2"></i>Chiave Cifratura
                     </button>
                 </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link <?= $activeTab === 'smtp' ? 'active' : '' ?>" id="smtp-tab" data-bs-toggle="tab" data-bs-target="#tab-smtp" type="button" role="tab" data-tab="smtp">
+                        <i class="fa-solid fa-envelope-circle-check me-2"></i>Configurazione SMTP
+                    </button>
+                </li>
             </ul>
 
             <div class="tab-content" id="setupTabsContent">
@@ -1898,6 +1994,76 @@ $flashHtml = renderFlashMessages();
                             <div class="key-preview"><?= $currentEncryptionKeyHex !== null ? h($currentEncryptionKeyHex) : 'Nessuna chiave disponibile.' ?></div>
                         </div>
                     </div>
+                </div>
+
+                <div class="tab-pane fade <?= $activeTab === 'smtp' ? 'show active' : '' ?>" id="tab-smtp" role="tabpanel" aria-labelledby="smtp-tab">
+                    <div class="section-title">Configurazione SMTP</div>
+                    <p class="muted-text">Configura server SMTP e mittente globale usato dalle notifiche email.</p>
+                    <form method="POST" action="<?= h(adminSetupUrl('smtp')) ?>" class="row g-3">
+                        <?= csrfField() ?>
+                        <input type="hidden" name="action" value="save_smtp">
+                        <div class="col-12">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="smtp_enabled" name="smtp_enabled" value="1" <?= !empty($smtpConfig['enabled']) ? 'checked' : '' ?>>
+                                <label class="form-check-label" for="smtp_enabled">Abilita SMTP personalizzato</label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="smtp_host">Host SMTP</label>
+                            <input type="text" class="form-control" id="smtp_host" name="smtp_host" value="<?= h((string)$smtpConfig['host']) ?>" placeholder="smtp.provider.com">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label" for="smtp_port">Porta</label>
+                            <input type="number" class="form-control" id="smtp_port" name="smtp_port" min="1" max="65535" value="<?= h((string)$smtpConfig['port']) ?>">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label" for="smtp_encryption">Cifratura</label>
+                            <select class="form-select" id="smtp_encryption" name="smtp_encryption">
+                                <option value="" <?= (string)$smtpConfig['encryption'] === '' ? 'selected' : '' ?>>Nessuna</option>
+                                <option value="tls" <?= (string)$smtpConfig['encryption'] === 'tls' ? 'selected' : '' ?>>TLS</option>
+                                <option value="ssl" <?= (string)$smtpConfig['encryption'] === 'ssl' ? 'selected' : '' ?>>SSL</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="smtp_username">Username SMTP</label>
+                            <input type="text" class="form-control" id="smtp_username" name="smtp_username" value="<?= h((string)$smtpConfig['username']) ?>">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="smtp_password">Password SMTP</label>
+                            <input type="password" class="form-control" id="smtp_password" name="smtp_password" autocomplete="new-password">
+                            <div class="small-note mt-1">Lascia vuoto per mantenere la password salvata.</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="smtp_sender_email">Email mittente</label>
+                            <input type="email" class="form-control" id="smtp_sender_email" name="smtp_sender_email" value="<?= h((string)$smtpConfig['sender_email']) ?>">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="smtp_sender_name">Nome mittente</label>
+                            <input type="text" class="form-control" id="smtp_sender_name" name="smtp_sender_name" value="<?= h((string)$smtpConfig['sender_name']) ?>">
+                        </div>
+                        <div class="col-12">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fa-solid fa-floppy-disk me-2"></i>Salva configurazione SMTP
+                            </button>
+                        </div>
+                    </form>
+
+                    <hr class="my-4">
+
+                    <div class="section-title">Invio email di test</div>
+                    <form method="POST" action="<?= h(adminSetupUrl('smtp')) ?>" class="row g-3">
+                        <?= csrfField() ?>
+                        <input type="hidden" name="action" value="send_test_smtp_email">
+                        <div class="col-md-8">
+                            <label class="form-label" for="test_email">Email destinataria test</label>
+                            <input type="email" class="form-control" id="test_email" name="test_email" required placeholder="nome@dominio.it">
+                        </div>
+                        <div class="col-md-4 d-grid align-content-end">
+                            <button type="submit" class="btn btn-outline-info mt-2">
+                                <i class="fa-solid fa-paper-plane me-2"></i>Invia email test
+                            </button>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>

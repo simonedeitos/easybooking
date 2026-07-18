@@ -18,10 +18,10 @@ Accedi al pannello Hostinger → **Hosting** → **Cron Jobs** e aggiungi i segu
 
 ---
 
-### 2. Notifiche email (ogni ora)
+### 2. Notifiche email (ogni 5 minuti consigliato)
 
 ```
-0 * * * *   php /home/utente/public_html/webapp/cron/send-notifications.php >> /home/utente/public_html/webapp/cron/send-notifications.log 2>&1
+*/5 * * * *   php /home/utente/public_html/webapp/cron/send-notifications.php >> /home/utente/public_html/webapp/cron/send-notifications.log 2>&1
 ```
 
 **Cosa fa:** Lo script verifica ogni ora se è il momento giusto per inviare le notifiche configurate da ogni utente:
@@ -31,8 +31,8 @@ Accedi al pannello Hostinger → **Hosting** → **Cron Jobs** e aggiungi i segu
 | **Promemoria lezioni** | Il giorno e orario configurato (es. ogni lunedì alle 09:00) |
 | **Report settimanale** | Il giorno e orario configurato (es. ogni venerdì alle 18:00) |
 | **Report mensile** | Il giorno del mese e orario configurato (es. il 1° di ogni mese alle 18:00) |
-| **Avviso scadenza pacchetti** | Ogni ora (verifica se ci sono pacchetti in esaurimento) |
-| **Avviso lezioni non confermate** | Ogni ora (verifica lezioni non confermate entro N giorni) |
+| **Avviso scadenza pacchetti** | Ogni esecuzione del cron (verifica se ci sono pacchetti in esaurimento) |
+| **Avviso lezioni non confermate** | Ogni esecuzione del cron (verifica lezioni non confermate entro N giorni) |
 
 > **Nota:** Le notifiche vengono inviate solo se l'utente ha abilitato le email in *Impostazioni → Notifiche*.
 
