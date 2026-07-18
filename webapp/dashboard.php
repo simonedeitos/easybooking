@@ -101,11 +101,11 @@ try {
          INNER JOIN clienti c ON a.cliente_id = c.id
          LEFT JOIN pacchetti pk ON a.pacchetto_id = pk.id
          LEFT JOIN (
-             SELECT acquisto_id, COUNT(*) AS lezioni_svolte
-             FROM prenotazioni
-             WHERE stato = 'Svolta' AND acquisto_id IS NOT NULL
-             GROUP BY acquisto_id
-         ) ls ON ls.acquisto_id = a.id
+    SELECT acquisto_id, COUNT(*) AS lezioni_svolte
+    FROM prenotazioni
+    WHERE (stato = 'Svolta' OR stato = 'Assente') AND acquisto_id IS NOT NULL
+    GROUP BY acquisto_id
+) ls ON ls.acquisto_id = a.id
          WHERE a.stato_pagamento <> 'Rimborso'
          HAVING lezioni_acquistate > 0 AND lezioni_rimanenti > 0 AND lezioni_rimanenti <= ?
          ORDER BY lezioni_rimanenti ASC, a.data_acquisto DESC, a.id DESC"
