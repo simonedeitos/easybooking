@@ -200,7 +200,8 @@ function cronPreviewDirectory(): string
 
 function saveTestModePreview(string $notificationType, string $recipientEmail, string $subject, array $body, string $timezone): string
 {
-    $baseName = date('Ymd-His') . '-' . preg_replace('/[^a-z0-9_-]+/i', '-', $notificationType) . '.html';
+    $baseName = date('Ymd-His') . '-' . preg_replace('/[^a-z0-9_-]+/i', '-', $notificationType)
+        . '-' . bin2hex(random_bytes(4)) . '.html';
     $path = cronPreviewDirectory() . DIRECTORY_SEPARATOR . $baseName;
     $html = '<!-- recipient: ' . htmlspecialchars($recipientEmail, ENT_QUOTES, 'UTF-8')
         . ' | subject: ' . htmlspecialchars($subject, ENT_QUOTES, 'UTF-8')

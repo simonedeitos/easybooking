@@ -443,6 +443,7 @@ function buildHtmlEmail(string $templateName, array $templateData = []): array
 function sendEmail(string $to, string $subject, mixed $body, string $from = '', ?string &$errorMessage = null): bool {
     $to = trim((string)(preg_replace('/[\r\n\x00]+/', '', $to) ?? ''));
     $subject = trim((string)(preg_replace('/[\r\n\x00]+/', '', $subject) ?? ''));
+    $from = trim((string)(preg_replace('/[\r\n\x00]+/', '', $from) ?? ''));
     if (!filter_var($to, FILTER_VALIDATE_EMAIL)) {
         $errorMessage = 'Destinatario email non valido.';
         return false;

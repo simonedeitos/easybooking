@@ -144,7 +144,7 @@ function emailTemplateAsciiBars(array $series, int $width = 16): string
         $value = (float)$value;
         $bars = (int)round(($value / $max) * $width);
         $lines[] = str_pad(mb_substr((string)$label, 0, 12), 12) . ' | '
-            . str_repeat('█', max(0, $bars))
+            . str_repeat('#', max(0, $bars))
             . ' ' . rtrim(rtrim(number_format($value, 2, ',', ''), '0'), ',');
     }
 
