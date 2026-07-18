@@ -291,6 +291,10 @@ function decryptFullName(?string $nome, ?string $cognome, string $fallback = '')
  */
 function markLessonsDone(): void
 {
+    if (session_status() !== PHP_SESSION_ACTIVE) {
+        return;
+    }
+
     $throttleKey = '_mark_lessons_done_at';
     $lastRun     = $_SESSION[$throttleKey] ?? 0;
 

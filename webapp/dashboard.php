@@ -9,9 +9,6 @@ require_once __DIR__ . '/config/encryption.php';
 require_once __DIR__ . '/includes/auth.php';
 requireAuth();
 
-// Ensure past lessons are marked as done before loading dashboard data
-markLessonsDone();
-
 $pdo = Database::getInstance();
 
 $totalClients = 0;
