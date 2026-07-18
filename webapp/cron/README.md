@@ -46,12 +46,51 @@ Se vuoi chiamare i cron via HTTP (es. da un servizio esterno), imposta la variab
 CRON_SECRET=una_stringa_segreta_lunga
 ```
 
+Genera una stringa sicura con: `openssl rand -hex 32`
+
 E poi chiama gli script con:
 ```
 https://tuo-dominio.it/webapp/cron/mark-lessons-done.php?cron_token=una_stringa_segreta_lunga
 ```
 
 > ⚠️ La cartella `cron/` è bloccata ad Apache via `.htaccess`. Se usi Nginx, aggiungi manualmente il blocco.
+
+---
+
+### Test via browser (debug)
+
+Per testare gli script via browser senza CLI:
+
+1. **Disabilita temporaneamente** il file `cron/.htaccess` (rinominalo in `.htaccess.bak`)
+2. Assicurati che `webapp/.env` esista e contenga `CRON_SECRET=<valore>` e le credenziali DB corrette
+3. Accedi via browser:
+   ```
+   http://localhost/webapp/cron/mark-lessons-done.php?cron_token=<valore di CRON_SECRET>
+   http://localhost/webapp/cron/send-notifications.php?cron_token=<valore di CRON_SECRET>
+   ```
+4. **Ripristina** `.htaccess` dopo il test
+
+> ⚠️ Non lasciare `.htaccess` disabilitato in produzione.
+
+---
+
+### Risoluzione problemi
+
+#### Errore 500 via browser
+La causa più comune è una configurazione mancante o errata. Controllare:
+
+1. **`webapp/.env` esiste?** Se non esiste, copiare `.env.example` in `.env` e compilare i valori.
+2. **`CRON_SECRET` è impostato** in `.env` e il valore coincide con il parametro `cron_token` nell'URL.
+3. **Credenziali database corrette** (`DB_HOST`, `DB_NAME`, `DB_USER`, `DB_PASS`).
+4. **Log di errore PHP:** controllare `webapp/cron/php-error.log` per i dettagli tecnici.
+   Questo file viene creato automaticamente quando gli script vengono chiamati via HTTP.
+
+#### Risposta 403 Accesso negato
+- `CRON_SECRET` non è nel `.env` oppure il `cron_token` nell'URL non corrisponde.
+
+#### Nessun output / pagina bianca
+- Il file `.env` non esiste: lo script si interrompe prima di produrre output.
+- Controllare `webapp/cron/php-error.log`.
 
 ---
 
