@@ -14,6 +14,7 @@ if (function_exists('date_default_timezone_set')) {
 $__isCli = (PHP_SAPI === 'cli');
 $__logFile = __DIR__ . '/send-notifications.log';
 $__testMode = isset($_GET['test_mode']) && $_GET['test_mode'] === '1';
+$__maxRetryDelaySeconds = 8;
 
 if (!$__isCli) {
     ob_start();
@@ -123,7 +124,10 @@ function unmarkNotificationSent(PDO $pdo, int $userId, string $tipo, string $rif
 
 function cronResolveTimezone(PDO $pdo): string
 {
-    $candidate = trim(getSystemConfigValue('app_timezone', getenv('APP_TIMEZONE') ?: date_default_timezone_get()));
+    $systemTimezone = trim(getSystemConfigValue('app_timezone', ''));
+    $environmentTimezone = trim((string)(getenv('APP_TIMEZONE') ?: ''));
+    $defaultTimezone = date_default_timezone_get();
+    $candidate = $systemTimezone !== '' ? $systemTimezone : ($environmentTimezone !== '' ? $environmentTimezone : $defaultTimezone);
     if ($candidate === '') {
         $candidate = 'Europe/Rome';
     }
@@ -204,6 +208,7 @@ function sendLoggedNotification(
     string $logFile,
     bool $testMode = false,
     string $timezone = 'Europe/Rome',
+    int $maxRetryDelaySeconds = 8,
     int $additionalRetries = 2
 ): bool {
     $retryCount = 0;
@@ -274,7 +279,7 @@ function sendLoggedNotification(
         cronLog("    ✗ Tentativo {$attempt} fallito: {$lastError}", $logFile);
 
         if ($attempt < $maxAttempts) {
-            $delaySeconds = min(8, 2 ** $retryCount);
+            $delaySeconds = min($maxRetryDelaySeconds, 2 ** $retryCount);
             cronLog("    ⟳ Nuovo tentativo tra {$delaySeconds} secondi", $logFile);
             sleep($delaySeconds);
         }
@@ -350,7 +355,8 @@ function processReminderLezioni(
         ['html' => (string)$payload['html'], 'text' => (string)$payload['text']],
         $logFile,
         $testMode,
-        $timezone
+        $timezone,
+        $GLOBALS['__maxRetryDelaySeconds'] ?? 8
     );
 
     if ($sent) {
@@ -413,7 +419,8 @@ function processReportSettimanale(
         ['html' => (string)$payload['html'], 'text' => (string)$payload['text']],
         $logFile,
         $testMode,
-        $timezone
+        $timezone,
+        $GLOBALS['__maxRetryDelaySeconds'] ?? 8
     );
 
     if ($sent) {
@@ -475,7 +482,8 @@ function processReportMensile(
         ['html' => (string)$payload['html'], 'text' => (string)$payload['text']],
         $logFile,
         $testMode,
-        $timezone
+        $timezone,
+        $GLOBALS['__maxRetryDelaySeconds'] ?? 8
     );
 
     if ($sent) {
@@ -527,7 +535,8 @@ function processAvvisoScadenza(
         ['html' => (string)$payload['html'], 'text' => (string)$payload['text']],
         $logFile,
         $testMode,
-        $timezone
+        $timezone,
+        $GLOBALS['__maxRetryDelaySeconds'] ?? 8
     );
 
     if ($sent) {
@@ -579,7 +588,8 @@ function processAvvisoNonConfermata(
         ['html' => (string)$payload['html'], 'text' => (string)$payload['text']],
         $logFile,
         $testMode,
-        $timezone
+        $timezone,
+        $GLOBALS['__maxRetryDelaySeconds'] ?? 8
     );
 
     if ($sent) {

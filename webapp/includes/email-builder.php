@@ -151,9 +151,22 @@ function emailTemplateAsciiBars(array $series, int $width = 16): string
     return implode("\n", $lines);
 }
 
+function emailTemplateAppName(array $data = []): string
+{
+    if (!empty($data['app_name'])) {
+        return trim((string)$data['app_name']);
+    }
+
+    if (function_exists('appName')) {
+        return appName();
+    }
+
+    return 'EasyBooking';
+}
+
 function emailTemplateBuilder(string $templateName, array $data = []): array
 {
-    $appName = trim((string)($data['app_name'] ?? (function_exists('appName') ? appName() : 'EasyBooking')));
+    $appName = emailTemplateAppName($data);
     $title = trim((string)($data['title'] ?? 'Notifica EasyBooking'));
     $generatedAt = trim((string)($data['generated_at'] ?? date('d/m/Y H:i')));
     $footerNote = trim((string)($data['footer_note'] ?? 'Questo messaggio è stato generato automaticamente.'));

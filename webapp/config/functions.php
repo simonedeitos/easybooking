@@ -500,10 +500,7 @@ function sendEmail(string $to, string $subject, mixed $body, string $from = '', 
     $headers .= "Reply-To: {$from}\r\n";
     $message = '';
     if ($htmlBody !== '' && $textBody !== '') {
-        $boundaryToken = function_exists('random_bytes')
-            ? bin2hex(random_bytes(12))
-            : str_replace('.', '', uniqid('easybooking', true));
-        $boundary = 'easybooking-' . $boundaryToken;
+        $boundary = 'easybooking-' . bin2hex(random_bytes(12));
         $headers .= "Content-Type: multipart/alternative; boundary=\"{$boundary}\"\r\n";
         $message = "--{$boundary}\r\n"
             . "Content-Type: text/plain; charset=UTF-8\r\n"
