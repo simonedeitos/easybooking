@@ -134,12 +134,20 @@ function markNotificationSent(PDO $pdo, int $userId, string $tipo, string $rifer
     }
 }
 
+/**
+ * Rimuove il marcatore di invio per consentire un nuovo tentativo nello stesso periodo.
+ * Va chiamata solo quando l'invio email fallisce dopo aver riservato lo slot.
+ */
 function unmarkNotificationSent(PDO $pdo, int $userId, string $tipo, string $riferimento): void
 {
     $stmt = $pdo->prepare('DELETE FROM notifiche_log WHERE user_id = ? AND tipo = ? AND riferimento = ?');
     $stmt->execute([$userId, $tipo, $riferimento]);
 }
 
+/**
+ * Invia una notifica email con tentativi multipli e registra l'esito in notification_logs.
+ * Restituisce true solo se almeno un tentativo va a buon fine.
+ */
 function sendLoggedNotification(
     array $smtpConfig,
     array $smtpConnectionTest,

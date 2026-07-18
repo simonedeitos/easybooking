@@ -235,10 +235,12 @@ function encodeSmtpSecret(string $plain): string
         return '';
     }
     if (!function_exists('encryptField')) {
+        error_log('encodeSmtpSecret warning: encryptField non disponibile, password SMTP salvata in chiaro.');
         return $plain;
     }
     $encrypted = encryptField($plain);
     if ($encrypted === '') {
+        error_log('encodeSmtpSecret warning: cifratura SMTP non riuscita, password salvata in chiaro.');
         return $plain;
     }
     return 'enc:' . $encrypted;
@@ -399,7 +401,7 @@ function testSmtpConnection(?array $smtpConfig = null): array
     $target = $encryption === 'ssl' ? ('ssl://' . $host) : $host;
     $errno = 0;
     $errstr = '';
-    $socket = @fsockopen($target, $port, $errno, $errstr, 5);
+    $socket = fsockopen($target, $port, $errno, $errstr, 5);
     if (!is_resource($socket)) {
         $detail = 'errore #' . $errno;
         if ($errstr !== '') {
@@ -411,7 +413,8 @@ function testSmtpConnection(?array $smtpConfig = null): array
     $banner = fgets($socket);
     @fclose($socket);
     if ($banner === false || preg_match('/^220\s/', ltrim($banner)) !== 1) {
-        return ['success' => false, 'message' => 'Connessione aperta ma banner SMTP non valido.'];
+        $bannerText = $banner !== false ? trim($banner) : 'banner non disponibile';
+        return ['success' => false, 'message' => 'Connessione aperta ma banner SMTP non valido: ' . $bannerText];
     }
 
     return ['success' => true, 'message' => 'Connessione SMTP riuscita verso ' . $host . ':' . $port . '.'];
@@ -450,7 +453,8 @@ function sendEmail(string $to, string $subject, string $body, string $from = '',
 
     @ini_set('sendmail_from', $from);
 
-    $safeSenderName = str_replace(["\r", "\n"], '', $senderName !== '' ? $senderName : 'EasyBooking');
+    $safeSenderName = $senderName !== '' ? $senderName : 'EasyBooking';
+    $safeSenderName = preg_replace('/[\r\n\x00]+/', '', $safeSenderName) ?? 'EasyBooking';
     $headers  = "MIME-Version: 1.0\r\n";
     $headers .= "Content-type: text/html; charset=UTF-8\r\n";
     $headers .= "From: {$safeSenderName} <{$from}>\r\n";
