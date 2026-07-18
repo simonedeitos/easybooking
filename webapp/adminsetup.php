@@ -1348,12 +1348,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             'INSERT INTO system_config (`key`, `value`) VALUES (?, ?)
                              ON DUPLICATE KEY UPDATE `value` = VALUES(`value`), updated_at = CURRENT_TIMESTAMP'
                         );
+                        $pdo->beginTransaction();
                         foreach ($pairs as $key => $value) {
                             $stmt->execute([$key, $value]);
                         }
+                        $pdo->commit();
                         setFlash('success', 'Configurazione SMTP salvata.');
                         redirect(adminSetupUrl('smtp'));
                     } catch (Throwable $exception) {
+                        if (isset($pdo) && $pdo instanceof PDO && $pdo->inTransaction()) {
+                            $pdo->rollBack();
+                        }
                         $errorMessage = 'Errore durante il salvataggio SMTP: ' . $exception->getMessage();
                     }
                     break;

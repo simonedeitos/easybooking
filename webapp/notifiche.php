@@ -248,8 +248,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'smtp_sender_email' => $smtpSenderEmail,
             'smtp_sender_name' => $smtpSenderName !== '' ? $smtpSenderName : 'EasyBooking',
         ];
-        foreach ($pairs as $key => $value) {
-            $stmt->execute([$key, $value]);
+        $pdo->beginTransaction();
+        try {
+            foreach ($pairs as $key => $value) {
+                $stmt->execute([$key, $value]);
+            }
+            $pdo->commit();
+        } catch (Throwable $e) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            throw $e;
         }
 
         setFlash('success', 'Configurazione SMTP salvata.');
@@ -335,8 +344,9 @@ $logRows = $logResult['rows'];
 
 $logTypeOptions = [];
 try {
-    $distinctTypeStmt = $pdo->query('SELECT DISTINCT notification_type FROM notification_logs ORDER BY notification_type ASC');
-    $logTypeOptions = $distinctTypeStmt ? $distinctTypeStmt->fetchAll(PDO::FETCH_COLUMN) : [];
+    $distinctTypeStmt = $pdo->prepare('SELECT DISTINCT notification_type FROM notification_logs ORDER BY notification_type ASC');
+    $distinctTypeStmt->execute();
+    $logTypeOptions = $distinctTypeStmt->fetchAll(PDO::FETCH_COLUMN);
 } catch (Throwable) {
     $logTypeOptions = [];
 }

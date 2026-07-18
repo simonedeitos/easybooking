@@ -404,7 +404,7 @@ function sendEmail(string $to, string $subject, string $body, string $from = '',
     $lastError = '';
     set_error_handler(static function (int $severity, string $message) use (&$lastError): bool {
         $lastError = $message;
-        return true;
+        return false;
     });
     try {
         $result = mail($to, $subject, $body, $headers);

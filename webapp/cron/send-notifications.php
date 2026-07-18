@@ -144,8 +144,8 @@ function hasNotificationBeenSent(PDO $pdo, int $userId, string $tipo, string $ri
 }
 
 function sendLoggedNotification(
-    PDO $pdo,
     array $smtpConfig,
+    array $smtpConnectionTest,
     string $notificationType,
     string $recipientEmail,
     string $recipientName,
@@ -159,28 +159,27 @@ function sendLoggedNotification(
         : 'php-mail';
     $lastError = '';
 
-    if (!empty($smtpConfig['enabled'])) {
-        $smtpTest = testSmtpConnection($smtpConfig);
-        if (empty($smtpTest['success'])) {
-            $lastError = (string)($smtpTest['message'] ?? 'Connessione SMTP fallita.');
-            logNotification([
-                'notification_type' => $notificationType,
-                'recipient_email' => $recipientEmail,
-                'recipient_name' => $recipientName,
-                'subject' => $subject,
-                'status' => 'failed',
-                'error_message' => $lastError,
-                'mail_server_used' => $mailServer,
-                'retry_count' => 0,
-            ]);
-            return false;
-        }
+    if (!empty($smtpConfig['enabled']) && empty($smtpConnectionTest['success'])) {
+        $lastError = (string)($smtpConnectionTest['message'] ?? 'Connessione SMTP fallita.');
+        logNotification([
+            'notification_type' => $notificationType,
+            'recipient_email' => $recipientEmail,
+            'recipient_name' => $recipientName,
+            'subject' => $subject,
+            'status' => 'failed',
+            'error_message' => $lastError,
+            'mail_server_used' => $mailServer,
+            'retry_count' => 0,
+        ]);
+        return false;
     }
 
-    for ($attempt = 0; $attempt <= $maxRetries; $attempt++) {
+    $maxAttempts = max(1, $maxRetries + 1);
+    for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
         $errorMessage = '';
         $sent = sendEmail($recipientEmail, $subject, $body, '', $errorMessage);
         if ($sent) {
+            $retryCount = $attempt - 1;
             logNotification([
                 'notification_type' => $notificationType,
                 'recipient_email' => $recipientEmail,
@@ -195,7 +194,7 @@ function sendLoggedNotification(
         }
 
         $lastError = $errorMessage !== '' ? $errorMessage : 'Invio non riuscito.';
-        $retryCount = $attempt + 1;
+        $retryCount = $attempt;
     }
 
     logNotification([
@@ -232,7 +231,7 @@ function h(mixed $value): string
 /**
  * Invia il promemoria lezioni per l'utente, se configurato per l'ora/giorno correnti.
  */
-function processReminderLezioni(PDO $pdo, array $user, array $config, array $smtpConfig, DateTimeImmutable $now): void
+function processReminderLezioni(PDO $pdo, array $user, array $config, array $smtpConfig, array $smtpConnectionTest, DateTimeImmutable $now): void
 {
     if (empty($config['reminder_lezioni_enabled']) || empty($config['abilita_email']) || empty($config['email_notifiche'])) {
         return;
@@ -290,8 +289,8 @@ function processReminderLezioni(PDO $pdo, array $user, array $config, array $smt
     $subject = 'Promemoria lezioni – EasyBooking';
     $recipientEmail = (string)$config['email_notifiche'];
     $sent = sendLoggedNotification(
-        $pdo,
         $smtpConfig,
+        $smtpConnectionTest,
         'reminder_lezioni',
         $recipientEmail,
         'Utente #' . (int)$user['id'],
@@ -356,7 +355,7 @@ function buildReportBody(PDO $pdo, string $tipo, string $dataInizio, string $dat
     }
 }
 
-function processReportSettimanale(PDO $pdo, array $user, array $config, array $smtpConfig, DateTimeImmutable $now): void
+function processReportSettimanale(PDO $pdo, array $user, array $config, array $smtpConfig, array $smtpConnectionTest, DateTimeImmutable $now): void
 {
     if (empty($config['report_settimanale_enabled']) || empty($config['abilita_email']) || empty($config['email_notifiche'])) {
         return;
@@ -386,8 +385,8 @@ function processReportSettimanale(PDO $pdo, array $user, array $config, array $s
 
     $subject = 'Report settimanale – EasyBooking';
     $sent = sendLoggedNotification(
-        $pdo,
         $smtpConfig,
+        $smtpConnectionTest,
         'report_settimanale',
         (string)$config['email_notifiche'],
         'Utente #' . (int)$user['id'],
@@ -402,7 +401,7 @@ function processReportSettimanale(PDO $pdo, array $user, array $config, array $s
     }
 }
 
-function processReportMensile(PDO $pdo, array $user, array $config, array $smtpConfig, DateTimeImmutable $now): void
+function processReportMensile(PDO $pdo, array $user, array $config, array $smtpConfig, array $smtpConnectionTest, DateTimeImmutable $now): void
 {
     if (empty($config['report_mensile_enabled']) || empty($config['abilita_email']) || empty($config['email_notifiche'])) {
         return;
@@ -437,8 +436,8 @@ function processReportMensile(PDO $pdo, array $user, array $config, array $smtpC
 
     $subject = 'Report mensile – EasyBooking';
     $sent = sendLoggedNotification(
-        $pdo,
         $smtpConfig,
+        $smtpConnectionTest,
         'report_mensile',
         (string)$config['email_notifiche'],
         'Utente #' . (int)$user['id'],
@@ -453,7 +452,7 @@ function processReportMensile(PDO $pdo, array $user, array $config, array $smtpC
     }
 }
 
-function processAvvisoScadenzaPacchetti(PDO $pdo, array $user, array $config, array $smtpConfig, DateTimeImmutable $now): void
+function processAvvisoScadenzaPacchetti(PDO $pdo, array $user, array $config, array $smtpConfig, array $smtpConnectionTest, DateTimeImmutable $now): void
 {
     if (empty($config['avviso_scadenza_enabled']) || empty($config['abilita_email']) || empty($config['email_notifiche'])) {
         return;
@@ -498,8 +497,8 @@ function processAvvisoScadenzaPacchetti(PDO $pdo, array $user, array $config, ar
 
     $subject = 'Avviso scadenza pacchetti – EasyBooking';
     $sent = sendLoggedNotification(
-        $pdo,
         $smtpConfig,
+        $smtpConnectionTest,
         'avviso_scadenza',
         (string)$config['email_notifiche'],
         'Utente #' . (int)$user['id'],
@@ -514,7 +513,7 @@ function processAvvisoScadenzaPacchetti(PDO $pdo, array $user, array $config, ar
     }
 }
 
-function processAvvisoLezioniNonConfermate(PDO $pdo, array $user, array $config, array $smtpConfig, DateTimeImmutable $now): void
+function processAvvisoLezioniNonConfermate(PDO $pdo, array $user, array $config, array $smtpConfig, array $smtpConnectionTest, DateTimeImmutable $now): void
 {
     if (empty($config['avviso_non_confermata_enabled']) || empty($config['abilita_email']) || empty($config['email_notifiche'])) {
         return;
@@ -561,8 +560,8 @@ function processAvvisoLezioniNonConfermate(PDO $pdo, array $user, array $config,
 
     $subject = 'Avviso lezioni da confermare – EasyBooking';
     $sent = sendLoggedNotification(
-        $pdo,
         $smtpConfig,
+        $smtpConnectionTest,
         'avviso_non_confermata',
         (string)$config['email_notifiche'],
         'Utente #' . (int)$user['id'],
@@ -590,6 +589,7 @@ try {
     ensureNotificheLogTable($pdo);
     ensureNotificationLogsTable($pdo);
     $smtpConfig = getSmtpConfig($pdo);
+    $smtpConnectionTest = testSmtpConnection($smtpConfig);
 
     $now = new DateTimeImmutable('now');
 
@@ -609,11 +609,11 @@ try {
         $user = ['id' => (int)$config['user_id'], 'email' => (string)$config['user_email']];
 
         try {
-            processReminderLezioni($pdo, $user, $config, $smtpConfig, $now);
-            processReportSettimanale($pdo, $user, $config, $smtpConfig, $now);
-            processReportMensile($pdo, $user, $config, $smtpConfig, $now);
-            processAvvisoScadenzaPacchetti($pdo, $user, $config, $smtpConfig, $now);
-            processAvvisoLezioniNonConfermate($pdo, $user, $config, $smtpConfig, $now);
+            processReminderLezioni($pdo, $user, $config, $smtpConfig, $smtpConnectionTest, $now);
+            processReportSettimanale($pdo, $user, $config, $smtpConfig, $smtpConnectionTest, $now);
+            processReportMensile($pdo, $user, $config, $smtpConfig, $smtpConnectionTest, $now);
+            processAvvisoScadenzaPacchetti($pdo, $user, $config, $smtpConfig, $smtpConnectionTest, $now);
+            processAvvisoLezioniNonConfermate($pdo, $user, $config, $smtpConfig, $smtpConnectionTest, $now);
         } catch (Throwable $e) {
             cronLog("ERRORE durante l'elaborazione per utente #{$user['id']}: " . $e->getMessage());
             if (!$__isCli) {
