@@ -7,9 +7,7 @@
 
 declare(strict_types=1);
 
-if (function_exists('date_default_timezone_set')) {
-    date_default_timezone_set(getenv('APP_TIMEZONE') ?: 'Europe/Rome');
-}
+date_default_timezone_set(getenv('APP_TIMEZONE') ?: 'Europe/Rome');
 
 $__isCli = (PHP_SAPI === 'cli');
 $__logFile = __DIR__ . '/send-notifications.log';
@@ -99,7 +97,19 @@ function ensureNotificheLogTable(PDO $pdo): void
     );
 
     try {
-        $pdo->exec("ALTER TABLE `notifiche_log` MODIFY `riferimento` VARCHAR(50) NOT NULL");
+        $stmt = $pdo->prepare(
+            "SELECT COLUMN_TYPE
+             FROM information_schema.COLUMNS
+             WHERE TABLE_SCHEMA = ?
+               AND TABLE_NAME = 'notifiche_log'
+               AND COLUMN_NAME = 'riferimento'
+             LIMIT 1"
+        );
+        $stmt->execute([DB_NAME]);
+        $columnType = strtolower((string)$stmt->fetchColumn());
+        if ($columnType !== 'varchar(50)') {
+            $pdo->exec("ALTER TABLE `notifiche_log` MODIFY `riferimento` VARCHAR(50) NOT NULL");
+        }
     } catch (Throwable $e) {
         error_log('[send-notifications] Impossibile aggiornare notifiche_log.riferimento a VARCHAR(50): ' . $e->getMessage());
     }
@@ -192,7 +202,10 @@ function saveTestModePreview(string $notificationType, string $recipientEmail, s
 {
     $baseName = date('Ymd-His') . '-' . preg_replace('/[^a-z0-9_-]+/i', '-', $notificationType) . '.html';
     $path = cronPreviewDirectory() . DIRECTORY_SEPARATOR . $baseName;
-    $html = "<!-- recipient: {$recipientEmail} | subject: {$subject} | timezone: {$timezone} -->\n" . (string)($body['html'] ?? '');
+    $html = '<!-- recipient: ' . htmlspecialchars($recipientEmail, ENT_QUOTES, 'UTF-8')
+        . ' | subject: ' . htmlspecialchars($subject, ENT_QUOTES, 'UTF-8')
+        . ' | timezone: ' . htmlspecialchars($timezone, ENT_QUOTES, 'UTF-8')
+        . " -->\n" . (string)($body['html'] ?? '');
     file_put_contents($path, $html);
     return $path;
 }

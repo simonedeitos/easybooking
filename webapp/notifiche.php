@@ -490,6 +490,7 @@ require_once __DIR__ . '/includes/header.php';
     <div class="col-lg-8">
         <form method="post" action="<?= h($formAction) ?>" class="d-grid gap-4">
             <?= csrfField() ?>
+            <input type="hidden" name="action" value="save">
 
             <div class="card">
                 <div class="card-header"><i class="fas fa-envelope me-2"></i>Email generale</div>
