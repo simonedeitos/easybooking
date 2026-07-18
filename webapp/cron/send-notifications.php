@@ -96,6 +96,11 @@ function ensureNotificheLogTable(PDO $pdo): void
             UNIQUE KEY `uniq_user_tipo_riferimento` (`user_id`, `tipo`, `riferimento`)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
     );
+
+    try {
+        $pdo->exec("ALTER TABLE `notifiche_log` MODIFY `riferimento` VARCHAR(50) NOT NULL");
+    } catch (Throwable) {
+    }
 }
 
 function markNotificationSent(PDO $pdo, int $userId, string $tipo, string $riferimento): bool
