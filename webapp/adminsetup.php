@@ -1324,16 +1324,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         break;
                     }
 
-                    $smtpPasswordToStore = $smtpEnabled === '1'
-                        ? ($smtpPassword !== '' ? encodeSmtpSecret($smtpPassword) : getStoredSmtpPasswordRaw())
-                        : '';
-
                     try {
                         $pdo = currentPdo();
                         if (!$pdo instanceof PDO) {
                             $errorMessage = 'Connessione al database non disponibile.';
                             break;
                         }
+                        $smtpPasswordToStore = $smtpEnabled === '1'
+                            ? ($smtpPassword !== '' ? encodeSmtpSecret($smtpPassword) : getStoredSmtpPasswordRaw($pdo))
+                            : '';
 
                         $pairs = [
                             'smtp_enabled' => $smtpEnabled,

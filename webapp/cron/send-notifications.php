@@ -178,10 +178,11 @@ function sendLoggedNotification(
 
     $maxAttempts = max(1, $additionalRetries + 1);
     for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
+        $retryUsed = max(0, $attempt - 1);
         $errorMessage = '';
         $sent = sendEmail($recipientEmail, $subject, $body, '', $errorMessage);
         if ($sent) {
-            $retryCount = $attempt - 1;
+            $retryCount = $retryUsed;
             logNotification([
                 'notification_type' => $notificationType,
                 'recipient_email' => $recipientEmail,
@@ -196,7 +197,7 @@ function sendLoggedNotification(
         }
 
         $lastError = $errorMessage !== '' ? $errorMessage : 'Invio non riuscito.';
-        $retryCount = max(0, $attempt - 1);
+        $retryCount = $retryUsed;
     }
 
     logNotification([
