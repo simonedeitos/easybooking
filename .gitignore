@@ -8,6 +8,10 @@ webapp/.adminsetup-imports/
 vendor/
 *.cache
 
+# Cron runtime log files
+webapp/cron/*.log
+webapp/cron/php-error.log
+
 # OS files
 .DS_Store
 Thumbs.db
