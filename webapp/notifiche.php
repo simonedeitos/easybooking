@@ -230,7 +230,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             redirect(notificationRedirectTarget($embedded));
         }
 
-        $passwordToStore = $smtpPassword !== '' ? encodeSmtpSecret($smtpPassword) : getStoredSmtpPasswordRaw($pdo);
+        $passwordToStore = $smtpEnabled === 1
+            ? ($smtpPassword !== '' ? encodeSmtpSecret($smtpPassword) : getStoredSmtpPasswordRaw($pdo))
+            : '';
 
         $stmt = $pdo->prepare(
             'INSERT INTO system_config (`key`, `value`) VALUES (?, ?)

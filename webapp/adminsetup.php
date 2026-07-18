@@ -1324,7 +1324,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         break;
                     }
 
-                    $smtpPasswordToStore = $smtpPassword !== '' ? encodeSmtpSecret($smtpPassword) : getStoredSmtpPasswordRaw();
+                    $smtpPasswordToStore = $smtpEnabled === '1'
+                        ? ($smtpPassword !== '' ? encodeSmtpSecret($smtpPassword) : getStoredSmtpPasswordRaw())
+                        : '';
 
                     try {
                         $pdo = currentPdo();

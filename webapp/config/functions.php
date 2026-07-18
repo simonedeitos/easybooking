@@ -401,12 +401,16 @@ function testSmtpConnection(?array $smtpConfig = null): array
     $errstr = '';
     $socket = @fsockopen($target, $port, $errno, $errstr, 5);
     if (!is_resource($socket)) {
-        return ['success' => false, 'message' => 'Connessione SMTP fallita: ' . ($errstr !== '' ? $errstr : ('errore #' . $errno))];
+        $detail = 'errore #' . $errno;
+        if ($errstr !== '') {
+            $detail .= ' - ' . $errstr;
+        }
+        return ['success' => false, 'message' => 'Connessione SMTP fallita: ' . $detail];
     }
     stream_set_timeout($socket, 5);
     $banner = fgets($socket);
     @fclose($socket);
-    if ($banner === false || strpos($banner, '220') !== 0) {
+    if ($banner === false || preg_match('/^220\s/', ltrim($banner)) !== 1) {
         return ['success' => false, 'message' => 'Connessione aperta ma banner SMTP non valido.'];
     }
 

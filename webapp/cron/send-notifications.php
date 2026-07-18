@@ -148,7 +148,7 @@ function sendLoggedNotification(
     string $recipientName,
     string $subject,
     string $body,
-    int $maxRetries = 2
+    int $additionalRetries = 2
 ): bool {
     $retryCount = 0;
     $smtpPort = (int)($smtpConfig['port'] ?? 0);
@@ -176,7 +176,7 @@ function sendLoggedNotification(
         return false;
     }
 
-    $maxAttempts = max(1, $maxRetries + 1);
+    $maxAttempts = max(1, $additionalRetries + 1);
     for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
         $errorMessage = '';
         $sent = sendEmail($recipientEmail, $subject, $body, '', $errorMessage);
@@ -196,7 +196,7 @@ function sendLoggedNotification(
         }
 
         $lastError = $errorMessage !== '' ? $errorMessage : 'Invio non riuscito.';
-        $retryCount = $attempt;
+        $retryCount = max(0, $attempt - 1);
     }
 
     logNotification([
