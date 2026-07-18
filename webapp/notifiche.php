@@ -3,6 +3,7 @@ if (session_status() === PHP_SESSION_NONE) { session_start(); }
 require_once __DIR__ . '/config/database.php';
 require_once __DIR__ . '/config/functions.php';
 require_once __DIR__ . '/config/encryption.php';
+require_once __DIR__ . '/includes/email-builder.php';
 require_once __DIR__ . '/includes/auth.php';
 requireAuth();
 $pdo = Database::getInstance();
@@ -76,8 +77,34 @@ function notificationCleanText(mixed $value, int $maxLength = 255): string
 }
 
 $requestAction = $_SERVER['REQUEST_METHOD'] === 'POST' ? post('action') : get('action');
+$previewConfigOverride = null;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if ($requestAction === 'preview') {
+        verifyCsrf();
+        $previewConfigOverride = [
+            'email_notifiche' => trim(post('email_notifiche')),
+            'abilita_email' => notificationFlag('abilita_email'),
+            'reminder_lezioni_enabled' => notificationFlag('reminder_lezioni_enabled'),
+            'reminder_lezioni_giorni_prima' => max(0, sanitizeInt(post('reminder_lezioni_giorni_prima'))),
+            'reminder_lezioni_giorno_settimana' => post('reminder_lezioni_giorno_settimana') ?: 'lun',
+            'reminder_lezioni_ora' => notificationTime(post('reminder_lezioni_ora'), '09:00:00'),
+            'reminder_lezioni_giorni_futuri' => max(1, sanitizeInt(post('reminder_lezioni_giorni_futuri'))),
+            'report_settimanale_enabled' => notificationFlag('report_settimanale_enabled'),
+            'report_settimanale_giorno' => post('report_settimanale_giorno') ?: 'lun',
+            'report_settimanale_ora' => notificationTime(post('report_settimanale_ora'), '18:00:00'),
+            'report_settimanale_tipo' => post('report_settimanale_tipo') ?: 'lezioni',
+            'report_mensile_enabled' => notificationFlag('report_mensile_enabled'),
+            'report_mensile_giorno_mese' => max(1, min(31, sanitizeInt(post('report_mensile_giorno_mese')))),
+            'report_mensile_ora' => notificationTime(post('report_mensile_ora'), '18:00:00'),
+            'report_mensile_tipo' => post('report_mensile_tipo') ?: 'lezioni',
+            'avviso_scadenza_enabled' => notificationFlag('avviso_scadenza_enabled'),
+            'avviso_scadenza_giorni' => max(0, sanitizeInt(post('avviso_scadenza_giorni'))),
+            'avviso_non_confermata_enabled' => notificationFlag('avviso_non_confermata_enabled'),
+            'avviso_non_confermata_giorni' => max(0, sanitizeInt(post('avviso_non_confermata_giorni'))),
+        ];
+    }
+
     if ($requestAction === 'save') {
         try {
             verifyCsrf();
@@ -364,10 +391,29 @@ try {
     $pageError = 'Impossibile caricare la configurazione notifiche. Dettagli: ' . ($e->errorInfo[2] ?? $e->getMessage());
 }
 
+if (is_array($previewConfigOverride)) {
+    $config = array_merge($config, $previewConfigOverride);
+}
+
 $dayOptions = notificationDayMap();
 $reportTypeOptions = notificationReportTypes();
 $formAction = notificationRedirectTarget($embedded);
 $smtpConfig = getSmtpConfig($pdo);
+$emailPreviewTypes = notificationPreviewTypes();
+$emailPreviews = [];
+foreach ($emailPreviewTypes as $previewType => $previewLabel) {
+    try {
+        $emailPreviews[$previewType] = buildNotificationEmailPreview($pdo, $user, $config, $previewType, new DateTimeImmutable('now'));
+    } catch (Throwable $e) {
+        $emailPreviews[$previewType] = [
+            'subject' => $previewLabel . ' – errore',
+            'summary' => 'Impossibile generare l’anteprima: ' . $e->getMessage(),
+            'html' => '<div style="font-family:Arial,sans-serif;padding:24px;"><strong>Errore anteprima:</strong> '
+                . h($e->getMessage()) . '</div>',
+            'text' => '',
+        ];
+    }
+}
 
 $logStatus = get('log_status', '');
 $logType = get('log_type', '');
@@ -584,8 +630,9 @@ require_once __DIR__ . '/includes/header.php';
                 </div>
             </div>
 
-            <div>
-                <button type="submit" class="btn btn-primary"><i class="fas fa-save me-2"></i>Salva notifiche</button>
+            <div class="d-flex flex-wrap gap-2">
+                <button type="submit" class="btn btn-outline-secondary" name="action" value="preview"><i class="fas fa-eye me-2"></i>Aggiorna anteprima</button>
+                <button type="submit" class="btn btn-primary" name="action" value="save"><i class="fas fa-save me-2"></i>Salva notifiche</button>
             </div>
         </form>
     </div>
@@ -659,6 +706,47 @@ require_once __DIR__ . '/includes/header.php';
             <button type="submit" class="btn btn-outline-secondary"><i class="fas fa-plug me-2"></i>Test connessione SMTP</button>
         </form>
         <?php endif; ?>
+    </div>
+</div>
+
+<div class="card mt-4<?= $embedded ? ' mx-3 mb-3' : '' ?>">
+    <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <span><i class="fas fa-envelope-open-text me-2"></i>Anteprima email</span>
+        <span class="small text-secondary">Basata sui valori correnti del form e sui dati reali disponibili adesso.</span>
+    </div>
+    <div class="card-body">
+        <ul class="nav nav-tabs" id="notificationPreviewTabs" role="tablist">
+            <?php $previewIndex = 0; ?>
+            <?php foreach ($emailPreviewTypes as $previewType => $previewLabel): ?>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link<?= $previewIndex === 0 ? ' active' : '' ?>" id="tab-<?= h($previewType) ?>" data-bs-toggle="tab" data-bs-target="#pane-<?= h($previewType) ?>" type="button" role="tab" aria-controls="pane-<?= h($previewType) ?>" aria-selected="<?= $previewIndex === 0 ? 'true' : 'false' ?>">
+                    <?= h($previewLabel) ?>
+                </button>
+            </li>
+            <?php $previewIndex++; ?>
+            <?php endforeach; ?>
+        </ul>
+        <div class="tab-content border border-top-0 rounded-bottom p-3 bg-body-tertiary">
+            <?php $previewIndex = 0; ?>
+            <?php foreach ($emailPreviewTypes as $previewType => $previewLabel): ?>
+            <?php $preview = $emailPreviews[$previewType] ?? null; ?>
+            <div class="tab-pane fade<?= $previewIndex === 0 ? ' show active' : '' ?>" id="pane-<?= h($previewType) ?>" role="tabpanel" aria-labelledby="tab-<?= h($previewType) ?>">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                    <div>
+                        <div class="fw-semibold"><?= h((string)($preview['subject'] ?? $previewLabel)) ?></div>
+                        <div class="small text-secondary"><?= h((string)($preview['summary'] ?? '')) ?></div>
+                    </div>
+                </div>
+                <iframe
+                    title="Anteprima <?= h($previewLabel) ?>"
+                    class="w-100 border rounded bg-white"
+                    style="min-height: 560px;"
+                    sandbox=""
+                    srcdoc="<?= h((string)($preview['html'] ?? '')) ?>"></iframe>
+            </div>
+            <?php $previewIndex++; ?>
+            <?php endforeach; ?>
+        </div>
     </div>
 </div>
 
