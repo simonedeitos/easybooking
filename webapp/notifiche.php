@@ -7,6 +7,7 @@ require_once __DIR__ . '/includes/auth.php';
 requireAuth();
 $pdo = Database::getInstance();
 $user = currentUser();
+$isAdmin = ($user['role'] ?? 'user') === 'admin';
 $embedded = get('embedded') === '1';
 
 function h(mixed $value): string
@@ -65,146 +66,218 @@ function notificationInRange(int $value, int $min, int $max): bool
     return $value >= $min && $value <= $max;
 }
 
+function notificationCleanText(mixed $value, int $maxLength = 255): string
+{
+    $value = trim((string)$value);
+    if ($maxLength > 0) {
+        $value = mb_substr($value, 0, $maxLength);
+    }
+    return $value;
+}
+
 $requestAction = $_SERVER['REQUEST_METHOD'] === 'POST' ? post('action') : get('action');
 
-if ($requestAction === 'save' && $_SERVER['REQUEST_METHOD'] === 'POST') {
-    try {
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if ($requestAction === 'save') {
+        try {
+            verifyCsrf();
+
+            $days = notificationDayMap();
+            $reportTypes = notificationReportTypes();
+            $email = trim(post('email_notifiche'));
+            $abilitaEmail = notificationFlag('abilita_email');
+            $reminderDay = post('reminder_lezioni_giorno_settimana');
+            $reportSettimanaleGiorno = post('report_settimanale_giorno');
+            $reportSettimanaleTipo = post('report_settimanale_tipo');
+            $reportMensileTipo = post('report_mensile_tipo');
+
+            if ($abilitaEmail === 1) {
+                if ($email === '') {
+                    setFlash('danger', 'Inserisci l\'email da usare per le notifiche.');
+                    redirect(notificationRedirectTarget($embedded));
+                }
+                if (!notificationValidEmail($email)) {
+                    setFlash('danger', 'Inserisci un indirizzo email valido per le notifiche.');
+                    redirect(notificationRedirectTarget($embedded));
+                }
+            } elseif ($email !== '' && !notificationValidEmail($email)) {
+                setFlash('danger', 'L\'email indicata non è valida.');
+                redirect(notificationRedirectTarget($embedded));
+            }
+
+            if (!array_key_exists($reminderDay, $days)) {
+                $reminderDay = 'lun';
+            }
+            if (!array_key_exists($reportSettimanaleGiorno, $days)) {
+                $reportSettimanaleGiorno = 'lun';
+            }
+            if (!array_key_exists($reportSettimanaleTipo, $reportTypes)) {
+                $reportSettimanaleTipo = 'lezioni';
+            }
+            if (!array_key_exists($reportMensileTipo, $reportTypes)) {
+                $reportMensileTipo = 'lezioni';
+            }
+
+            $reminderFutureDays = sanitizeInt(post('reminder_lezioni_giorni_futuri'));
+            if ($reminderFutureDays < 1) {
+                setFlash('danger', 'I giorni futuri da controllare per i promemoria devono essere almeno 1.');
+                redirect(notificationRedirectTarget($embedded));
+            }
+
+            $reportMensileGiornoMese = sanitizeInt(post('report_mensile_giorno_mese'));
+            if (!notificationInRange($reportMensileGiornoMese, 1, 31)) {
+                setFlash('danger', 'Il giorno del report mensile deve essere compreso tra 1 e 31.');
+                redirect(notificationRedirectTarget($embedded));
+            }
+
+            $userId = isset($user['id']) && is_numeric($user['id']) ? (int)$user['id'] : 0;
+            if ($userId <= 0) {
+                throw new RuntimeException('User ID non valido.');
+            }
+
+            $stmt = $pdo->prepare(
+                'INSERT INTO notifiche_config (
+                    user_id, email_notifiche, abilita_email,
+                    reminder_lezioni_enabled, reminder_lezioni_giorni_prima, reminder_lezioni_giorno_settimana, reminder_lezioni_ora, reminder_lezioni_giorni_futuri,
+                    report_settimanale_enabled, report_settimanale_giorno, report_settimanale_ora, report_settimanale_tipo,
+                    report_mensile_enabled, report_mensile_giorno_mese, report_mensile_ora, report_mensile_tipo,
+                    avviso_scadenza_enabled, avviso_scadenza_giorni,
+                    avviso_non_confermata_enabled, avviso_non_confermata_giorni
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON DUPLICATE KEY UPDATE
+                    email_notifiche = VALUES(email_notifiche),
+                    abilita_email = VALUES(abilita_email),
+                    reminder_lezioni_enabled = VALUES(reminder_lezioni_enabled),
+                    reminder_lezioni_giorni_prima = VALUES(reminder_lezioni_giorni_prima),
+                    reminder_lezioni_giorno_settimana = VALUES(reminder_lezioni_giorno_settimana),
+                    reminder_lezioni_ora = VALUES(reminder_lezioni_ora),
+                    reminder_lezioni_giorni_futuri = VALUES(reminder_lezioni_giorni_futuri),
+                    report_settimanale_enabled = VALUES(report_settimanale_enabled),
+                    report_settimanale_giorno = VALUES(report_settimanale_giorno),
+                    report_settimanale_ora = VALUES(report_settimanale_ora),
+                    report_settimanale_tipo = VALUES(report_settimanale_tipo),
+                    report_mensile_enabled = VALUES(report_mensile_enabled),
+                    report_mensile_giorno_mese = VALUES(report_mensile_giorno_mese),
+                    report_mensile_ora = VALUES(report_mensile_ora),
+                    report_mensile_tipo = VALUES(report_mensile_tipo),
+                    avviso_scadenza_enabled = VALUES(avviso_scadenza_enabled),
+                    avviso_scadenza_giorni = VALUES(avviso_scadenza_giorni),
+                    avviso_non_confermata_enabled = VALUES(avviso_non_confermata_enabled),
+                    avviso_non_confermata_giorni = VALUES(avviso_non_confermata_giorni)'
+            );
+            $stmt->execute([
+                $userId,
+                $email !== '' ? $email : null,
+                $abilitaEmail,
+                notificationFlag('reminder_lezioni_enabled'),
+                max(0, sanitizeInt(post('reminder_lezioni_giorni_prima'))),
+                $reminderDay,
+                notificationTime(post('reminder_lezioni_ora'), '09:00:00'),
+                $reminderFutureDays,
+                notificationFlag('report_settimanale_enabled'),
+                $reportSettimanaleGiorno,
+                notificationTime(post('report_settimanale_ora'), '18:00:00'),
+                $reportSettimanaleTipo,
+                notificationFlag('report_mensile_enabled'),
+                $reportMensileGiornoMese,
+                notificationTime(post('report_mensile_ora'), '18:00:00'),
+                $reportMensileTipo,
+                notificationFlag('avviso_scadenza_enabled'),
+                max(0, sanitizeInt(post('avviso_scadenza_giorni'))),
+                notificationFlag('avviso_non_confermata_enabled'),
+                max(0, sanitizeInt(post('avviso_non_confermata_giorni'))),
+            ]);
+
+            setFlash('success', 'Preferenze notifiche salvate con successo.');
+            redirect(notificationRedirectTarget($embedded));
+        } catch (Throwable $e) {
+            error_log('notifiche.php save error [' . $e->getCode() . ']: ' . $e->getMessage());
+            setFlash('danger', 'Errore durante il salvataggio delle notifiche. Contatta il supporto se il problema persiste.');
+            redirect(notificationRedirectTarget($embedded));
+        }
+    }
+
+    if ($requestAction === 'save_smtp') {
         verifyCsrf();
-
-        $days = notificationDayMap();
-        $reportTypes = notificationReportTypes();
-        $email = trim(post('email_notifiche'));
-        $abilitaEmail = notificationFlag('abilita_email');
-        $reminderDay = post('reminder_lezioni_giorno_settimana');
-        $reportSettimanaleGiorno = post('report_settimanale_giorno');
-        $reportSettimanaleTipo = post('report_settimanale_tipo');
-        $reportMensileTipo = post('report_mensile_tipo');
-
-        if ($abilitaEmail === 1) {
-            if ($email === '') {
-                setFlash('danger', 'Inserisci l\'email da usare per le notifiche.');
-                redirect(notificationRedirectTarget($embedded));
-            }
-            if (!notificationValidEmail($email)) {
-                setFlash('danger', 'Inserisci un indirizzo email valido per le notifiche.');
-                redirect(notificationRedirectTarget($embedded));
-            }
-        } elseif ($email !== '' && !notificationValidEmail($email)) {
-            setFlash('danger', 'L\'email indicata non è valida.');
+        if (!$isAdmin) {
+            setFlash('danger', 'Solo un amministratore può salvare la configurazione SMTP.');
             redirect(notificationRedirectTarget($embedded));
         }
 
-        if (!array_key_exists($reminderDay, $days)) {
-            $reminderDay = 'lun';
-        }
-        if (!array_key_exists($reportSettimanaleGiorno, $days)) {
-            $reportSettimanaleGiorno = 'lun';
-        }
-        if (!array_key_exists($reportSettimanaleTipo, $reportTypes)) {
-            $reportSettimanaleTipo = 'lezioni';
-        }
-        if (!array_key_exists($reportMensileTipo, $reportTypes)) {
-            $reportMensileTipo = 'lezioni';
-        }
+        $smtpEnabled = notificationFlag('smtp_enabled');
+        $smtpHost = notificationCleanText(post('smtp_host'));
+        $smtpPort = sanitizeInt(post('smtp_port'));
+        $smtpUsername = notificationCleanText(post('smtp_username'));
+        $smtpPassword = (string)post('smtp_password');
+        $smtpEncryption = post('smtp_encryption');
+        $smtpSenderEmail = notificationCleanText(post('smtp_sender_email'));
+        $smtpSenderName = notificationCleanText(post('smtp_sender_name'));
 
-        $reminderFutureDays = sanitizeInt(post('reminder_lezioni_giorni_futuri'));
-        if ($reminderFutureDays < 1) {
-            setFlash('danger', 'I giorni futuri da controllare per i promemoria devono essere almeno 1.');
+        if ($smtpEnabled === 1 && $smtpHost === '') {
+            setFlash('danger', 'Se SMTP è abilitato devi specificare l\'host.');
+            redirect(notificationRedirectTarget($embedded));
+        }
+        if ($smtpEnabled === 1 && !notificationInRange($smtpPort, 1, 65535)) {
+            setFlash('danger', 'La porta SMTP deve essere compresa tra 1 e 65535.');
+            redirect(notificationRedirectTarget($embedded));
+        }
+        if (!in_array($smtpEncryption, ['', 'tls', 'ssl'], true)) {
+            setFlash('danger', 'Tipo di cifratura SMTP non valido.');
+            redirect(notificationRedirectTarget($embedded));
+        }
+        if ($smtpSenderEmail !== '' && !notificationValidEmail($smtpSenderEmail)) {
+            setFlash('danger', 'Email mittente SMTP non valida.');
             redirect(notificationRedirectTarget($embedded));
         }
 
-        $reportMensileGiornoMese = sanitizeInt(post('report_mensile_giorno_mese'));
-        if (!notificationInRange($reportMensileGiornoMese, 1, 31)) {
-            setFlash('danger', 'Il giorno del report mensile deve essere compreso tra 1 e 31.');
-            redirect(notificationRedirectTarget($embedded));
+        if ($smtpEnabled !== 1) {
+            $passwordToStore = '';
+        } elseif ($smtpPassword !== '') {
+            $passwordToStore = encodeSmtpSecret($smtpPassword);
+        } else {
+            $passwordToStore = getStoredSmtpPasswordRaw($pdo);
         }
 
-        $userId = isset($user['id']) && is_numeric($user['id']) ? (int)$user['id'] : 0;
-        if ($userId <= 0) {
-            throw new \RuntimeException('User ID non valido.');
-        }
-
-        $params = [
-            $email !== '' ? $email : null,
-            $abilitaEmail,
-            notificationFlag('reminder_lezioni_enabled'),
-            max(0, sanitizeInt(post('reminder_lezioni_giorni_prima'))),
-            $reminderDay,
-            notificationTime(post('reminder_lezioni_ora'), '09:00:00'),
-            $reminderFutureDays,
-            notificationFlag('report_settimanale_enabled'),
-            $reportSettimanaleGiorno,
-            notificationTime(post('report_settimanale_ora'), '18:00:00'),
-            $reportSettimanaleTipo,
-            notificationFlag('report_mensile_enabled'),
-            $reportMensileGiornoMese,
-            notificationTime(post('report_mensile_ora'), '18:00:00'),
-            $reportMensileTipo,
-            notificationFlag('avviso_scadenza_enabled'),
-            max(0, sanitizeInt(post('avviso_scadenza_giorni'))),
-            notificationFlag('avviso_non_confermata_enabled'),
-            max(0, sanitizeInt(post('avviso_non_confermata_giorni'))),
-        ];
-
-        $updateStmt = $pdo->prepare(
-            'UPDATE notifiche_config SET
-                email_notifiche = ?,
-                abilita_email = ?,
-                reminder_lezioni_enabled = ?,
-                reminder_lezioni_giorni_prima = ?,
-                reminder_lezioni_giorno_settimana = ?,
-                reminder_lezioni_ora = ?,
-                reminder_lezioni_giorni_futuri = ?,
-                report_settimanale_enabled = ?,
-                report_settimanale_giorno = ?,
-                report_settimanale_ora = ?,
-                report_settimanale_tipo = ?,
-                report_mensile_enabled = ?,
-                report_mensile_giorno_mese = ?,
-                report_mensile_ora = ?,
-                report_mensile_tipo = ?,
-                avviso_scadenza_enabled = ?,
-                avviso_scadenza_giorni = ?,
-                avviso_non_confermata_enabled = ?,
-                avviso_non_confermata_giorni = ?
-            WHERE user_id = ?'
+        $stmt = $pdo->prepare(
+            'INSERT INTO system_config (`key`, `value`) VALUES (?, ?)
+             ON DUPLICATE KEY UPDATE `value` = VALUES(`value`), updated_at = CURRENT_TIMESTAMP'
         );
 
-        $checkStmt = $pdo->prepare('SELECT id FROM notifiche_config WHERE user_id = ? LIMIT 1');
-        $checkStmt->execute([$userId]);
-        $existingRow = $checkStmt->fetch();
-
-        if ($existingRow) {
-            $updateStmt->execute(array_merge($params, [$userId]));
-        } else {
-            try {
-                $insertStmt = $pdo->prepare(
-                    'INSERT INTO notifiche_config (
-                        user_id, email_notifiche, abilita_email,
-                        reminder_lezioni_enabled, reminder_lezioni_giorni_prima, reminder_lezioni_giorno_settimana, reminder_lezioni_ora, reminder_lezioni_giorni_futuri,
-                        report_settimanale_enabled, report_settimanale_giorno, report_settimanale_ora, report_settimanale_tipo,
-                        report_mensile_enabled, report_mensile_giorno_mese, report_mensile_ora, report_mensile_tipo,
-                        avviso_scadenza_enabled, avviso_scadenza_giorni,
-                        avviso_non_confermata_enabled, avviso_non_confermata_giorni
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
-                );
-                $insertStmt->execute(array_merge([$userId], $params));
-            } catch (PDOException $insertEx) {
-                // Race condition: another request inserted first; fall back to UPDATE.
-                // SQLSTATE 23000 = Integrity Constraint Violation (e.g. duplicate key).
-                if (($insertEx->errorInfo[0] ?? '') === '23000') {
-                    $updateStmt->execute(array_merge($params, [$userId]));
-                } else {
-                    throw $insertEx;
-                }
+        $pairs = [
+            'smtp_enabled' => (string)$smtpEnabled,
+            'smtp_host' => $smtpHost,
+            'smtp_port' => (string)($smtpPort > 0 ? $smtpPort : 587),
+            'smtp_username' => $smtpUsername,
+            'smtp_password' => $passwordToStore,
+            'smtp_encryption' => $smtpEncryption,
+            'smtp_sender_email' => $smtpSenderEmail,
+            'smtp_sender_name' => $smtpSenderName !== '' ? $smtpSenderName : 'EasyBooking',
+        ];
+        $pdo->beginTransaction();
+        try {
+            foreach ($pairs as $key => $value) {
+                $stmt->execute([$key, $value]);
             }
+            $pdo->commit();
+        } catch (Throwable $e) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            throw $e;
         }
 
-        setFlash('success', 'Preferenze notifiche salvate con successo.');
+        setFlash('success', 'Configurazione SMTP salvata.');
         redirect(notificationRedirectTarget($embedded));
-    } catch (\Exception $e) {
-        error_log('notifiche.php save error [' . $e->getCode() . ']: ' . $e->getMessage());
-        setFlash('danger', 'Errore durante il salvataggio delle notifiche. Contatta il supporto se il problema persiste.');
+    }
+
+    if ($requestAction === 'test_smtp') {
+        verifyCsrf();
+        if (!$isAdmin) {
+            setFlash('danger', 'Solo un amministratore può testare la connessione SMTP.');
+            redirect(notificationRedirectTarget($embedded));
+        }
+        $testResult = testSmtpConnection(getSmtpConfig($pdo));
+        setFlash(!empty($testResult['success']) ? 'success' : 'danger', (string)($testResult['message'] ?? 'Test SMTP completato.'));
         redirect(notificationRedirectTarget($embedded));
     }
 }
@@ -249,6 +322,49 @@ try {
 $dayOptions = notificationDayMap();
 $reportTypeOptions = notificationReportTypes();
 $formAction = notificationRedirectTarget($embedded);
+$smtpConfig = getSmtpConfig($pdo);
+
+$logStatus = get('log_status', '');
+$logType = get('log_type', '');
+$logDateFrom = get('log_date_from', '');
+$logDateTo = get('log_date_to', '');
+$logPage = max(1, sanitizeInt(get('log_page', '1')));
+$logPerPage = 20;
+$logFilters = [];
+if (in_array($logStatus, ['success', 'failed', 'pending'], true)) {
+    $logFilters['status'] = $logStatus;
+}
+if ($logType !== '') {
+    $logFilters['notification_type'] = notificationCleanText($logType, 50);
+}
+if ($logDateFrom !== '' && preg_match('/^\d{4}-\d{2}-\d{2}$/', $logDateFrom) === 1) {
+    $logFilters['date_from'] = $logDateFrom;
+}
+if ($logDateTo !== '' && preg_match('/^\d{4}-\d{2}-\d{2}$/', $logDateTo) === 1) {
+    $logFilters['date_to'] = $logDateTo;
+}
+$logResult = getNotificationLogs($logPerPage, ($logPage - 1) * $logPerPage, $logFilters);
+$logPagination = paginate((int)$logResult['total'], $logPerPage, $logPage);
+$logRows = $logResult['rows'];
+
+$logTypeOptions = [];
+try {
+    $distinctTypeStmt = $pdo->prepare('SELECT DISTINCT notification_type FROM notification_logs ORDER BY notification_type ASC');
+    $distinctTypeStmt->execute();
+    $logTypeOptions = $distinctTypeStmt->fetchAll(PDO::FETCH_COLUMN);
+} catch (Throwable) {
+    $logTypeOptions = [];
+}
+
+$logBaseQuery = [];
+if ($logStatus !== '') { $logBaseQuery['log_status'] = $logStatus; }
+if ($logType !== '') { $logBaseQuery['log_type'] = $logType; }
+if ($logDateFrom !== '') { $logBaseQuery['log_date_from'] = $logDateFrom; }
+if ($logDateTo !== '') { $logBaseQuery['log_date_to'] = $logDateTo; }
+$logBaseUrl = 'notifiche.php' . ($embedded ? '?embedded=1' : '');
+if ($logBaseQuery) {
+    $logBaseUrl .= ($embedded ? '&' : '?') . http_build_query($logBaseQuery);
+}
 
 require_once __DIR__ . '/includes/header.php';
 ?>
@@ -440,6 +556,143 @@ require_once __DIR__ . '/includes/header.php';
                 </ul>
             </div>
         </div>
+        <?php if ($isAdmin): ?>
+        <div class="card mt-4">
+            <div class="card-header"><i class="fas fa-server me-2"></i>Configurazione SMTP</div>
+            <form method="post" action="<?= h($formAction) ?>">
+                <div class="card-body row g-3">
+                    <?= csrfField() ?>
+                    <input type="hidden" name="action" value="save_smtp">
+                    <div class="col-12">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="smtp_enabled" name="smtp_enabled" value="1" <?= !empty($smtpConfig['enabled']) ? 'checked' : '' ?>>
+                            <label class="form-check-label" for="smtp_enabled">Abilita SMTP personalizzato</label>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <label for="smtp_host" class="form-label">Host SMTP</label>
+                        <input type="text" class="form-control" id="smtp_host" name="smtp_host" value="<?= h((string)$smtpConfig['host']) ?>" placeholder="smtp.provider.com">
+                    </div>
+                    <div class="col-6">
+                        <label for="smtp_port" class="form-label">Porta</label>
+                        <input type="number" class="form-control" id="smtp_port" name="smtp_port" min="1" max="65535" value="<?= h((string)$smtpConfig['port']) ?>">
+                    </div>
+                    <div class="col-6">
+                        <label for="smtp_encryption" class="form-label">Cifratura</label>
+                        <select class="form-select" id="smtp_encryption" name="smtp_encryption">
+                            <option value="" <?= (string)$smtpConfig['encryption'] === '' ? 'selected' : '' ?>>Nessuna</option>
+                            <option value="tls" <?= (string)$smtpConfig['encryption'] === 'tls' ? 'selected' : '' ?>>TLS</option>
+                            <option value="ssl" <?= (string)$smtpConfig['encryption'] === 'ssl' ? 'selected' : '' ?>>SSL</option>
+                        </select>
+                    </div>
+                    <div class="col-12">
+                        <label for="smtp_username" class="form-label">Username SMTP</label>
+                        <input type="text" class="form-control" id="smtp_username" name="smtp_username" value="<?= h((string)$smtpConfig['username']) ?>">
+                    </div>
+                    <div class="col-12">
+                        <label for="smtp_password" class="form-label">Password SMTP</label>
+                        <input type="password" class="form-control" id="smtp_password" name="smtp_password" autocomplete="new-password">
+                        <div class="form-text">Lascia vuoto per mantenere la password già salvata.</div>
+                    </div>
+                    <div class="col-12">
+                        <label for="smtp_sender_email" class="form-label">Email mittente</label>
+                        <input type="email" class="form-control" id="smtp_sender_email" name="smtp_sender_email" value="<?= h((string)$smtpConfig['sender_email']) ?>">
+                    </div>
+                    <div class="col-12">
+                        <label for="smtp_sender_name" class="form-label">Nome mittente</label>
+                        <input type="text" class="form-control" id="smtp_sender_name" name="smtp_sender_name" value="<?= h((string)$smtpConfig['sender_name']) ?>">
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-save me-2"></i>Salva SMTP</button>
+                </div>
+            </form>
+        </div>
+        <form method="post" action="<?= h($formAction) ?>" class="mt-2">
+            <?= csrfField() ?>
+            <input type="hidden" name="action" value="test_smtp">
+            <button type="submit" class="btn btn-outline-secondary"><i class="fas fa-plug me-2"></i>Test connessione SMTP</button>
+        </form>
+        <?php endif; ?>
+    </div>
+</div>
+
+<div class="card mt-4<?= $embedded ? ' mx-3 mb-3' : '' ?>">
+    <div class="card-header"><i class="fas fa-list me-2"></i>Log notifiche</div>
+    <div class="card-body">
+        <form method="get" class="row g-3 mb-3">
+            <?php if ($embedded): ?>
+            <input type="hidden" name="embedded" value="1">
+            <?php endif; ?>
+            <div class="col-md-3">
+                <label for="log_status" class="form-label">Stato</label>
+                <select class="form-select" id="log_status" name="log_status">
+                    <option value="">Tutti</option>
+                    <option value="success" <?= $logStatus === 'success' ? 'selected' : '' ?>>Successo</option>
+                    <option value="failed" <?= $logStatus === 'failed' ? 'selected' : '' ?>>Fallito</option>
+                    <option value="pending" <?= $logStatus === 'pending' ? 'selected' : '' ?>>Pending</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="log_type" class="form-label">Tipo</label>
+                <select class="form-select" id="log_type" name="log_type">
+                    <option value="">Tutti</option>
+                    <?php foreach ($logTypeOptions as $type): ?>
+                    <option value="<?= h((string)$type) ?>" <?= $logType === (string)$type ? 'selected' : '' ?>><?= h((string)$type) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label for="log_date_from" class="form-label">Da</label>
+                <input type="date" class="form-control" id="log_date_from" name="log_date_from" value="<?= h($logDateFrom) ?>">
+            </div>
+            <div class="col-md-2">
+                <label for="log_date_to" class="form-label">A</label>
+                <input type="date" class="form-control" id="log_date_to" name="log_date_to" value="<?= h($logDateTo) ?>">
+            </div>
+            <div class="col-md-2 d-grid align-content-end">
+                <button type="submit" class="btn btn-outline-primary mt-2">Filtra</button>
+            </div>
+        </form>
+
+        <div class="table-responsive">
+            <table class="table table-sm align-middle">
+                <thead>
+                    <tr>
+                        <th>Data</th>
+                        <th>Tipo</th>
+                        <th>Destinatario</th>
+                        <th>Oggetto</th>
+                        <th>Server</th>
+                        <th>Retry</th>
+                        <th>Stato</th>
+                        <th>Errore</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php if (empty($logRows)): ?>
+                    <tr><td colspan="8" class="text-center text-secondary py-4">Nessun log disponibile.</td></tr>
+                    <?php else: ?>
+                    <?php foreach ($logRows as $logRow): ?>
+                    <tr>
+                        <td><?= h(formatDateTime((string)$logRow['sent_at'])) ?></td>
+                        <td><?= h((string)$logRow['notification_type']) ?></td>
+                        <td><?= h((string)$logRow['recipient_email']) ?></td>
+                        <td><?= h((string)$logRow['subject']) ?></td>
+                        <td><?= h((string)($logRow['mail_server_used'] ?? '')) ?></td>
+                        <td><?= h((string)$logRow['retry_count']) ?></td>
+                        <td>
+                            <?php $status = (string)$logRow['status']; ?>
+                            <span class="badge bg-<?= $status === 'success' ? 'success' : ($status === 'failed' ? 'danger' : 'warning') ?>"><?= h($status) ?></span>
+                        </td>
+                        <td class="small text-danger"><?= h((string)($logRow['error_message'] ?? '')) ?></td>
+                    </tr>
+                    <?php endforeach; ?>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
+        <?= renderPagination($logPagination, $logBaseUrl) ?>
     </div>
 </div>
 <?php require_once __DIR__ . '/includes/footer.php';
