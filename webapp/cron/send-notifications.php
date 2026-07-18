@@ -99,7 +99,8 @@ function ensureNotificheLogTable(PDO $pdo): void
 
     try {
         $pdo->exec("ALTER TABLE `notifiche_log` MODIFY `riferimento` VARCHAR(50) NOT NULL");
-    } catch (Throwable) {
+    } catch (Throwable $e) {
+        error_log('[send-notifications] Impossibile aggiornare notifiche_log.riferimento a VARCHAR(50): ' . $e->getMessage());
     }
 }
 
