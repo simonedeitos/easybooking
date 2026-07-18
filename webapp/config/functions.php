@@ -209,7 +209,7 @@ function getSmtpConfig(?PDO $pdo = null): array
                     $defaults['username'] = $value;
                     break;
                 case 'smtp_password':
-                    $defaults['password'] = $value;
+                    $defaults['password'] = decodeSmtpSecret($value);
                     break;
                 case 'smtp_encryption':
                     $defaults['encryption'] = in_array($value, ['', 'tls', 'ssl'], true) ? $value : 'tls';
@@ -224,6 +224,39 @@ function getSmtpConfig(?PDO $pdo = null): array
         }
     } catch (Throwable) {
         return $defaults;
+    }
+
+    function encodeSmtpSecret(string $plain): string
+    {
+        if ($plain === '') {
+            return '';
+        }
+        if (!function_exists('encryptField')) {
+            return $plain;
+        }
+        $encrypted = encryptField($plain);
+        if ($encrypted === '') {
+            return $plain;
+        }
+        return 'enc:' . $encrypted;
+    }
+
+    function decodeSmtpSecret(string $stored): string
+    {
+        if ($stored === '') {
+            return '';
+        }
+        if (!str_starts_with($stored, 'enc:')) {
+            return $stored;
+        }
+        $payload = substr($stored, 4);
+        if ($payload === '') {
+            return '';
+        }
+        if (!function_exists('decryptField')) {
+            return $payload;
+        }
+        return decryptField($payload);
     }
 
     return $defaults;
@@ -357,7 +390,12 @@ function testSmtpConnection(?array $smtpConfig = null): array
     if (!is_resource($socket)) {
         return ['success' => false, 'message' => 'Connessione SMTP fallita: ' . ($errstr !== '' ? $errstr : ('errore #' . $errno))];
     }
+    stream_set_timeout($socket, 5);
+    $banner = fgets($socket);
     @fclose($socket);
+    if ($banner === false || strpos($banner, '220') !== 0) {
+        return ['success' => false, 'message' => 'Connessione aperta ma banner SMTP non valido.'];
+    }
 
     return ['success' => true, 'message' => 'Connessione SMTP riuscita verso ' . $host . ':' . $port . '.'];
 }

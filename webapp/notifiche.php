@@ -231,7 +231,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         $currentSmtp = getSmtpConfig($pdo);
-        $passwordToStore = $smtpPassword !== '' ? $smtpPassword : (string)$currentSmtp['password'];
+        $passwordToStore = $smtpPassword !== '' ? encodeSmtpSecret($smtpPassword) : encodeSmtpSecret((string)$currentSmtp['password']);
 
         $stmt = $pdo->prepare(
             'INSERT INTO system_config (`key`, `value`) VALUES (?, ?)

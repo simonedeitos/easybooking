@@ -154,9 +154,14 @@ function sendLoggedNotification(
     int $maxRetries = 2
 ): bool {
     $retryCount = 0;
-    $mailServer = !empty($smtpConfig['enabled']) && !empty($smtpConfig['host'])
-        ? ((string)$smtpConfig['host'] . ':' . (int)($smtpConfig['port'] ?? 0))
-        : 'php-mail';
+    $smtpPort = (int)($smtpConfig['port'] ?? 0);
+    $mailServer = 'php-mail';
+    if (!empty($smtpConfig['enabled']) && !empty($smtpConfig['host'])) {
+        $mailServer = (string)$smtpConfig['host'];
+        if ($smtpPort > 0 && $smtpPort <= 65535) {
+            $mailServer .= ':' . $smtpPort;
+        }
+    }
     $lastError = '';
 
     if (!empty($smtpConfig['enabled']) && empty($smtpConnectionTest['success'])) {
