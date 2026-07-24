@@ -40,6 +40,9 @@ function requireAuth(): void {
     }
     // Refresh session activity
     $_SESSION['last_activity'] = time();
+
+    // Auto-mark past lessons as done (throttled to once per hour)
+    markLessonsDone();
 }
 
 function requireAdmin(): void {

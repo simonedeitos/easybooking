@@ -639,3 +639,42 @@ function decryptFullName(?string $nome, ?string $cognome, string $fallback = '')
     $fullName = trim(implode(' ', array_filter($parts, static fn(string $part): bool => $part !== '')));
     return $fullName !== '' ? $fullName : $fallback;
 }
+
+// ─── AUTO MARK LESSONS DONE ───────────────────────────────────────────────────
+/**
+ * Contrassegna automaticamente come "Svolta" tutte le lezioni la cui data è
+ * passata (< oggi) e il cui stato è ancora "Programmata", "Riprogrammata" o
+ * "Rimandata".  Viene eseguita in modo silenzioso (nessun output) e registra
+ * solo gli errori.
+ *
+ * Throttling: viene eseguita al massimo una volta all'ora per sessione utente,
+ * per evitare query eccessive al database.
+ */
+function markLessonsDone(): void
+{
+    if (session_status() !== PHP_SESSION_ACTIVE) {
+        return;
+    }
+
+    $throttleKey = '_mark_lessons_done_at';
+    $lastRun     = $_SESSION[$throttleKey] ?? 0;
+
+    if ((time() - $lastRun) < 3600) {
+        return;
+    }
+
+    try {
+        $pdo  = Database::getInstance();
+        $stmt = $pdo->prepare(
+            "UPDATE prenotazioni
+             SET stato = 'Svolta'
+             WHERE data < CURDATE()
+               AND stato IN ('Programmata', 'Riprogrammata', 'Rimandata')"
+        );
+        $stmt->execute();
+
+        $_SESSION[$throttleKey] = time();
+    } catch (Throwable $e) {
+        error_log('markLessonsDone error: ' . $e->getMessage());
+    }
+}
